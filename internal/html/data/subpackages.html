@@ -1,0 +1,16 @@
+<h2 id="pkg-directories">Directories</h2>
+
+<table>
+  <tbody>
+    {{ range .Subpackages }}
+      <tr>
+        <td>
+          <a href="{{ .RelativePath }}">{{ .RelativePath }}</a>
+        </td>
+        <td>
+          {{ .Synopsis }}
+        </td>
+      </tr>
+    {{ end }}
+  </tbody>
+</table>

@@ -1,0 +1,33 @@
+<h3>Index</h3>
+
+{{ if or .Constants .Variables .Functions .Types }}
+<ul>
+  {{ if .Constants }}<li><a href="#pkg-constants">Constants</a></li>{{ end }}
+  {{ if .Variables }}<li><a href="#pkg-variables">Variables</a></li>{{ end }}
+
+  {{ range .Functions }}
+    <li><a href="#{{ .Name }}">{{ .Decl | code }}</a></li>
+  {{ end }}
+
+  {{ with .Types }}
+    <ul>
+      {{ range .}}
+        <li>
+          {{ $typ := .Name }}
+          <a href="#{{ .Name }}">type {{ .Name }}</a>
+          {{ if or .Functions .Methods }}
+            <ul>
+              {{ range .Functions }}
+                <li><a href="#{{ .Name }}">{{ .Decl | code }}</a></li>
+              {{ end }}
+              {{ range .Methods }}
+                <li><a href="#{{ $typ }}.{{ .Name }}">{{ .Decl | code }}</a></li>
+              {{ end }}
+            </ul>
+          {{ end }}
+        </li>
+      {{ end }}
+    </ul>
+  {{ end }}
+</ul>
+{{ end }}

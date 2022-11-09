@@ -1,0 +1,30 @@
+<h2 id="pkg-overview">package {{ .Name }}</h2>
+
+<p><code>import "{{ .ImportPath }}"</code></p>
+
+{{ .Doc | doc }}
+
+{{ template "index.html" . }}
+
+{{/* TODO: examples, files */}}
+
+{{ with .Constants }}
+  <h3 id="pkg-constants">Constants</h3>
+  {{ range . }}{{ template "value.html" . }}{{ end }}
+{{ end }}
+
+{{ with .Variables }}
+  <h3 id="pkg-variables">Variables</h3>
+  {{ range . }}{{ template "value.html" . }}{{ end }}
+{{ end }}
+
+{{ with .Functions }}
+  <h3 id="pkg-variables">Functions</h3>
+  {{ range . }}{{ template "function.html" . }}{{ end }}
+{{ end }}
+
+{{ with .Types }}
+  <h3 id="pkg-types">Types</h3>
+
+  {{ range . }}{{ template "type.html" . }}{{ end }}
+{{ end }}

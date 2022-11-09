@@ -1,0 +1,21 @@
+<h3 id="{{ .Name }}">type {{ .Name }}</h3>
+
+<pre><code>{{ .Decl | code }}</code></pre>
+<div>{{ .Doc | doc }}</div>
+
+{{ range .Constants }}
+  {{ template "value.html" . }}
+{{ end }}
+
+{{ range .Variables }}
+  {{ template "value.html" . }}
+{{ end }}
+
+{{ range .Functions }}
+  {{ template "function.html" . }}
+{{ end }}
+
+{{ range .Methods }}
+  {{ template "function.html" . }}
+{{ end }}
+
