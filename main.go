@@ -78,7 +78,8 @@ func (cmd *mainCmd) run(opts *params) error {
 		Renderer: &html.Renderer{
 			DocPrinter: &comment.Printer{},
 		},
-		OutDir: opts.OutputDir,
+		OutDir:   opts.OutputDir,
+		Internal: opts.Internal,
 	}
 
 	return runner.Run(opts.Patterns)

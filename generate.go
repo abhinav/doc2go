@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
@@ -18,11 +19,15 @@ type Finder interface {
 	FindPackages(patterns ...string) ([]*gosrc.PackageRef, error)
 }
 
+var _ Finder = (*gosrc.Finder)(nil)
+
 // Parser loads a package reference from disk
 // and parses its contents.
 type Parser interface {
 	ParsePackage(*gosrc.PackageRef) (*gosrc.Package, error)
 }
+
+var _ Parser = (*gosrc.Parser)(nil)
 
 // Assembler consumes a parsed Go source package,
 // and builds a documentation representation of it.
@@ -30,11 +35,15 @@ type Assembler interface {
 	Assemble(*gosrc.Package) (*godoc.Package, error)
 }
 
+var _ Assembler = (*godoc.Assembler)(nil)
+
 // Renderer renders a Go package's documentation to HTML.
 type Renderer interface {
 	RenderPackage(io.Writer, *godoc.Package) error
 	RenderSubpackages(io.Writer, []*html.Subpackage) error
 }
+
+var _ Renderer = (*html.Renderer)(nil)
 
 type Runner struct {
 	Log       *log.Logger
@@ -44,6 +53,7 @@ type Runner struct {
 	Renderer  Renderer
 	OutDir    string
 	LinkTmpl  *templateTree
+	Internal  bool
 }
 
 func (r *Runner) Run(patterns []string) error {
@@ -115,11 +125,22 @@ func (r *Runner) writePackageIndex(w io.Writer, from string, rpkgs []*renderedPa
 			continue
 		}
 
+		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
+			if !r.Internal {
+				continue
+			}
+		}
+
 		subpkgs = append(subpkgs, &html.Subpackage{
 			RelativePath: relPath,
 			Synopsis:     rpkg.Synopsis,
 		})
 	}
+
+	if len(subpkgs) == 0 {
+		return nil
+	}
+
 	return r.Renderer.RenderSubpackages(w, subpkgs)
 }
 

@@ -21,6 +21,7 @@ type params struct {
 	OutputDir string
 	Links     []pathTemplate
 	Patterns  []string
+	Internal  bool
 }
 
 // cliParser parses the command line arguments for doc2go.
@@ -50,6 +51,8 @@ func (cmd *cliParser) parseParams(args []string) (*params, error) {
 		"Given `path=template`, use 'template' to link to documentation\n"+
 			"for import paths under 'path'.\n"+
 			"This flag may be provided multiple times.")
+	flag.BoolVar(&p.Internal, "internal", false,
+		"Include internal packages in package listings.")
 	flag.BoolVar(&p.Debug, "debug", false, "Print debugging output")
 	flag.StringVar(&p.Tags, "tags", "", "List of comma-separated build `tags`")
 
