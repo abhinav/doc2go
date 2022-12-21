@@ -1,3 +1,4 @@
+// doc2go generates static HTML documentation from one or more Go packages.
 package main
 
 import (

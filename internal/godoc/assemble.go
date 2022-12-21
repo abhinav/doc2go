@@ -1,3 +1,6 @@
+// Package godoc provides the means of converting parsed Go source information
+// into a documentation subset of it.
+// This information is neessary to render documentation for a package.
 package godoc
 
 import (
@@ -52,6 +55,20 @@ func (as *assembly) doc(doc string) *comment.Doc {
 	return as.cparse.Parse(doc)
 }
 
+// Package holds documentation for a single Go package.
+type Package struct {
+	Name string
+	Doc  *comment.Doc // package-level documentation
+
+	ImportPath string
+	Synopsis   string
+
+	Constants []*Value
+	Variables []*Value
+	Types     []*Type
+	Functions []*Function
+}
+
 func (as *assembly) pkg(dpkg *doc.Package) *Package {
 	return &Package{
 		Name:       dpkg.Name,
@@ -65,12 +82,32 @@ func (as *assembly) pkg(dpkg *doc.Package) *Package {
 	}
 }
 
+// Value is a top-level constant or variable or a group fo them
+// declared in a package.
+type Value struct {
+	Names []string
+	Doc   *comment.Doc
+	Decl  *code.Block
+}
+
 func (as *assembly) val(dval *doc.Value) *Value {
 	return &Value{
 		Names: dval.Names,
 		Doc:   as.doc(dval.Doc),
 		Decl:  as.decl(dval.Decl),
 	}
+}
+
+// Type is a single top-level type.
+type Type struct {
+	Name string
+	Doc  *comment.Doc
+	Decl *code.Block
+
+	// Constants, variables, functions, and methods
+	// associated with this type.
+	Constants, Variables []*Value
+	Functions, Methods   []*Function
 }
 
 func (as *assembly) typ(dtyp *doc.Type) *Type {
@@ -83,6 +120,14 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 		Functions: slices.Transform(dtyp.Funcs, as.fun),
 		Methods:   slices.Transform(dtyp.Methods, as.fun),
 	}
+}
+
+// Function is a top-level function or method.
+type Function struct {
+	Name string
+	Doc  *comment.Doc
+	Decl *code.Block
+	Recv string // only set for methods
 }
 
 func (as *assembly) fun(dfun *doc.Func) *Function {

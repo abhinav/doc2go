@@ -1,3 +1,4 @@
+// Package flagvalue provides convenient flag.Value implementations.
 package flagvalue
 
 import "flag"
