@@ -56,110 +56,130 @@ func (r *Runner) Run(patterns []string) error {
 }
 
 func (r *Runner) renderTrees(trees []*packageTree) error {
-	// TODO: if we do this depth-first, we can get subpackage descriptions
-	// for use in the package index for renderPackage.
 	for _, t := range trees {
-		if t.Ref != nil {
-			if err := r.renderPackage(t); err != nil {
-				return err
-			}
-		} else {
-			if err := r.renderPackageIndex(t); err != nil {
-				return err
-			}
-		}
-		if err := r.renderTrees(t.Children); err != nil {
+		if _, err := r.renderPackageTree(t); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func (r *Runner) renderPackageIndex(t *packageTree) error {
+func (r *Runner) renderPackageTree(t *packageTree) ([]*renderedPackage, error) {
+	if t.Ref == nil {
+		return r.renderPackageIndex(t)
+	}
+	rpkg, err := r.renderPackage(t)
+	if err != nil {
+		return nil, err
+	}
+	return []*renderedPackage{rpkg}, nil
+}
+
+func (r *Runner) renderPackageIndex(t *packageTree) ([]*renderedPackage, error) {
+	// TODO: dedupe
+	var subpkgs []*renderedPackage
+	for _, child := range t.Children {
+		rpkgs, err := r.renderPackageTree(child)
+		if err != nil {
+			return nil, err
+		}
+		subpkgs = append(subpkgs, rpkgs...)
+	}
+
 	r.Log.Printf("Rendering index %v", t.Path)
 
 	dir := filepath.Join(r.OutDir, t.Path)
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return err
+		return nil, err
 	}
 
 	f, err := os.Create(filepath.Join(dir, "index.html"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
 
-	return r.writePackageIndex(f, t.Path, t.Favorites)
+	if err := r.writePackageIndex(f, t.Path, subpkgs); err != nil {
+		return nil, err
+	}
+
+	return subpkgs, nil
 }
 
-// TODO: template
-func (r *Runner) writePackageIndex(w io.Writer, from string, trees []*packageTree) error {
-	if len(trees) == 0 {
-		return nil
-	}
-
-	subpkgs := make([]*html.Subpackage, len(trees))
-	for i, t := range trees {
-		relPath, err := filepath.Rel(from, t.Path)
+func (r *Runner) writePackageIndex(w io.Writer, from string, rpkgs []*renderedPackage) error {
+	var subpkgs []*html.Subpackage
+	for _, rpkg := range rpkgs {
+		// TODO: track this on packageTree?
+		relPath, err := filepath.Rel(from, rpkg.ImportPath)
 		if err != nil {
-			// TODO: Log
-			relPath = t.Path
+			continue
 		}
 
-		subpkgs[i] = &html.Subpackage{
+		subpkgs = append(subpkgs, &html.Subpackage{
 			RelativePath: relPath,
-			Synopsis:     "", // TODO
-		}
+			Synopsis:     rpkg.Synopsis,
+		})
 	}
-
 	return r.Renderer.RenderSubpackages(w, subpkgs)
 }
 
-func (r *Runner) renderPackage(t *packageTree) error {
+type renderedPackage struct {
+	ImportPath string
+	Synopsis   string
+}
+
+func (r *Runner) renderPackage(t *packageTree) (*renderedPackage, error) {
+	var subpkgs []*renderedPackage
+	for _, child := range t.Children {
+		rpkgs, err := r.renderPackageTree(child)
+		if err != nil {
+			return nil, err
+		}
+		subpkgs = append(subpkgs, rpkgs...)
+	}
+
 	ref := t.Ref
 	r.Log.Printf("Rendering package %v", t.Path)
 	bpkg, err := r.Parser.ParsePackage(ref)
 	if err != nil {
-		return fmt.Errorf("parse: %w", err)
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 
 	dpkg, err := r.Assembler.Assemble(bpkg)
 	if err != nil {
-		return fmt.Errorf("assemble: %w", err)
+		return nil, fmt.Errorf("assemble: %w", err)
 	}
 
 	dir := filepath.Join(r.OutDir, t.Path)
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return err
+		return nil, err
 	}
 
 	// TODO: For Hugo, this should be _index.html.
 	f, err := os.Create(filepath.Join(dir, "index.html"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
 
 	if err := r.Renderer.RenderPackage(f, dpkg); err != nil {
-		return fmt.Errorf("render: %w", err)
+		return nil, fmt.Errorf("render: %w", err)
 	}
 
-	if err := r.writePackageIndex(f, t.Path, t.Favorites); err != nil {
-		return err
+	if err := r.writePackageIndex(f, t.Path, subpkgs); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return &renderedPackage{
+		ImportPath: ref.ImportPath,
+		Synopsis:   dpkg.Synopsis,
+	}, nil
 }
 
 type packageTree struct {
 	Path     string
 	Ref      *gosrc.PackageRef
 	Children []*packageTree
-
-	// Closest descendants of this node
-	// that have values attached to them.
-	Favorites []*packageTree
 }
 
 func buildTrees(refs []*gosrc.PackageRef) []*packageTree {
@@ -189,13 +209,6 @@ func buildTrees(refs []*gosrc.PackageRef) []*packageTree {
 			t.Ref = *s.Value
 		}
 		t.Children = fromSnaps(s.Children)
-		for _, c := range t.Children {
-			if c.Ref != nil {
-				t.Favorites = append(t.Favorites, c)
-			} else {
-				t.Favorites = append(t.Favorites, c.Favorites...)
-			}
-		}
 		return &t
 	}
 
