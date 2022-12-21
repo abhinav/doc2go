@@ -55,7 +55,7 @@ func (r *Runner) Run(patterns []string) error {
 	return r.renderTrees(buildTrees(pkgRefs))
 }
 
-func (r *Runner) renderTrees(trees []*packageTree) error {
+func (r *Runner) renderTrees(trees []packageTree) error {
 	for _, t := range trees {
 		if _, err := r.renderPackageTree(t); err != nil {
 			return err
@@ -64,8 +64,8 @@ func (r *Runner) renderTrees(trees []*packageTree) error {
 	return nil
 }
 
-func (r *Runner) renderPackageTree(t *packageTree) ([]*renderedPackage, error) {
-	if t.Ref == nil {
+func (r *Runner) renderPackageTree(t packageTree) ([]*renderedPackage, error) {
+	if t.Value == nil {
 		return r.renderPackageIndex(t)
 	}
 	rpkg, err := r.renderPackage(t)
@@ -75,7 +75,7 @@ func (r *Runner) renderPackageTree(t *packageTree) ([]*renderedPackage, error) {
 	return []*renderedPackage{rpkg}, nil
 }
 
-func (r *Runner) renderPackageIndex(t *packageTree) ([]*renderedPackage, error) {
+func (r *Runner) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
 	// TODO: dedupe
 	var subpkgs []*renderedPackage
 	for _, child := range t.Children {
@@ -128,7 +128,7 @@ type renderedPackage struct {
 	Synopsis   string
 }
 
-func (r *Runner) renderPackage(t *packageTree) (*renderedPackage, error) {
+func (r *Runner) renderPackage(t packageTree) (*renderedPackage, error) {
 	var subpkgs []*renderedPackage
 	for _, child := range t.Children {
 		rpkgs, err := r.renderPackageTree(child)
@@ -138,7 +138,7 @@ func (r *Runner) renderPackage(t *packageTree) (*renderedPackage, error) {
 		subpkgs = append(subpkgs, rpkgs...)
 	}
 
-	ref := t.Ref
+	ref := *t.Value
 	r.Log.Printf("Rendering package %v", t.Path)
 	bpkg, err := r.Parser.ParsePackage(ref)
 	if err != nil {
@@ -176,41 +176,12 @@ func (r *Runner) renderPackage(t *packageTree) (*renderedPackage, error) {
 	}, nil
 }
 
-type packageTree struct {
-	Path     string
-	Ref      *gosrc.PackageRef
-	Children []*packageTree
-}
+type packageTree = pathtree.Snapshot[*gosrc.PackageRef]
 
-func buildTrees(refs []*gosrc.PackageRef) []*packageTree {
+func buildTrees(refs []*gosrc.PackageRef) []packageTree {
 	var root pathtree.Root[*gosrc.PackageRef]
 	for _, ref := range refs {
 		root.Set(ref.ImportPath, ref)
 	}
-
-	var (
-		fromSnaps func([]pathtree.Snapshot[*gosrc.PackageRef]) []*packageTree
-		fromSnap  func(pathtree.Snapshot[*gosrc.PackageRef]) *packageTree
-	)
-	fromSnaps = func(snaps []pathtree.Snapshot[*gosrc.PackageRef]) []*packageTree {
-		if len(snaps) == 0 {
-			return nil
-		}
-
-		trees := make([]*packageTree, len(snaps))
-		for i, s := range snaps {
-			trees[i] = fromSnap(s)
-		}
-		return trees
-	}
-	fromSnap = func(s pathtree.Snapshot[*gosrc.PackageRef]) *packageTree {
-		t := packageTree{Path: s.Path}
-		if s.Value != nil {
-			t.Ref = *s.Value
-		}
-		t.Children = fromSnaps(s.Children)
-		return &t
-	}
-
-	return fromSnaps(root.Snapshot())
+	return root.Snapshot()
 }
