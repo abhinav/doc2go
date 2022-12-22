@@ -6,7 +6,7 @@
   {{ if .Variables }}<li><a href="#pkg-variables">Variables</a></li>{{ end }}
 
   {{ range .Functions }}
-    <li><a href="#{{ .Name }}">{{ .Decl | code }}</a></li>
+    <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
   {{ end }}
 
   {{ with .Types }}
@@ -18,10 +18,10 @@
           {{ if or .Functions .Methods }}
             <ul>
               {{ range .Functions }}
-                <li><a href="#{{ .Name }}">{{ .Decl | code }}</a></li>
+                <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
               {{ end }}
               {{ range .Methods }}
-                <li><a href="#{{ $typ }}.{{ .Name }}">{{ .Decl | code }}</a></li>
+                <li><a href="#{{ $typ }}.{{ .Name }}">{{ .ShortDecl }}</a></li>
               {{ end }}
             </ul>
           {{ end }}

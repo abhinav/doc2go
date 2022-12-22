@@ -124,18 +124,20 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 
 // Function is a top-level function or method.
 type Function struct {
-	Name string
-	Doc  *comment.Doc
-	Decl *code.Block
-	Recv string // only set for methods
+	Name      string
+	Doc       *comment.Doc
+	Decl      *code.Block
+	ShortDecl string
+	Recv      string // only set for methods
 }
 
 func (as *assembly) fun(dfun *doc.Func) *Function {
 	return &Function{
-		Name: dfun.Name,
-		Doc:  as.doc(dfun.Doc),
-		Decl: as.decl(dfun.Decl),
-		Recv: dfun.Recv,
+		Name:      dfun.Name,
+		Doc:       as.doc(dfun.Doc),
+		Decl:      as.decl(dfun.Decl),
+		ShortDecl: as.shortDecl(dfun.Decl),
+		Recv:      dfun.Recv,
 	}
 }
 
@@ -163,4 +165,8 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 			},
 		},
 	}
+}
+
+func (as *assembly) shortDecl(decl ast.Decl) string {
+	return OneLineNodeDepth(as.fset, decl, 0)
 }
