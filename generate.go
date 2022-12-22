@@ -45,7 +45,7 @@ type Renderer interface {
 
 var _ Renderer = (*html.Renderer)(nil)
 
-type Runner struct {
+type Generator struct {
 	Log       *log.Logger
 	Finder    Finder
 	Parser    Parser
@@ -56,7 +56,7 @@ type Runner struct {
 	Internal  bool
 }
 
-func (r *Runner) Run(patterns []string) error {
+func (r *Generator) Run(patterns []string) error {
 	pkgRefs, err := r.Finder.FindPackages(patterns...)
 	if err != nil {
 		return fmt.Errorf("find packages: %w", err)
@@ -65,7 +65,7 @@ func (r *Runner) Run(patterns []string) error {
 	return r.renderTrees(buildTrees(pkgRefs))
 }
 
-func (r *Runner) renderTrees(trees []packageTree) error {
+func (r *Generator) renderTrees(trees []packageTree) error {
 	for _, t := range trees {
 		if _, err := r.renderPackageTree(t); err != nil {
 			return err
@@ -74,7 +74,7 @@ func (r *Runner) renderTrees(trees []packageTree) error {
 	return nil
 }
 
-func (r *Runner) renderPackageTree(t packageTree) ([]*renderedPackage, error) {
+func (r *Generator) renderPackageTree(t packageTree) ([]*renderedPackage, error) {
 	if t.Value == nil {
 		return r.renderPackageIndex(t)
 	}
@@ -85,7 +85,7 @@ func (r *Runner) renderPackageTree(t packageTree) ([]*renderedPackage, error) {
 	return []*renderedPackage{rpkg}, nil
 }
 
-func (r *Runner) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
+func (r *Generator) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
 	// TODO: dedupe
 	var subpkgs []*renderedPackage
 	for _, child := range t.Children {
@@ -116,7 +116,7 @@ func (r *Runner) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
 	return subpkgs, nil
 }
 
-func (r *Runner) writePackageIndex(w io.Writer, from string, rpkgs []*renderedPackage) error {
+func (r *Generator) writePackageIndex(w io.Writer, from string, rpkgs []*renderedPackage) error {
 	var subpkgs []*html.Subpackage
 	for _, rpkg := range rpkgs {
 		// TODO: track this on packageTree?
@@ -149,7 +149,7 @@ type renderedPackage struct {
 	Synopsis   string
 }
 
-func (r *Runner) renderPackage(t packageTree) (*renderedPackage, error) {
+func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
 	var subpkgs []*renderedPackage
 	for _, child := range t.Children {
 		rpkgs, err := r.renderPackageTree(child)

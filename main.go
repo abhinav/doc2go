@@ -70,7 +70,7 @@ func (cmd *mainCmd) run(opts *params) error {
 		linkTmpl.Set(lt.Path, lt.Template)
 	}
 
-	runner := Runner{
+	g := Generator{
 		Log:       cmd.log,
 		Finder:    &finder,
 		Parser:    new(gosrc.Parser),
@@ -82,7 +82,7 @@ func (cmd *mainCmd) run(opts *params) error {
 		Internal: opts.Internal,
 	}
 
-	return runner.Run(opts.Patterns)
+	return g.Run(opts.Patterns)
 }
 
 type templateTree struct {
