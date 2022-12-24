@@ -4,12 +4,10 @@
 package godoc
 
 import (
-	"bytes"
 	"fmt"
 	"go/ast"
 	"go/doc"
 	"go/doc/comment"
-	"go/printer"
 	"go/token"
 
 	"go.abhg.dev/doc2go/internal/code"
@@ -41,12 +39,14 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 	}
 
 	return (&assembly{
+		fmt:    gosrc.NewDeclFormatter(bpkg),
 		fset:   bpkg.Fset,
 		cparse: dpkg.Parser(),
 	}).pkg(dpkg), nil
 }
 
 type assembly struct {
+	fmt    *gosrc.DeclFormatter
 	fset   *token.FileSet
 	cparse *comment.Parser
 }
@@ -142,29 +142,71 @@ func (as *assembly) fun(dfun *doc.Func) *Function {
 }
 
 func (as *assembly) decl(decl ast.Decl) *code.Block {
-	var buf bytes.Buffer
-	err := (&printer.Config{
-		Mode:     printer.UseSpaces,
-		Tabwidth: 8,
-	}).Fprint(&buf, as.fset, decl)
+	// TODO: this can probably be extracted
+
+	src, regions, err := as.fmt.FormatDecl(decl)
 	if err != nil {
+		msg := fmt.Sprintf("Could not format declaration:\n%v", err)
 		return &code.Block{
 			Nodes: []code.Node{
 				&code.TextNode{
-					Text: []byte(err.Error()),
+					Text: []byte(msg),
 				},
 			},
 		}
 	}
 
-	// TODO: links
-	return &code.Block{
-		Nodes: []code.Node{
-			&code.TextNode{
-				Text: buf.Bytes(),
-			},
-		},
+	var (
+		nodes      []code.Node
+		lastOffset int
+	)
+	for _, r := range regions {
+		if t := src[lastOffset:r.Offset]; len(t) > 0 {
+			nodes = append(nodes, &code.TextNode{Text: t})
+		}
+
+		lastOffset = r.Offset + r.Length
+		body := src[r.Offset:lastOffset]
+		switch l := r.Label.(type) {
+		case *gosrc.DeclLabel:
+			id := l.Name
+			if len(l.Parent) > 0 {
+				id = l.Parent + "." + id
+			}
+
+			nodes = append(nodes, &code.AnchorNode{
+				Text: body,
+				ID:   id,
+			})
+
+		case *gosrc.EntityRefLabel:
+			dest := "#" + l.Name
+			if len(l.ImportPath) > 0 {
+				// TODO: actual cross-package linking
+				dest = "https://pkg.go.dev/" + l.ImportPath + dest
+			}
+
+			nodes = append(nodes, &code.LinkNode{
+				Text: body,
+				Dest: dest,
+			})
+
+		case *gosrc.PackageRefLabel:
+			dest := "https://pkg.go.dev/" + l.ImportPath
+			nodes = append(nodes, &code.LinkNode{
+				Text: body,
+				Dest: dest,
+			})
+
+		default:
+			panic(fmt.Sprintf("Unexpected label %T", l))
+		}
 	}
+	if t := src[lastOffset:]; len(t) > 0 {
+		nodes = append(nodes, &code.TextNode{Text: t})
+	}
+
+	return &code.Block{Nodes: nodes}
 }
 
 func (as *assembly) shortDecl(decl ast.Decl) string {

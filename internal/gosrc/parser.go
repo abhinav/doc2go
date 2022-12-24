@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"sort"
 )
 
 // Package is a package that has been loaded from disk.
@@ -23,6 +24,9 @@ type Package struct {
 
 	// FileSet used to parse these files.
 	Fset *token.FileSet
+
+	// Names of top-level declarations defined in this package.
+	TopLevelDecls []string
 }
 
 // Parser loads the contents of a package by parsing it from source.
@@ -44,12 +48,23 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	fset := token.NewFileSet()
 
 	syntax := make([]*ast.File, len(ref.Files))
+	files := make(map[string]*ast.File)
 	for i, file := range ref.Files {
 		var err error
 		syntax[i], err = parseFile(fset, file, nil, parser.ParseComments)
 		if err != nil {
 			return nil, fmt.Errorf("parse file %q: %w", file, err)
 		}
+		files[file] = syntax[i]
+	}
+
+	var topLevel []string
+	if pkg, _ := ast.NewPackage(fset, files, nil, nil); pkg != nil {
+		topLevel = make([]string, 0, len(pkg.Scope.Objects))
+		for name := range pkg.Scope.Objects {
+			topLevel = append(topLevel, name)
+		}
+		sort.Strings(topLevel)
 	}
 
 	testSyntax := make([]*ast.File, len(ref.TestFiles))
@@ -62,10 +77,11 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	}
 
 	return &Package{
-		Name:       ref.Name,
-		ImportPath: ref.ImportPath,
-		Syntax:     syntax,
-		TestSyntax: testSyntax,
-		Fset:       fset,
+		Name:          ref.Name,
+		ImportPath:    ref.ImportPath,
+		Syntax:        syntax,
+		TestSyntax:    testSyntax,
+		Fset:          fset,
+		TopLevelDecls: topLevel,
 	}, nil
 }
