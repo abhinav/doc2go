@@ -9,25 +9,21 @@
     <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
   {{ end }}
 
-  {{ with .Types }}
-    <ul>
-      {{ range .}}
-        <li>
-          {{ $typ := .Name }}
-          <a href="#{{ .Name }}">type {{ .Name }}</a>
-          {{ if or .Functions .Methods }}
-            <ul>
-              {{ range .Functions }}
-                <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
-              {{ end }}
-              {{ range .Methods }}
-                <li><a href="#{{ $typ }}.{{ .Name }}">{{ .ShortDecl }}</a></li>
-              {{ end }}
-            </ul>
+  {{ range .Types }}
+    <li>
+      {{ $typ := .Name }}
+      <a href="#{{ .Name }}">type {{ .Name }}</a>
+      {{ if or .Functions .Methods }}
+        <ul>
+          {{ range .Functions }}
+            <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
           {{ end }}
-        </li>
+          {{ range .Methods }}
+            <li><a href="#{{ $typ }}.{{ .Name }}">{{ .ShortDecl }}</a></li>
+          {{ end }}
+        </ul>
       {{ end }}
-    </ul>
+    </li>
   {{ end }}
 </ul>
 {{ end }}
