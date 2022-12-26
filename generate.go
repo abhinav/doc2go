@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
 	"go.abhg.dev/doc2go/internal/pathtree"
+	"go.abhg.dev/doc2go/internal/relative"
 )
 
 // Finder searches for packages on-disk based on the provided patterns.
@@ -120,10 +121,7 @@ func (r *Generator) writePackageIndex(w io.Writer, from string, rpkgs []*rendere
 	var subpkgs []*html.Subpackage
 	for _, rpkg := range rpkgs {
 		// TODO: track this on packageTree?
-		relPath, err := filepath.Rel(from, rpkg.ImportPath)
-		if err != nil {
-			continue
-		}
+		relPath := relative.Filepath(from, rpkg.ImportPath)
 
 		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
 			if !r.Internal {
