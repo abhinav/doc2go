@@ -67,7 +67,7 @@ type Subpackage struct {
 
 // RenderSubpackages renders the list of descendants for a package
 // as HTML.
-func (r *Renderer) RenderSubpackages(w io.Writer, pkgs []*Subpackage) error {
+func (*Renderer) RenderSubpackages(w io.Writer, pkgs []*Subpackage) error {
 	return template.Must(_tmpl.Clone()).ExecuteTemplate(w, "subpackages.html", struct {
 		Subpackages []*Subpackage
 	}{Subpackages: pkgs})
@@ -77,7 +77,7 @@ func (r *Renderer) doc(doc *comment.Doc) template.HTML {
 	return template.HTML(r.DocPrinter.HTML(doc))
 }
 
-func (r *Renderer) code(blk *code.Block) template.HTML {
+func (*Renderer) code(blk *code.Block) template.HTML {
 	var buf bytes.Buffer
 	for _, b := range blk.Nodes {
 		switch b := b.(type) {

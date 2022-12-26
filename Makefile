@@ -2,7 +2,7 @@ export GOBIN ?= $(shell pwd)/bin
 export PATH := $(GOBIN):$(PATH)
 
 STATICCHECK = bin/staticcheck
-GOLINT = bin/golint
+REVIVE = bin/revive
 DOC2GO = bin/doc2go
 
 GO_FILES = $(shell find . \
@@ -17,7 +17,7 @@ build:
 	go install go.abhg.dev/doc2go
 
 .PHONY: lint
-lint: gofmt staticcheck golint
+lint: gofmt staticcheck revive
 
 .PHONY: gofmt
 gofmt:
@@ -31,9 +31,9 @@ gofmt:
 staticcheck: $(STATICCHECK)
 	staticcheck ./...
 
-.PHONY: golint
-golint: $(GOLINT)
-	golint ./...
+.PHONY: revive
+revive: $(REVIVE)
+	revive -config revive.toml ./...
 
 .PHONY: test
 test:
@@ -47,5 +47,5 @@ cover:
 $(STATICCHECK): tools/go.mod
 	cd tools && go install honnef.co/go/tools/cmd/staticcheck
 
-$(GOLINT): tools/go.mod
-	cd tools && go install golang.org/x/lint/golint
+$(REVIVE): tools/go.mod
+	cd tools && go install github.com/mgechev/revive

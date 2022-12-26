@@ -1,3 +1,5 @@
+// Package relative turns paths and file paths relative
+// with string manipulation exclusively.
 package relative
 
 import (
