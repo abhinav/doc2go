@@ -77,30 +77,6 @@ func (r *Root[T]) Snapshot() []Snapshot[T] {
 	return r.root.Snapshot(nil).Children
 }
 
-func (r *node[T]) Snapshot(path []string) Snapshot[T] {
-	var children []Snapshot[T]
-	if len(r.children) > 0 {
-		childNames := make([]string, 0, len(r.children))
-		for name := range r.children {
-			childNames = append(childNames, name)
-		}
-		// TODO: This won't be necessary once node.children
-		// is turned into a sorted slice.
-		sort.Strings(childNames)
-
-		children = make([]Snapshot[T], len(childNames))
-		for i, name := range childNames {
-			children[i] = r.children[name].Snapshot(append(path, name))
-		}
-	}
-
-	return Snapshot[T]{
-		Value:    r.value,
-		Path:     strings.Join(path, string(_sep)),
-		Children: children,
-	}
-}
-
 type node[T any] struct {
 	value *T
 	// TODO: children should be a sorted list that we binary search inside.
@@ -141,6 +117,30 @@ func (n *node[T]) Get(p string, current *T) (final *T) {
 
 	head, tail := split(p)
 	return n.children[head].Get(tail, current)
+}
+
+func (n *node[T]) Snapshot(path []string) Snapshot[T] {
+	var children []Snapshot[T]
+	if len(n.children) > 0 {
+		childNames := make([]string, 0, len(n.children))
+		for name := range n.children {
+			childNames = append(childNames, name)
+		}
+		// TODO: This won't be necessary once node.children
+		// is turned into a sorted slice.
+		sort.Strings(childNames)
+
+		children = make([]Snapshot[T], len(childNames))
+		for i, name := range childNames {
+			children[i] = n.children[name].Snapshot(append(path, name))
+		}
+	}
+
+	return Snapshot[T]{
+		Value:    n.value,
+		Path:     strings.Join(path, string(_sep)),
+		Children: children,
+	}
 }
 
 func split(p string) (head, tail string) {

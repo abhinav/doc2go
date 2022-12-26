@@ -46,6 +46,11 @@ type Renderer interface {
 
 var _ Renderer = (*html.Renderer)(nil)
 
+// Generator generates documentation for user-specified Go packages.
+//
+// In terms of code organization,
+// Generator's purpose is to add a separation between main
+// and the program's core logic to aid in testability.
 type Generator struct {
 	Log       *log.Logger
 	Finder    Finder

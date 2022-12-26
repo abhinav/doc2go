@@ -47,7 +47,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 		case token.CONST, token.VAR:
 			for i, spec := range n.Specs {
 				valueSpec := spec.(*ast.ValueSpec) // must succeed; we can't mix types in one GenDecl.
-				return ConstOrVarSynopsis(valueSpec, fset, n.Tok, trailer, i, depth)
+				return constOrVarSynopsis(valueSpec, fset, n.Tok, trailer, i, depth)
 			}
 		case token.TYPE:
 			if len(n.Specs) > 0 {
@@ -175,7 +175,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 	}
 }
 
-func ConstOrVarSynopsis(valueSpec *ast.ValueSpec, fset *token.FileSet, tok token.Token,
+func constOrVarSynopsis(valueSpec *ast.ValueSpec, fset *token.FileSet, tok token.Token,
 	trailer string, i, depth int,
 ) string {
 	if len(valueSpec.Names) > 1 || len(valueSpec.Values) > 1 {
