@@ -100,7 +100,7 @@ func (t *templateTree) Set(p string, v *template.Template) {
 
 func (t *templateTree) Get(p string) *template.Template {
 	v, ok := t.tree.Lookup(p)
-	if ok {
+	if !ok {
 		v = t.fallback
 	}
 	return v
