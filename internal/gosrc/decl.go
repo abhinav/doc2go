@@ -62,35 +62,34 @@ func (f *DeclFormatter) FormatDecl(decl ast.Decl) (src []byte, regions []Region,
 	pos, tok, lit := scan.Scan()
 
 loop:
-	for tok != token.EOF {
-		switch tok {
-		case token.IDENT:
-			// There's an identifier but no label for it.
-			// This is a bug. Fail silently.
-			if len(remaining) == 0 {
-				// TODO: Don't fail silently.
-				// Log this and tell users to try debug mode.
-				if !f.debug {
-					break loop
-				}
-
-				panic(fmt.Sprintf("Ran out of labels rendering:\n%s\nHave: %#v\nRemaining: %q", buff.String(), lb.labels, src[file.Offset(pos):]))
-			}
-			var label Label
-			label, remaining = remaining[0], remaining[1:]
-			if label == nil {
-				// Ignore this token.
-				break
-			}
-
-			regions = append(regions, Region{
-				Label:  label,
-				Offset: file.Offset(pos),
-				Length: len(lit),
-			})
+	for ; tok != token.EOF; pos, tok, lit = scan.Scan() {
+		if tok != token.IDENT {
+			continue
 		}
 
-		pos, tok, lit = scan.Scan()
+		// There's an identifier but no label for it.
+		// This is a bug. Fail silently.
+		if len(remaining) == 0 {
+			// TODO: Don't fail silently.
+			// Log this and tell users to try debug mode.
+			if !f.debug {
+				break loop
+			}
+
+			panic(fmt.Sprintf("Ran out of labels rendering:\n%s\nHave: %#v\nRemaining: %q", buff.String(), lb.labels, src[file.Offset(pos):]))
+		}
+		var label Label
+		label, remaining = remaining[0], remaining[1:]
+		if label == nil {
+			// Ignore this token.
+			continue
+		}
+
+		regions = append(regions, Region{
+			Label:  label,
+			Offset: file.Offset(pos),
+			Length: len(lit),
+		})
 	}
 
 	return buff.Bytes(), regions, nil

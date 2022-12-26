@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/doc/comment"
 	"io"
 	"log"
 	"os"
@@ -40,7 +41,7 @@ var _ Assembler = (*godoc.Assembler)(nil)
 
 // Renderer renders a Go package's documentation to HTML.
 type Renderer interface {
-	RenderPackage(io.Writer, *godoc.Package) error
+	RenderPackage(io.Writer, *html.PackageInfo) error
 	RenderSubpackages(io.Writer, []*html.Subpackage) error
 }
 
@@ -58,16 +59,12 @@ type Generator struct {
 	Assembler Assembler
 	Renderer  Renderer
 	OutDir    string
-	LinkTmpl  *templateTree
 	Internal  bool
+	DocLinker godoc.Linker
 }
 
-func (r *Generator) Run(patterns []string) error {
-	pkgRefs, err := r.Finder.FindPackages(patterns...)
-	if err != nil {
-		return fmt.Errorf("find packages: %w", err)
-	}
-
+// Generate runs the generator over the provided packages.
+func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 	return r.renderTrees(buildTrees(pkgRefs))
 }
 
@@ -186,7 +183,15 @@ func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
 	}
 	defer f.Close()
 
-	if err := r.Renderer.RenderPackage(f, dpkg); err != nil {
+	info := html.PackageInfo{
+		Package: dpkg,
+		DocPrinter: &comment.Printer{
+			DocLinkURL: func(link *comment.DocLink) string {
+				return r.DocLinker.DocLinkURL(dpkg.ImportPath, link)
+			},
+		},
+	}
+	if err := r.Renderer.RenderPackage(f, &info); err != nil {
 		return nil, fmt.Errorf("render: %w", err)
 	}
 

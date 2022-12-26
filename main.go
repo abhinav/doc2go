@@ -4,17 +4,15 @@ package main
 import (
 	"errors"
 	"flag"
-	"go/doc/comment"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
-	"text/template"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
-	"go.abhg.dev/doc2go/internal/pathtree"
 )
 
 func main() {
@@ -65,67 +63,38 @@ func (cmd *mainCmd) run(opts *params) error {
 		finder.DebugLog = cmd.log
 	}
 
-	linkTmpl := newTemplateTree(_defaultLinkTemplate)
-	for _, lt := range opts.Links {
-		linkTmpl.Set(lt.Path, lt.Template)
+	pkgRefs, err := finder.FindPackages(opts.Patterns...)
+	if err != nil {
+		return fmt.Errorf("find packages: %w", err)
+	}
+
+	var pkgDocTmpls templateTree
+	for _, lt := range opts.PackageDocTemplates {
+		pkgDocTmpls.Set(lt.Path, lt.Template)
+	}
+
+	knownImports := make(map[string]struct{}, len(pkgRefs))
+	for _, ref := range pkgRefs {
+		knownImports[ref.ImportPath] = struct{}{}
+	}
+
+	linker := docLinker{
+		knownImports: knownImports,
+		templates:    pkgDocTmpls,
 	}
 
 	g := Generator{
-		Log:       cmd.log,
-		Finder:    &finder,
-		Parser:    new(gosrc.Parser),
-		Assembler: new(godoc.Assembler),
-		Renderer: &html.Renderer{
-			DocPrinter: &comment.Printer{},
+		Log:    cmd.log,
+		Finder: &finder,
+		Parser: new(gosrc.Parser),
+		Assembler: &godoc.Assembler{
+			Linker: &linker,
 		},
-		OutDir:   opts.OutputDir,
-		Internal: opts.Internal,
+		Renderer:  new(html.Renderer),
+		OutDir:    opts.OutputDir,
+		Internal:  opts.Internal,
+		DocLinker: &linker,
 	}
 
-	return g.Run(opts.Patterns)
+	return g.Generate(pkgRefs)
 }
-
-type templateTree struct {
-	tree     pathtree.Root[*template.Template]
-	fallback *template.Template
-}
-
-func newTemplateTree(fallback *template.Template) *templateTree {
-	return &templateTree{fallback: fallback}
-}
-
-func (t *templateTree) Set(p string, v *template.Template) {
-	t.tree.Set(p, v)
-}
-
-func (t *templateTree) Get(p string) *template.Template {
-	v, ok := t.tree.Lookup(p)
-	if !ok {
-		v = t.fallback
-	}
-	return v
-}
-
-// TODO: our own template data
-var _defaultLinkTemplate = template.Must(template.New("default").Parse(
-	`
-{{- with .ImportPath -}}
-	https://pkg.go.dev/{{ . }}
-{{- end -}}
-{{- if or .Recv .Name -}}
-	#
-	{{- if .Recv -}}
-		{{ .Recv }}{{ with .Name }}.{{ . }}{{ end }}
-	{{- else -}}
-		{{ .Name }}
-	{{- end -}}
-{{- end -}}
-`))
-
-// TODO: Use a local doc linker for things within scope of the render.
-// So this and comment.Printer have to be constructed per-package.
-// func docLinker(t *templateTree) func(*comment.DocLink) string {
-// 	return func(dl *comment.DocLink) string {
-
-// 	}
-// }

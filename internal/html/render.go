@@ -25,27 +25,43 @@ var (
 				// and then Clone and replace at render time.
 				// This way, template validity is still
 				// verified at init.
-				"doc":  (*Renderer).doc,
-				"code": (*Renderer).code,
+				"doc":  (*packageRenderer).doc,
+				"code": (*packageRenderer).code,
 			}).
 			ParseFS(_tmplFS, "data/*"),
 	)
 )
 
 // Renderer renders components into HTML.
-type Renderer struct {
-	// DocPrinter converts Go comment.Doc objects into HTML.
-	DocPrinter *comment.Printer
-	// TODO: DocPrinter should probably be an interface.
+type Renderer struct{}
+
+// DocPrinter formats godoc comments as HTML.
+type DocPrinter interface {
+	HTML(*comment.Doc) []byte
+}
+
+var _ DocPrinter = (*comment.Printer)(nil)
+
+// PackageInfo specifies the package that should be rendered.
+type PackageInfo struct {
+	// Parsed package documentation information.
+	Package *godoc.Package
+
+	// DocPrinter specifies how to render godoc comments.
+	DocPrinter DocPrinter
 }
 
 // RenderPackage renders the documentation for a single Go package.
 // It does not include subpackage information.
-func (r *Renderer) RenderPackage(w io.Writer, pkg *godoc.Package) error {
+func (*Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
+	pkgRender := packageRenderer{
+		DocPrinter: info.DocPrinter,
+	}
+
 	return template.Must(_tmpl.Clone()).Funcs(template.FuncMap{
-		"doc":  r.doc,
-		"code": r.code,
-	}).ExecuteTemplate(w, "package.html", pkg)
+		"doc":  pkgRender.doc,
+		"code": pkgRender.code,
+	}).ExecuteTemplate(w, "package.html", info.Package)
 }
 
 // Subpackage is a descendant of a Go package.
@@ -73,11 +89,16 @@ func (*Renderer) RenderSubpackages(w io.Writer, pkgs []*Subpackage) error {
 	}{Subpackages: pkgs})
 }
 
-func (r *Renderer) doc(doc *comment.Doc) template.HTML {
+type packageRenderer struct {
+	// DocPrinter converts Go comment.Doc objects into HTML.
+	DocPrinter DocPrinter
+}
+
+func (r *packageRenderer) doc(doc *comment.Doc) template.HTML {
 	return template.HTML(r.DocPrinter.HTML(doc))
 }
 
-func (*Renderer) code(blk *code.Block) template.HTML {
+func (*packageRenderer) code(blk *code.Block) template.HTML {
 	var buf bytes.Buffer
 	for _, b := range blk.Nodes {
 		switch b := b.(type) {

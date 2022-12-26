@@ -19,9 +19,10 @@ type params struct {
 	Tags      string
 	Debug     bool
 	OutputDir string
-	Links     []pathTemplate
 	Patterns  []string
 	Internal  bool
+
+	PackageDocTemplates []pathTemplate
 }
 
 // cliParser parses the command line arguments for doc2go.
@@ -47,7 +48,7 @@ func (cmd *cliParser) parseParams(args []string) (*params, error) {
 
 	var p params
 	flag.StringVar(&p.OutputDir, "out", "_site", "Write files to `dir`.")
-	flag.Var(flagvalue.ListOf(&p.Links), "link",
+	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc",
 		"Given `path=template`, use 'template' to link to documentation\n"+
 			"for import paths under 'path'.\n"+
 			"This flag may be provided multiple times.")

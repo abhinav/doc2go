@@ -15,10 +15,15 @@ import (
 	"go.abhg.dev/doc2go/internal/slices"
 )
 
+// Linker generates links to the documentation for a specific package or
+// entity.
+type Linker interface {
+	DocLinkURL(fromPkg string, link *comment.DocLink) string
+}
+
 // Assembler assembles a [Package] from a [go/doc.Package].
 type Assembler struct {
-	// TODO:
-	// link resolvers go here
+	Linker Linker
 
 	// Reference to doc.NewFromFiles.
 	//
@@ -39,16 +44,20 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 	}
 
 	return (&assembly{
-		fmt:    gosrc.NewDeclFormatter(bpkg),
-		fset:   bpkg.Fset,
-		cparse: dpkg.Parser(),
+		fmt:        gosrc.NewDeclFormatter(bpkg),
+		fset:       bpkg.Fset,
+		cparse:     dpkg.Parser(),
+		linker:     a.Linker,
+		importPath: bpkg.ImportPath,
 	}).pkg(dpkg), nil
 }
 
 type assembly struct {
-	fmt    *gosrc.DeclFormatter
-	fset   *token.FileSet
-	cparse *comment.Parser
+	fmt        *gosrc.DeclFormatter
+	fset       *token.FileSet
+	cparse     *comment.Parser
+	linker     Linker
+	importPath string
 }
 
 func (as *assembly) doc(doc string) *comment.Doc {
@@ -180,19 +189,19 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 			})
 
 		case *gosrc.EntityRefLabel:
-			dest := "#" + l.Name
-			if len(l.ImportPath) > 0 {
-				// TODO: actual cross-package linking
-				dest = "https://pkg.go.dev/" + l.ImportPath + dest
-			}
-
+			dest := as.linker.DocLinkURL(as.importPath, &comment.DocLink{
+				ImportPath: l.ImportPath,
+				Name:       l.Name,
+			})
 			nodes = append(nodes, &code.LinkNode{
 				Text: body,
 				Dest: dest,
 			})
 
 		case *gosrc.PackageRefLabel:
-			dest := "https://pkg.go.dev/" + l.ImportPath
+			dest := as.linker.DocLinkURL(as.importPath, &comment.DocLink{
+				ImportPath: l.ImportPath,
+			})
 			nodes = append(nodes, &code.LinkNode{
 				Text: body,
 				Dest: dest,
