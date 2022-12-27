@@ -67,6 +67,7 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 func (cmd *mainCmd) run(opts *params) error {
 	finder := gosrc.Finder{
 		Tags: strings.Split(opts.Tags, ","),
+		Log:  cmd.log,
 	}
 	if cmd.debug {
 		finder.DebugLog = cmd.debugLog
