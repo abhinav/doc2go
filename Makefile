@@ -13,7 +13,9 @@ GO_FILES = $(shell find . \
 all: build lint test
 
 .PHONY: build
-build:
+build: $(DOC2GO)
+
+$(DOC2GO): FORCE
 	go install go.abhg.dev/doc2go
 
 .PHONY: lint
@@ -49,3 +51,7 @@ $(STATICCHECK): tools/go.mod
 
 $(REVIVE): tools/go.mod
 	cd tools && go install github.com/mgechev/revive
+
+# Targets that depend on this are always rebuilt.
+.PHONY: FORCE
+FORCE:
