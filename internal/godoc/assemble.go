@@ -10,7 +10,6 @@ import (
 	"go/doc/comment"
 	"go/token"
 
-	"go.abhg.dev/doc2go/internal/code"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/slices"
 )
@@ -96,7 +95,7 @@ func (as *assembly) pkg(dpkg *doc.Package) *Package {
 type Value struct {
 	Names []string
 	Doc   *comment.Doc
-	Decl  *code.Block
+	Decl  *Code
 }
 
 func (as *assembly) val(dval *doc.Value) *Value {
@@ -111,7 +110,7 @@ func (as *assembly) val(dval *doc.Value) *Value {
 type Type struct {
 	Name string
 	Doc  *comment.Doc
-	Decl *code.Block
+	Decl *Code
 
 	// Constants, variables, functions, and methods
 	// associated with this type.
@@ -135,7 +134,7 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 type Function struct {
 	Name      string
 	Doc       *comment.Doc
-	Decl      *code.Block
+	Decl      *Code
 	ShortDecl string
 	Recv      string // only set for methods
 }
@@ -150,28 +149,28 @@ func (as *assembly) fun(dfun *doc.Func) *Function {
 	}
 }
 
-func (as *assembly) decl(decl ast.Decl) *code.Block {
+func (as *assembly) decl(decl ast.Decl) *Code {
 	// TODO: this can probably be extracted
 
 	src, regions, err := as.fmt.FormatDecl(decl)
 	if err != nil {
-		msg := fmt.Sprintf("Could not format declaration:\n%v", err)
-		return &code.Block{
-			Nodes: []code.Node{
-				&code.TextNode{
-					Text: []byte(msg),
+		return &Code{
+			Spans: []Span{
+				&ErrorSpan{
+					Err: err,
+					Msg: "Could not format declaration",
 				},
 			},
 		}
 	}
 
 	var (
-		nodes      []code.Node
+		spans      []Span
 		lastOffset int
 	)
 	for _, r := range regions {
 		if t := src[lastOffset:r.Offset]; len(t) > 0 {
-			nodes = append(nodes, &code.TextNode{Text: t})
+			spans = append(spans, &TextSpan{Text: t})
 		}
 
 		lastOffset = r.Offset + r.Length
@@ -183,7 +182,7 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 				id = l.Parent + "." + id
 			}
 
-			nodes = append(nodes, &code.AnchorNode{
+			spans = append(spans, &AnchorSpan{
 				Text: body,
 				ID:   id,
 			})
@@ -193,7 +192,7 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 				ImportPath: l.ImportPath,
 				Name:       l.Name,
 			})
-			nodes = append(nodes, &code.LinkNode{
+			spans = append(spans, &LinkSpan{
 				Text: body,
 				Dest: dest,
 			})
@@ -202,7 +201,7 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 			dest := as.linker.DocLinkURL(as.importPath, &comment.DocLink{
 				ImportPath: l.ImportPath,
 			})
-			nodes = append(nodes, &code.LinkNode{
+			spans = append(spans, &LinkSpan{
 				Text: body,
 				Dest: dest,
 			})
@@ -212,10 +211,10 @@ func (as *assembly) decl(decl ast.Decl) *code.Block {
 		}
 	}
 	if t := src[lastOffset:]; len(t) > 0 {
-		nodes = append(nodes, &code.TextNode{Text: t})
+		spans = append(spans, &TextSpan{Text: t})
 	}
 
-	return &code.Block{Nodes: nodes}
+	return &Code{Spans: spans}
 }
 
 func (as *assembly) shortDecl(decl ast.Decl) string {

@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"io"
 
-	"go.abhg.dev/doc2go/internal/code"
 	"go.abhg.dev/doc2go/internal/godoc"
 )
 
@@ -98,20 +97,27 @@ func (r *packageRenderer) doc(doc *comment.Doc) template.HTML {
 	return template.HTML(r.DocPrinter.HTML(doc))
 }
 
-func (*packageRenderer) code(blk *code.Block) template.HTML {
+func (*packageRenderer) code(code *godoc.Code) template.HTML {
 	var buf bytes.Buffer
-	for _, b := range blk.Nodes {
+	for _, b := range code.Spans {
 		switch b := b.(type) {
-		case *code.TextNode:
+		case *godoc.TextSpan:
 			template.HTMLEscape(&buf, b.Text)
-		case *code.AnchorNode:
+		case *godoc.AnchorSpan:
 			fmt.Fprintf(&buf, "<a id=%q>", b.ID)
 			template.HTMLEscape(&buf, b.Text)
 			buf.WriteString("</a>")
-		case *code.LinkNode:
+		case *godoc.LinkSpan:
 			fmt.Fprintf(&buf, "<a href=%q>", b.Dest)
 			template.HTMLEscape(&buf, b.Text)
 			buf.WriteString("</a>")
+		case *godoc.ErrorSpan:
+			buf.WriteString("<strong>")
+			template.HTMLEscape(&buf, []byte(b.Msg))
+			buf.WriteString("</strong>")
+			buf.WriteString("<pre><code>")
+			template.HTMLEscape(&buf, []byte(b.Err.Error()))
+			buf.WriteString("</code></pre>")
 		default:
 			panic(fmt.Sprintf("unrecognized node type %T", b))
 		}
