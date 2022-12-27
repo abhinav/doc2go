@@ -72,19 +72,24 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 			return err
 		}
 	}
-	return r.renderTrees(buildTrees(pkgRefs))
+
+	_, err := r.renderTrees(buildTrees(pkgRefs))
+	return err
 }
 
-func (r *Generator) renderTrees(trees []packageTree) error {
+func (r *Generator) renderTrees(trees []packageTree) ([]*renderedPackage, error) {
+	var pkgs []*renderedPackage
 	for _, t := range trees {
-		if _, err := r.renderPackageTree(t); err != nil {
-			return err
+		rpkgs, err := r.renderTree(t)
+		if err != nil {
+			return nil, err
 		}
+		pkgs = append(pkgs, rpkgs...)
 	}
-	return nil
+	return pkgs, nil
 }
 
-func (r *Generator) renderPackageTree(t packageTree) ([]*renderedPackage, error) {
+func (r *Generator) renderTree(t packageTree) ([]*renderedPackage, error) {
 	if t.Value == nil {
 		return r.renderPackageIndex(t)
 	}
@@ -96,14 +101,9 @@ func (r *Generator) renderPackageTree(t packageTree) ([]*renderedPackage, error)
 }
 
 func (r *Generator) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
-	// TODO: dedupe
-	var subpkgs []*renderedPackage
-	for _, child := range t.Children {
-		rpkgs, err := r.renderPackageTree(child)
-		if err != nil {
-			return nil, err
-		}
-		subpkgs = append(subpkgs, rpkgs...)
+	subpkgs, err := r.renderTrees(t.Children)
+	if err != nil {
+		return nil, err
 	}
 
 	r.Log.Printf("Rendering index %v", t.Path)
@@ -160,13 +160,9 @@ type renderedPackage struct {
 }
 
 func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
-	var subpkgs []*renderedPackage
-	for _, child := range t.Children {
-		rpkgs, err := r.renderPackageTree(child)
-		if err != nil {
-			return nil, err
-		}
-		subpkgs = append(subpkgs, rpkgs...)
+	subpkgs, err := r.renderTrees(t.Children)
+	if err != nil {
+		return nil, err
 	}
 
 	ref := *t.Value
