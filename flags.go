@@ -5,19 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"text/template"
 
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
 
-const _usage = `usage: doc2go [options] pattern ...`
+const _shortUsage = `USAGE: doc2go [OPTIONS] PATTERN ...`
 
 // params holds all arguments for doc2go.
 type params struct {
 	Tags      string
-	Debug     bool
+	Debug     flagvalue.FileSwitch
 	OutputDir string
 	Patterns  []string
 	Internal  bool
@@ -28,47 +27,65 @@ type params struct {
 // cliParser parses the command line arguments for doc2go.
 type cliParser struct {
 	Stderr io.Writer
-	Log    *log.Logger
 }
 
 func (cmd *cliParser) printShortUsage() {
-	cmd.Log.Println(_usage)
+	fmt.Fprintln(cmd.Stderr, _shortUsage)
 }
 
 var errInvalidArguments = errors.New("invalid arguments")
 
-func (cmd *cliParser) parseParams(args []string) (*params, error) {
+const _about = `
+Generates API documentation for packages matching PATTERNs.
+Specify ./... to match the package in the current directory
+and all its descendants.
+
+	doc2go ./...
+`
+
+func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		cmd.printShortUsage()
-		cmd.Log.Println("The following options are available:")
+		fmt.Fprintln(cmd.Stderr, _shortUsage)
+		fmt.Fprint(cmd.Stderr, _about+"\n")
+		fmt.Fprint(cmd.Stderr, "OPTIONS\n\n")
 		flag.PrintDefaults()
 	}
 
 	var p params
-	flag.StringVar(&p.OutputDir, "out", "_site", "Write files to `dir`.")
-	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc",
-		"Given `path=template`, use 'template' to link to documentation\n"+
-			"for import paths under 'path'.\n"+
-			"This flag may be provided multiple times.")
-	flag.BoolVar(&p.Internal, "internal", false,
-		"Include internal packages in package listings.")
-	flag.BoolVar(&p.Debug, "debug", false, "Print debugging output")
-	flag.StringVar(&p.Tags, "tags", "", "List of comma-separated build `tags`")
+	flag.StringVar(&p.OutputDir, "out", "_site", "write files to `DIR`.")
+	flag.BoolVar(&p.Internal, "internal", false, "include internal packages in package listings.\n"+
+		"We always generate documentation for internal packages,\n"+
+		"but by default, we do not include them in package lists.\n"+
+		"Use this flag to have them listed.")
+	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc", "use TEMPLATE to generate documentation links for PATH and its children.\n"+
+		"  -pkg-doc example.com=https://godoc.example.com/{{.ImportPath}}\n"+
+		"The argument must be in the form `PATH=TEMPLATE`.\n"+
+		"The template is a text/template that gets the following variables:\n"+
+		"  ImportPath: import path of the package\n"+
+		"Pass this in multiple times to specify different patterns\n"+
+		"for different import path scopes.")
+	flag.Var(&p.Debug, "debug", "print debugging output to stderr or FILE,\n"+
+		"if specified in the form -debug=FILE.")
+	flag.StringVar(&p.Tags, "tags", "", "list of comma-separated build tags.")
+	return &p, flag
+}
 
+func (cmd *cliParser) Parse(args []string) (*params, error) {
+	p, flag := cmd.newFlagSet()
 	if err := flag.Parse(args); err != nil {
 		return nil, err
 	}
 
 	p.Patterns = flag.Args()
 	if len(p.Patterns) == 0 {
-		cmd.Log.Println("Please provide at least one pattern.")
+		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
 		cmd.printShortUsage()
 		return nil, errInvalidArguments
 	}
 
-	return &p, nil
+	return p, nil
 }
 
 type pathTemplate struct {

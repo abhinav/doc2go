@@ -1,4 +1,4 @@
-// Package flagvalue provides convenient flag.Value implementations.
+// Package flagvalue provides flag.Value implementations.
 package flagvalue
 
 import "flag"

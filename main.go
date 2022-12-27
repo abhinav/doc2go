@@ -28,25 +28,34 @@ type mainCmd struct {
 	Stdout io.Writer // == os.Stdout
 	Stderr io.Writer // == os.Stderr
 
-	log *log.Logger
+	log      *log.Logger
+	debugLog *log.Logger
+	debug    bool
 }
 
 func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.log = log.New(cmd.Stderr, "", 0)
 
-	opts, err := (&cliParser{
-		Stderr: cmd.Stderr,
-		Log:    cmd.log,
-	}).parseParams(args)
+	opts, err := (&cliParser{Stderr: cmd.Stderr}).Parse(args)
 	if err != nil {
 		// '$cmd -h' should exit with zero.
 		if errors.Is(err, flag.ErrHelp) {
 			return 0
 		}
 		// No need to print anything.
-		// parseParams prints messages.
+		// cliParser.Parse prints messages.
 		return 1
 	}
+
+	debugw, closedebug, err := opts.Debug.Create(cmd.Stderr)
+	if err != nil {
+		cmd.log.Printf("Unable to create debug log, using stderr: %v", err)
+		debugw = cmd.Stderr
+	} else {
+		defer closedebug()
+	}
+	cmd.debug = opts.Debug.Bool()
+	cmd.debugLog = log.New(debugw, "", 0)
 
 	if err := cmd.run(opts); err != nil {
 		cmd.log.Printf("doc2go: %v", err)
@@ -59,8 +68,8 @@ func (cmd *mainCmd) run(opts *params) error {
 	finder := gosrc.Finder{
 		Tags: strings.Split(opts.Tags, ","),
 	}
-	if opts.Debug {
-		finder.DebugLog = cmd.log
+	if cmd.debug {
+		finder.DebugLog = cmd.debugLog
 	}
 
 	pkgRefs, err := finder.FindPackages(opts.Patterns...)
