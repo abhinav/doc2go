@@ -82,6 +82,10 @@
     {{ end -}}
   {{ end -}}
 {{ end -}}
+
+{{ if .Subpackages -}}
+  {{ template "subpackages.html" . -}}
+{{ end -}}
 {{ end -}}
 
 {{- define "constOrVar" -}}

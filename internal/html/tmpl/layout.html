@@ -8,6 +8,14 @@
     {{ template "Head" $ -}}
   </head>
   <body>
+    {{ range $idx, $crumb := .Breadcrumbs -}}
+      {{ if gt $idx 0 }}/{{ end -}}
+      {{ with (relativePath .Path) -}}
+        <a href="{{ . }}">{{ $crumb.Text }}</a>
+      {{- else -}}
+        {{ $crumb.Text -}}
+      {{ end -}}
+    {{- end }}
     <main>{{ template "Body" $ -}}</main>
   </body>
 </html>

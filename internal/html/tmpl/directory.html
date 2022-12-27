@@ -1,0 +1,7 @@
+{{ define "Head" -}}
+  <title>{{ .Path }}</title>
+{{ end -}}
+
+{{ define "Body" -}}
+  {{ template "subpackages.html" . -}}
+{{ end -}}

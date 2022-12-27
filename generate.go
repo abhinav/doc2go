@@ -73,14 +73,14 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		}
 	}
 
-	_, err := r.renderTrees(buildTrees(pkgRefs))
+	_, err := r.renderTrees(nil, buildTrees(pkgRefs))
 	return err
 }
 
-func (r *Generator) renderTrees(trees []packageTree) ([]*renderedPackage, error) {
+func (r *Generator) renderTrees(crumbs []html.Breadcrumb, trees []packageTree) ([]*renderedPackage, error) {
 	var pkgs []*renderedPackage
 	for _, t := range trees {
-		rpkgs, err := r.renderTree(t)
+		rpkgs, err := r.renderTree(crumbs, t)
 		if err != nil {
 			return nil, err
 		}
@@ -89,19 +89,27 @@ func (r *Generator) renderTrees(trees []packageTree) ([]*renderedPackage, error)
 	return pkgs, nil
 }
 
-func (r *Generator) renderTree(t packageTree) ([]*renderedPackage, error) {
-	if t.Value == nil {
-		return r.renderPackageIndex(t)
+func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*renderedPackage, error) {
+	var crumbText string
+	if n := len(crumbs); n > 0 {
+		crumbText = relative.Path(crumbs[n-1].Path, t.Path)
+	} else {
+		crumbText = t.Path
 	}
-	rpkg, err := r.renderPackage(t)
+	crumbs = append(crumbs, html.Breadcrumb{Text: crumbText, Path: t.Path})
+
+	if t.Value == nil {
+		return r.renderPackageIndex(crumbs, t)
+	}
+	rpkg, err := r.renderPackage(crumbs, t)
 	if err != nil {
 		return nil, err
 	}
 	return []*renderedPackage{rpkg}, nil
 }
 
-func (r *Generator) renderPackageIndex(t packageTree) ([]*renderedPackage, error) {
-	subpkgs, err := r.renderTrees(t.Children)
+func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) ([]*renderedPackage, error) {
+	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
 		return nil, err
 	}
@@ -119,39 +127,16 @@ func (r *Generator) renderPackageIndex(t packageTree) ([]*renderedPackage, error
 	}
 	defer f.Close()
 
-	if err := r.writePackageIndex(f, t.Path, subpkgs); err != nil {
+	idx := html.PackageIndex{
+		Path:        t.Path,
+		Subpackages: r.subpackages(t.Path, subpkgs),
+		Breadcrumbs: crumbs,
+	}
+	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
 		return nil, err
 	}
 
 	return subpkgs, nil
-}
-
-func (r *Generator) writePackageIndex(w io.Writer, from string, rpkgs []*renderedPackage) error {
-	var subpkgs []*html.Subpackage
-	for _, rpkg := range rpkgs {
-		// TODO: track this on packageTree?
-		relPath := relative.Filepath(from, rpkg.ImportPath)
-
-		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
-			if !r.Internal {
-				continue
-			}
-		}
-
-		subpkgs = append(subpkgs, &html.Subpackage{
-			RelativePath: relPath,
-			Synopsis:     rpkg.Synopsis,
-		})
-	}
-
-	if len(subpkgs) == 0 {
-		return nil
-	}
-
-	return r.Renderer.RenderPackageIndex(w, &html.PackageIndex{
-		Path:     from,
-		Packages: subpkgs,
-	})
 }
 
 type renderedPackage struct {
@@ -159,8 +144,8 @@ type renderedPackage struct {
 	Synopsis   string
 }
 
-func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
-	subpkgs, err := r.renderTrees(t.Children)
+func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*renderedPackage, error) {
+	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +175,9 @@ func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
 	defer f.Close()
 
 	info := html.PackageInfo{
-		Package: dpkg,
+		Package:     dpkg,
+		Breadcrumbs: crumbs,
+		Subpackages: r.subpackages(dpkg.ImportPath, subpkgs),
 		DocPrinter: &comment.Printer{
 			DocLinkURL: func(link *comment.DocLink) string {
 				return r.DocLinker.DocLinkURL(dpkg.ImportPath, link)
@@ -201,14 +188,30 @@ func (r *Generator) renderPackage(t packageTree) (*renderedPackage, error) {
 		return nil, fmt.Errorf("render: %w", err)
 	}
 
-	if err := r.writePackageIndex(f, t.Path, subpkgs); err != nil {
-		return nil, err
-	}
-
 	return &renderedPackage{
 		ImportPath: ref.ImportPath,
 		Synopsis:   dpkg.Synopsis,
 	}, nil
+}
+
+func (r *Generator) subpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
+	subpkgs := make([]html.Subpackage, 0, len(rpkgs))
+	for _, rpkg := range rpkgs {
+		// TODO: track this on packageTree?
+		relPath := relative.Filepath(from, rpkg.ImportPath)
+
+		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
+			if !r.Internal {
+				continue
+			}
+		}
+
+		subpkgs = append(subpkgs, html.Subpackage{
+			RelativePath: relPath,
+			Synopsis:     rpkg.Synopsis,
+		})
+	}
+	return subpkgs
 }
 
 type packageTree = pathtree.Snapshot[*gosrc.PackageRef]

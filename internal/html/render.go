@@ -32,13 +32,14 @@ var (
 	_packageTmpl = template.Must(
 		template.New("package.html").
 			Funcs((*render)(nil).FuncMap()).
-			ParseFS(_tmplFS, "tmpl/package.html", "tmpl/layout.html"),
+			ParseFS(_tmplFS,
+				"tmpl/package.html", "tmpl/layout.html", "tmpl/subpackages.html"),
 	)
 
 	_packageIndexTmpl = template.Must(
-		template.New("subpackages.html").
+		template.New("directory.html").
 			Funcs((*render)(nil).FuncMap()).
-			ParseFS(_tmplFS, "tmpl/subpackages.html", "tmpl/layout.html"),
+			ParseFS(_tmplFS, "tmpl/directory.html", "tmpl/layout.html", "tmpl/subpackages.html"),
 	)
 )
 
@@ -86,10 +87,23 @@ func (*Renderer) WriteStatic(dir string) error {
 	})
 }
 
+// Breadcrumb holds information about parents of a page
+// so that we can leave a trail up for navigation.
+type Breadcrumb struct {
+	// Text for the crumb.
+	Text string
+
+	// Path to the crumb from the root of the output.
+	Path string
+}
+
 // PackageInfo specifies the package that should be rendered.
 type PackageInfo struct {
 	// Parsed package documentation information.
-	Package *godoc.Package
+	*godoc.Package
+
+	Subpackages []Subpackage
+	Breadcrumbs []Breadcrumb
 
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter
@@ -99,19 +113,21 @@ type PackageInfo struct {
 // It does not include subpackage information.
 func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 	render := render{
-		Path:       info.Package.ImportPath,
+		Path:       info.ImportPath,
 		DocPrinter: info.DocPrinter,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
-		ExecuteTemplate(w, r.templateName(), info.Package)
+		ExecuteTemplate(w, r.templateName(), info)
 }
 
 // PackageIndex holds information about a package listing.
 type PackageIndex struct {
 	// Path to this package index.
-	Path     string
-	Packages []*Subpackage
+	Path string
+
+	Subpackages []Subpackage
+	Breadcrumbs []Breadcrumb
 }
 
 // Subpackage is a descendant of a Go package.
@@ -151,14 +167,19 @@ type render struct {
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
-		"doc":    r.doc,
-		"code":   r.code,
-		"static": r.static,
+		"doc":          r.doc,
+		"code":         r.code,
+		"static":       r.static,
+		"relativePath": r.relativePath,
 	}
 }
 
+func (r *render) relativePath(p string) string {
+	return relative.Path(r.Path, p)
+}
+
 func (r *render) static(p string) string {
-	return relative.Path(r.Path, path.Join("_", p))
+	return r.relativePath(path.Join("_", p))
 }
 
 func (r *render) doc(doc *comment.Doc) template.HTML {
