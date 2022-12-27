@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	//go:embed data/*.html
+	//go:embed tmpl/*.html
 	_tmplFS embed.FS
 
 	_tmpl = template.Must(
@@ -27,7 +27,7 @@ var (
 				"doc":  (*packageRenderer).doc,
 				"code": (*packageRenderer).code,
 			}).
-			ParseFS(_tmplFS, "data/*"),
+			ParseFS(_tmplFS, "tmpl/*"),
 	)
 )
 
