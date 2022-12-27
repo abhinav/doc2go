@@ -25,7 +25,7 @@ var (
 				// This way, template validity is still
 				// verified at init.
 				"doc":  (*packageRenderer).doc,
-				"code": (*packageRenderer).code,
+				"code": renderCode,
 			}).
 			ParseFS(_tmplFS, "tmpl/*"),
 	)
@@ -58,8 +58,7 @@ func (*Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 	}
 
 	return template.Must(_tmpl.Clone()).Funcs(template.FuncMap{
-		"doc":  pkgRender.doc,
-		"code": pkgRender.code,
+		"doc": pkgRender.doc,
 	}).ExecuteTemplate(w, "package.html", info.Package)
 }
 
@@ -97,7 +96,7 @@ func (r *packageRenderer) doc(doc *comment.Doc) template.HTML {
 	return template.HTML(r.DocPrinter.HTML(doc))
 }
 
-func (*packageRenderer) code(code *godoc.Code) template.HTML {
+func renderCode(code *godoc.Code) template.HTML {
 	var buf bytes.Buffer
 	for _, b := range code.Spans {
 		switch b := b.(type) {
