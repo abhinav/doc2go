@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.abhg.dev/doc2go/internal/slices"
 	"go.uber.org/multierr"
 	"golang.org/x/tools/go/packages"
 )
@@ -92,12 +93,17 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			continue
 		}
 
-		if len(pkg.CompiledGoFiles) == 0 {
+		compiledGoFiles := slices.RemoveFunc(pkg.CompiledGoFiles,
+			func(path string) bool {
+				return !strings.HasSuffix(path, ".go")
+			})
+
+		if len(compiledGoFiles) == 0 {
 			f.Log.Printf("[%v] Skipping: no files found.", pkg.PkgPath)
 			continue
 		}
 
-		pkgDir := filepath.Dir(pkg.CompiledGoFiles[0])
+		pkgDir := filepath.Dir(compiledGoFiles[0])
 		var testFiles []string
 		if ents, err := os.ReadDir(pkgDir); err != nil {
 			f.Log.Printf("[%v] Skipping tests: unable to read directory: %v", pkg.PkgPath, err)
@@ -112,7 +118,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		infos = append(infos, &PackageRef{
 			Name:       pkg.Name,
 			ImportPath: pkg.PkgPath,
-			Files:      pkg.CompiledGoFiles,
+			Files:      compiledGoFiles,
 			TestFiles:  testFiles,
 		})
 	}
