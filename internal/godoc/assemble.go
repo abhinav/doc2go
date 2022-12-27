@@ -126,7 +126,11 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 		Constants: slices.Transform(dtyp.Consts, as.val),
 		Variables: slices.Transform(dtyp.Vars, as.val),
 		Functions: slices.Transform(dtyp.Funcs, as.fun),
-		Methods:   slices.Transform(dtyp.Methods, as.fun),
+		Methods: slices.Transform(dtyp.Methods, func(f *doc.Func) *Function {
+			fn := as.fun(f)
+			fn.RecvType = dtyp.Name
+			return fn
+		}),
 	}
 }
 
@@ -137,6 +141,7 @@ type Function struct {
 	Decl      *Code
 	ShortDecl string
 	Recv      string // only set for methods
+	RecvType  string // name of the receiver type without '*'
 }
 
 func (as *assembly) fun(dfun *doc.Func) *Function {

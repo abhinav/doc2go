@@ -3,28 +3,34 @@
 <p><code>import "{{ .ImportPath }}"</code></p>
 
 {{ .Doc | doc }}
+{{- /* TODO: package examples */ -}}
 
+<h3 id="pkg-index">Index</h3>
 {{ template "index.html" . }}
 
-{{/* TODO: examples, files */}}
+{{- /* TODO: all examples */ -}}
 
-{{ with .Constants }}
+{{ with .Constants -}}
   <h3 id="pkg-constants">Constants</h3>
-  {{ range . }}{{ template "value.html" . }}{{ end }}
-{{ end }}
+  {{ range . }}{{ template "value.html" . }}{{ end -}}
+{{ end -}}
 
-{{ with .Variables }}
+{{ with .Variables -}}
   <h3 id="pkg-variables">Variables</h3>
-  {{ range . }}{{ template "value.html" . }}{{ end }}
-{{ end }}
+  {{ range . }}{{ template "value.html" . }}{{ end -}}
+{{ end -}}
 
-{{ with .Functions }}
-  <h3 id="pkg-variables">Functions</h3>
-  {{ range . }}{{ template "function.html" . }}{{ end }}
-{{ end }}
+{{ with .Functions -}}
+  <h3 id="pkg-functions">Functions</h3>
+  {{ range . -}}
+    <h3 id="{{ .Name }}">func {{ .Name }}</h3>
+    <pre><code>{{ .Decl | code }}</code></pre>
+    {{ .Doc | doc }}
+    {{- /* TODO: function examples */ -}}
+  {{ end -}}
+{{ end -}}
 
-{{ with .Types }}
+{{ with .Types -}}
   <h3 id="pkg-types">Types</h3>
-
-  {{ range . }}{{ template "type.html" . }}{{ end }}
-{{ end }}
+  {{ range . }}{{ template "type.html" . }}{{ end -}}
+{{ end -}}
