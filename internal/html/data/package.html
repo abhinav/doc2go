@@ -1,7 +1,5 @@
 <h2 id="pkg-overview">package {{ .Name }}</h2>
-
 <p><code>import "{{ .ImportPath }}"</code></p>
-
 {{ .Doc | doc }}
 {{- /* TODO: package examples */ -}}
 
@@ -12,12 +10,12 @@
 
 {{ with .Constants -}}
   <h3 id="pkg-constants">Constants</h3>
-  {{ range . }}{{ template "value.html" . }}{{ end -}}
+  {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Variables -}}
   <h3 id="pkg-variables">Variables</h3>
-  {{ range . }}{{ template "value.html" . }}{{ end -}}
+  {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Functions -}}
@@ -25,12 +23,47 @@
   {{ range . -}}
     <h3 id="{{ .Name }}">func {{ .Name }}</h3>
     <pre><code>{{ .Decl | code }}</code></pre>
-    {{ .Doc | doc }}
+    {{ .Doc | doc -}}
     {{- /* TODO: function examples */ -}}
   {{ end -}}
 {{ end -}}
 
 {{ with .Types -}}
   <h3 id="pkg-types">Types</h3>
-  {{ range . }}{{ template "type.html" . }}{{ end -}}
+  {{ range . -}}
+    <h3 id="{{ .Name }}">type {{ .Name }}</h3>
+    <pre><code>{{ .Decl | code }}</code></pre>
+    {{ .Doc | doc -}}
+    {{- /* TODO: type examples */ -}}
+
+    {{ range .Constants -}}
+      {{ template "constOrVar" . -}}
+    {{ end -}}
+
+    {{ range .Variables -}}
+      {{ template "constOrVar" . -}}
+    {{ end -}}
+
+    {{ range .Functions -}}
+      {{ template "funcOrMethod" . -}}
+    {{ end -}}
+
+    {{ range .Methods -}}
+      {{ template "funcOrMethod" . -}}
+    {{ end -}}
+  {{ end -}}
 {{ end -}}
+
+{{- define "constOrVar" -}}
+  <pre><code>{{ .Decl | code }}</code></pre>
+  {{ .Doc | doc -}}
+{{- end -}}
+
+{{- define "funcOrMethod" -}}
+  <h4 id="{{with .RecvType }}{{ . }}.{{ end }}{{ .Name }}">
+    func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}
+  </h4>
+  <pre><code>{{ .Decl | code }}</code></pre>
+  {{ .Doc | doc -}}
+  {{- /* TODO: function examples */ -}}
+{{- end -}}
