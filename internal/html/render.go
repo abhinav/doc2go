@@ -8,31 +8,51 @@ import (
 	"go/doc/comment"
 	"html/template"
 	"io"
+	"io/fs"
+	"os"
+	"path"
+	"path/filepath"
 
 	"go.abhg.dev/doc2go/internal/godoc"
+	"go.abhg.dev/doc2go/internal/relative"
 )
 
 var (
 	//go:embed tmpl/*.html
 	_tmplFS embed.FS
 
-	_tmpl = template.Must(
-		template.New("").
-			Funcs(template.FuncMap{
-				// Trick borrowed from pkgsite:
-				// Unusable function references at parse time,
-				// and then Clone and replace at render time.
-				// This way, template validity is still
-				// verified at init.
-				"doc":  (*packageRenderer).doc,
-				"code": renderCode,
-			}).
-			ParseFS(_tmplFS, "tmpl/*"),
+	//go:embed static/**
+	_staticFS embed.FS
+
+	// Trick borrowed from pkgsite:
+	// Unusable function references at parse time,
+	// and then Clone and replace at render time.
+	// This way, template validity is still
+	// verified at init.
+	_packageTmpl = template.Must(
+		template.New("package.html").
+			Funcs((*render)(nil).FuncMap()).
+			ParseFS(_tmplFS, "tmpl/package.html", "tmpl/layout.html"),
+	)
+
+	_packageIndexTmpl = template.Must(
+		template.New("subpackages.html").
+			Funcs((*render)(nil).FuncMap()).
+			ParseFS(_tmplFS, "tmpl/subpackages.html", "tmpl/layout.html"),
 	)
 )
 
 // Renderer renders components into HTML.
-type Renderer struct{}
+type Renderer struct {
+	Embedded bool
+}
+
+func (r *Renderer) templateName() string {
+	if r.Embedded {
+		return "Body"
+	}
+	return "Page"
+}
 
 // DocPrinter formats godoc comments as HTML.
 type DocPrinter interface {
@@ -40,6 +60,31 @@ type DocPrinter interface {
 }
 
 var _ DocPrinter = (*comment.Printer)(nil)
+
+// WriteStatic dumps the contents of static/ into the given directory.
+func (*Renderer) WriteStatic(dir string) error {
+	static, err := fs.Sub(_staticFS, "static")
+	if err != nil {
+		return err
+	}
+	return fs.WalkDir(static, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || path == "." {
+			return err
+		}
+
+		outPath := filepath.Join(dir, path)
+		if d.IsDir() {
+			return os.MkdirAll(outPath, 0o1755)
+		}
+
+		bs, err := fs.ReadFile(static, path)
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(outPath, bs, 0o644)
+	})
+}
 
 // PackageInfo specifies the package that should be rendered.
 type PackageInfo struct {
@@ -52,14 +97,21 @@ type PackageInfo struct {
 
 // RenderPackage renders the documentation for a single Go package.
 // It does not include subpackage information.
-func (*Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
-	pkgRender := packageRenderer{
+func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
+	render := render{
+		Path:       info.Package.ImportPath,
 		DocPrinter: info.DocPrinter,
 	}
+	return template.Must(_packageTmpl.Clone()).
+		Funcs(render.FuncMap()).
+		ExecuteTemplate(w, r.templateName(), info.Package)
+}
 
-	return template.Must(_tmpl.Clone()).Funcs(template.FuncMap{
-		"doc": pkgRender.doc,
-	}).ExecuteTemplate(w, "package.html", info.Package)
+// PackageIndex holds information about a package listing.
+type PackageIndex struct {
+	// Path to this package index.
+	Path     string
+	Packages []*Subpackage
 }
 
 // Subpackage is a descendant of a Go package.
@@ -79,24 +131,41 @@ type Subpackage struct {
 	Synopsis string
 }
 
-// RenderSubpackages renders the list of descendants for a package
+// RenderPackageIndex renders the list of descendants for a package
 // as HTML.
-func (*Renderer) RenderSubpackages(w io.Writer, pkgs []*Subpackage) error {
-	return template.Must(_tmpl.Clone()).ExecuteTemplate(w, "subpackages.html", struct {
-		Subpackages []*Subpackage
-	}{Subpackages: pkgs})
+func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
+	render := render{
+		Path: pidx.Path,
+	}
+	return template.Must(_packageIndexTmpl.Clone()).
+		Funcs(render.FuncMap()).
+		ExecuteTemplate(w, r.templateName(), pidx)
 }
 
-type packageRenderer struct {
+type render struct {
+	Path string
+
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
 }
 
-func (r *packageRenderer) doc(doc *comment.Doc) template.HTML {
+func (r *render) FuncMap() template.FuncMap {
+	return template.FuncMap{
+		"doc":    r.doc,
+		"code":   r.code,
+		"static": r.static,
+	}
+}
+
+func (r *render) static(p string) string {
+	return relative.Path(r.Path, path.Join("_", p))
+}
+
+func (r *render) doc(doc *comment.Doc) template.HTML {
 	return template.HTML(r.DocPrinter.HTML(doc))
 }
 
-func renderCode(code *godoc.Code) template.HTML {
+func (*render) code(code *godoc.Code) template.HTML {
 	var buf bytes.Buffer
 	for _, b := range code.Spans {
 		switch b := b.(type) {

@@ -1,3 +1,9 @@
+{{ define "Head" -}}
+<title>{{ .Name }}</title>
+{{- /* TODO: For binaries, use the binary name. */ -}}
+{{ end -}}
+
+{{ define "Body" -}}
 <h2 id="pkg-overview">package {{ .Name }}</h2>
 <p><code>import "{{ .ImportPath }}"</code></p>
 {{ .Doc | doc }}
@@ -75,6 +81,7 @@
       {{ template "funcOrMethod" . -}}
     {{ end -}}
   {{ end -}}
+{{ end -}}
 {{ end -}}
 
 {{- define "constOrVar" -}}

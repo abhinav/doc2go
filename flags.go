@@ -20,6 +20,7 @@ type params struct {
 	OutputDir string
 	Patterns  []string
 	Internal  bool
+	Embedded  bool
 
 	PackageDocTemplates []pathTemplate
 }
@@ -59,6 +60,9 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 		"We always generate documentation for internal packages,\n"+
 		"but by default, we do not include them in package lists.\n"+
 		"Use this flag to have them listed.")
+	flag.BoolVar(&p.Embedded, "embed", false, "generate partial HTML pages fit for embedding.\n"+
+		"Instead of generating a standalone HTML website, generate partial HTML pages\n"+
+		"that can be incorporated into a website using a static site generator.")
 	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc", "use TEMPLATE to generate documentation links for PATH and its children.\n"+
 		"  -pkg-doc example.com=https://godoc.example.com/{{.ImportPath}}\n"+
 		"The argument must be in the form `PATH=TEMPLATE`.\n"+

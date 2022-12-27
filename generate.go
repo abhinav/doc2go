@@ -41,8 +41,9 @@ var _ Assembler = (*godoc.Assembler)(nil)
 
 // Renderer renders a Go package's documentation to HTML.
 type Renderer interface {
+	WriteStatic(string) error
 	RenderPackage(io.Writer, *html.PackageInfo) error
-	RenderSubpackages(io.Writer, []*html.Subpackage) error
+	RenderPackageIndex(io.Writer, *html.PackageIndex) error
 }
 
 var _ Renderer = (*html.Renderer)(nil)
@@ -60,11 +61,17 @@ type Generator struct {
 	Renderer  Renderer
 	OutDir    string
 	Internal  bool
+	Embedded  bool
 	DocLinker godoc.Linker
 }
 
 // Generate runs the generator over the provided packages.
 func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
+	if !r.Embedded {
+		if err := r.Renderer.WriteStatic(filepath.Join(r.OutDir, "_")); err != nil {
+			return err
+		}
+	}
 	return r.renderTrees(buildTrees(pkgRefs))
 }
 
@@ -141,7 +148,10 @@ func (r *Generator) writePackageIndex(w io.Writer, from string, rpkgs []*rendere
 		return nil
 	}
 
-	return r.Renderer.RenderSubpackages(w, subpkgs)
+	return r.Renderer.RenderPackageIndex(w, &html.PackageIndex{
+		Path:     from,
+		Packages: subpkgs,
+	})
 }
 
 type renderedPackage struct {

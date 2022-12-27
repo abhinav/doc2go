@@ -1,8 +1,13 @@
+{{ define "Head" -}}
+<title>{{ .Path }}</title>
+{{ end -}}
+
+{{ define "Body" -}}
 <h2 id="pkg-directories">Directories</h2>
 
 <table>
   <tbody>
-    {{ range .Subpackages -}}
+    {{ range .Packages -}}
       <tr>
         <td><a href="{{ .RelativePath }}">{{ .RelativePath }}</a></td>
         <td>
@@ -12,3 +17,4 @@
     {{ end -}}
   </tbody>
 </table>
+{{ end -}}

@@ -99,9 +99,12 @@ func (cmd *mainCmd) run(opts *params) error {
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
 		},
-		Renderer:  new(html.Renderer),
+		Renderer: &html.Renderer{
+			Embedded: opts.Embedded,
+		},
 		OutDir:    opts.OutputDir,
 		Internal:  opts.Internal,
+		Embedded:  opts.Embedded,
 		DocLinker: &linker,
 	}
 
