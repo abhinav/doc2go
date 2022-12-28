@@ -58,9 +58,8 @@ func (r *Renderer) templateName() string {
 // DocPrinter formats godoc comments as HTML.
 type DocPrinter interface {
 	HTML(*comment.Doc) []byte
+	WithHeadingLevel(int) DocPrinter
 }
-
-var _ DocPrinter = (*comment.Printer)(nil)
 
 // WriteStatic dumps the contents of static/ into the given directory.
 func (*Renderer) WriteStatic(dir string) error {
@@ -182,8 +181,8 @@ func (r *render) static(p string) string {
 	return r.relativePath(path.Join("_", p))
 }
 
-func (r *render) doc(doc *comment.Doc) template.HTML {
-	return template.HTML(r.DocPrinter.HTML(doc))
+func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {
+	return template.HTML(r.DocPrinter.WithHeadingLevel(lvl).HTML(doc))
 }
 
 func (*render) code(code *godoc.Code) template.HTML {

@@ -9,7 +9,7 @@
   {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}
 </h2>
 <pre><code>import "{{ .ImportPath }}"</code></pre>
-{{ .Doc | doc }}
+{{ .Doc | doc 3 }}
 {{- /* TODO: package examples */ -}}
 
 <h3 id="pkg-index">Index {{ template "permalink" "pkg-index" }}</h3>
@@ -55,7 +55,7 @@
   {{ range . -}}
     <h3 id="{{ .Name }}">func {{ .Name }} {{ template "permalink" .Name }}</h3>
     <pre><code>{{ .Decl | code }}</code></pre>
-    {{ .Doc | doc -}}
+    {{ .Doc | doc 4 -}}
     {{- /* TODO: function examples */ -}}
   {{ end -}}
 {{ end -}}
@@ -65,7 +65,7 @@
   {{ range . -}}
   <h3 id="{{ .Name }}">type {{ .Name }} {{ template "permalink" .Name }}</h3>
     <pre><code>{{ .Decl | code }}</code></pre>
-    {{ .Doc | doc -}}
+    {{ .Doc | doc 4 -}}
     {{- /* TODO: type examples */ -}}
 
     {{ range .Constants -}}
@@ -93,7 +93,7 @@
 
 {{- define "constOrVar" -}}
   <pre><code>{{ .Decl | code }}</code></pre>
-  {{ .Doc | doc -}}
+  {{ .Doc | doc 4 -}}
 {{- end -}}
 
 {{- define "funcOrMethod" -}}
@@ -103,7 +103,7 @@
     func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }} {{ template "permalink" $id }}
   </h4>
   <pre><code>{{ .Decl | code }}</code></pre>
-  {{ .Doc | doc -}}
+  {{ .Doc | doc 5 -}}
   {{- /* TODO: function examples */ -}}
 {{- end -}}
 
