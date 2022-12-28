@@ -43,6 +43,22 @@ func TestSetAndGet(t *testing.T) {
 	})
 }
 
+func TestExtraneousSlashes(t *testing.T) {
+	ensure := ensurer[int](t)
+
+	var r Root[int]
+	r.Set("foo", 42)
+	r.Set("foo////bar", 43)
+
+	assert.Equal(t, 42, ensure(r.Lookup("foo")))
+	assert.Equal(t, 42, ensure(r.Lookup("foo/foo")))
+	assert.Equal(t, 42, ensure(r.Lookup("foo/////foo")))
+
+	assert.Equal(t, 43, ensure(r.Lookup("foo/bar")))
+	assert.Equal(t, 43, ensure(r.Lookup("foo///bar/baz")))
+	assert.Equal(t, 43, ensure(r.Lookup("foo/bar///baz")))
+}
+
 func TestDescendantOverride(t *testing.T) {
 	ensure := ensurer[int](t)
 

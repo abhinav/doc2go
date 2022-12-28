@@ -13,10 +13,12 @@ type FileSwitch string
 
 var _ flag.Getter = (*FileSwitch)(nil)
 
-// Get returns the path stored in the writer.
+// Get returns the path stored in the writer
+// or '-' if no value was specified.
 func (fs *FileSwitch) Get() any { return string(*fs) }
 
-// String returns the path stored in the writer.
+// String returns the path stored in the writer
+// or '-' if no value was specified.
 func (fs *FileSwitch) String() string {
 	return string(*fs)
 }
