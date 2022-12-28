@@ -12,7 +12,7 @@
 {{ .Doc | doc 3 }}
 {{- /* TODO: package examples */ -}}
 
-<h3 id="pkg-index">Index {{ template "permalink" "pkg-index" }}</h3>
+<h3 id="pkg-index">Index</h3>
 {{ if or .Constants .Variables .Functions .Types -}}
 <ul>
   {{ if .Constants }}<li><a href="#pkg-constants">Constants</a></li>{{ end -}}
@@ -41,19 +41,19 @@
 {{- /* TODO: all examples */ -}}
 
 {{ with .Constants -}}
-  <h3 id="pkg-constants">Constants {{ template "permalink" "pkg-constants" }}</h3>
+  <h3 id="pkg-constants">Constants</h3>
   {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Variables -}}
-  <h3 id="pkg-variables">Variables {{ template "permalink" "pkg-variables" }}</h3>
+  <h3 id="pkg-variables">Variables</h3>
   {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Functions -}}
-  <h3 id="pkg-functions">Functions {{ template "permalink" "pkg-functions" }}</h3>
+  <h3 id="pkg-functions">Functions</h3>
   {{ range . -}}
-    <h3 id="{{ .Name }}">func {{ .Name }} {{ template "permalink" .Name }}</h3>
+    <h3 id="{{ .Name }}">func {{ .Name }}</h3>
     <pre><code>{{ .Decl | code }}</code></pre>
     {{ .Doc | doc 4 -}}
     {{- /* TODO: function examples */ -}}
@@ -61,9 +61,9 @@
 {{ end -}}
 
 {{ with .Types -}}
-  <h3 id="pkg-types">Types {{ template "permalink" "pkg-types" }}</h3>
+  <h3 id="pkg-types">Types</h3>
   {{ range . -}}
-  <h3 id="{{ .Name }}">type {{ .Name }} {{ template "permalink" .Name }}</h3>
+  <h3 id="{{ .Name }}">type {{ .Name }}</h3>
     <pre><code>{{ .Decl | code }}</code></pre>
     {{ .Doc | doc 4 -}}
     {{- /* TODO: type examples */ -}}
@@ -100,13 +100,9 @@
   {{ $id := .Name -}}
   {{ with .RecvType }}{{ $id = printf "%s.%s" . $id }}{{ end -}}
   <h4 id="{{ $id }}">
-    func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }} {{ template "permalink" $id }}
+    func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}
   </h4>
   <pre><code>{{ .Decl | code }}</code></pre>
   {{ .Doc | doc 5 -}}
   {{- /* TODO: function examples */ -}}
-{{- end -}}
-
-{{- define "permalink" -}}
-  <a class="permalink" href="#{{ . }}">&para;</a>
 {{- end -}}
