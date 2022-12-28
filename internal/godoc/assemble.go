@@ -9,6 +9,7 @@ import (
 	"go/doc"
 	"go/doc/comment"
 	"go/token"
+	"path"
 
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/slices"
@@ -68,6 +69,9 @@ type Package struct {
 	Name string
 	Doc  *comment.Doc // package-level documentation
 
+	// Empty if the package isn't a binary.
+	BinName string
+
 	ImportPath string
 	Synopsis   string
 
@@ -78,9 +82,14 @@ type Package struct {
 }
 
 func (as *assembly) pkg(dpkg *doc.Package) *Package {
+	var binName string
+	if dpkg.Name == "main" {
+		binName = path.Base(dpkg.ImportPath)
+	}
 	return &Package{
 		Name:       dpkg.Name,
 		Doc:        as.doc(dpkg.Doc),
+		BinName:    binName,
 		ImportPath: dpkg.ImportPath,
 		Synopsis:   dpkg.Synopsis(dpkg.Doc),
 		Constants:  slices.Transform(dpkg.Consts, as.val),
