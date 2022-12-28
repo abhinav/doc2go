@@ -197,9 +197,9 @@ func (*render) code(code *godoc.Code) template.HTML {
 			template.HTMLEscape(&buf, b.Text)
 			buf.WriteString(`</span>`)
 		case *godoc.AnchorSpan:
-			fmt.Fprintf(&buf, "<a id=%q>", b.ID)
+			fmt.Fprintf(&buf, "<span id=%q>", b.ID)
 			template.HTMLEscape(&buf, b.Text)
-			buf.WriteString("</a>")
+			buf.WriteString("</span>")
 		case *godoc.LinkSpan:
 			fmt.Fprintf(&buf, "<a href=%q>", b.Dest)
 			template.HTMLEscape(&buf, b.Text)
