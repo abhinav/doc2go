@@ -1,1 +1,57 @@
-/* TODO */
+body {
+  margin: 1em 2em;
+  font-family: Helvetica, sans-serif;
+  background-color: #f8f8f8;
+  font-size: 1em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+}
+h1, h2, h3, h4 { font-weight: 500; }
+h2 { font-size: 1.75em }
+h3 { font-size: 1.5em }
+h4 { font-size: 1.33em }
+h5 { font-size: 1em }
+
+a {
+  text-decoration: none;
+  color: #0366a5;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+a.permalink { display: none; }
+a.permalink:hover {
+  text-decoration: none;
+}
+*:hover > a.permalink { display: inline; }
+
+nav {
+  padding: 1em;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 0.5em;
+}
+
+/* Remove first level of nesting for a package's index section. */
+#pkg-index + ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+code, kbd, pre {
+  font-family: Consolas, monospace;
+}
+
+pre {
+  color: #222;
+  overflow-x: auto;
+  border: 1px solid #ccc;
+  border-radius: 0.5em;
+  background-color: #eee;
+  padding: 0.75em;
+  font-size: 0.9em;
+}

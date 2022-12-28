@@ -5,7 +5,7 @@
 
 {{ define "Body" -}}
 <h2 id="pkg-overview">package {{ .Name }}</h2>
-<p><code>import "{{ .ImportPath }}"</code></p>
+<pre><code>import "{{ .ImportPath }}"</code></pre>
 {{ .Doc | doc }}
 {{- /* TODO: package examples */ -}}
 
