@@ -184,6 +184,27 @@ func (lb *labeler) Visit(n ast.Node) ast.Visitor {
 		ast.Walk(lb, n.Type)
 		lb.popParent()
 
+	case *ast.StructType, *ast.InterfaceType:
+		var fields []*ast.Field
+		// Double switch is a bit icky.
+		switch n := n.(type) {
+		case *ast.StructType:
+			fields = n.Fields.List
+		case *ast.InterfaceType:
+			fields = n.Methods.List
+		}
+
+		parent := lb.parent()
+		for _, f := range fields {
+			for _, name := range f.Names {
+				lb.add(&DeclLabel{
+					Parent: parent,
+					Name:   name.Name,
+				})
+			}
+			ast.Walk(lb, f.Type)
+		}
+
 	case *ast.FuncDecl:
 		if n.Recv != nil {
 			ast.Walk(lb, n.Recv)
@@ -192,12 +213,13 @@ func (lb *labeler) Visit(n ast.Node) ast.Visitor {
 		ast.Walk(lb, n.Type)
 
 	case *ast.Field:
-		parent := lb.parent()
-		for _, name := range n.Names {
-			lb.add(&DeclLabel{
-				Parent: parent,
-				Name:   name.Name,
-			})
+		// All field lists that we care to declare labels for
+		// (struct fields and interface methods)
+		// have already been handled.
+		//
+		// Only function parameters will make it here.
+		for range n.Names {
+			lb.ignore()
 		}
 		ast.Walk(lb, n.Type)
 
