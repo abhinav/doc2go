@@ -164,8 +164,6 @@ func (as *assembly) fun(dfun *doc.Func) *Function {
 }
 
 func (as *assembly) decl(decl ast.Decl) *Code {
-	// TODO: this can probably be extracted
-
 	src, regions, err := as.fmt.FormatDecl(decl)
 	if err != nil {
 		return &Code{
@@ -178,60 +176,11 @@ func (as *assembly) decl(decl ast.Decl) *Code {
 		}
 	}
 
-	var (
-		spans      []Span
-		lastOffset int
-	)
-	for _, r := range regions {
-		if t := src[lastOffset:r.Offset]; len(t) > 0 {
-			spans = append(spans, &TextSpan{Text: t})
-		}
-
-		lastOffset = r.Offset + r.Length
-		body := src[r.Offset:lastOffset]
-		switch l := r.Label.(type) {
-		case *gosrc.DeclLabel:
-			id := l.Name
-			if len(l.Parent) > 0 {
-				id = l.Parent + "." + id
-			}
-
-			spans = append(spans, &AnchorSpan{
-				Text: body,
-				ID:   id,
-			})
-
-		case *gosrc.EntityRefLabel:
-			dest := as.linker.DocLinkURL(as.importPath, &comment.DocLink{
-				ImportPath: l.ImportPath,
-				Name:       l.Name,
-			})
-			spans = append(spans, &LinkSpan{
-				Text: body,
-				Dest: dest,
-			})
-
-		case *gosrc.PackageRefLabel:
-			dest := as.linker.DocLinkURL(as.importPath, &comment.DocLink{
-				ImportPath: l.ImportPath,
-			})
-			spans = append(spans, &LinkSpan{
-				Text: body,
-				Dest: dest,
-			})
-
-		case *gosrc.CommentLabel:
-			spans = append(spans, &CommentSpan{Text: body})
-
-		default:
-			panic(fmt.Sprintf("Unexpected label %T", l))
-		}
-	}
-	if t := src[lastOffset:]; len(t) > 0 {
-		spans = append(spans, &TextSpan{Text: t})
-	}
-
-	return &Code{Spans: spans}
+	return (&CodeBuilder{
+		DocLinkURL: func(link *comment.DocLink) string {
+			return as.linker.DocLinkURL(as.importPath, link)
+		},
+	}).Build(src, regions)
 }
 
 func (as *assembly) shortDecl(decl ast.Decl) string {
