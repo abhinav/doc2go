@@ -211,6 +211,9 @@ func (as *assembly) decl(decl ast.Decl) *Code {
 				Dest: dest,
 			})
 
+		case *gosrc.CommentLabel:
+			spans = append(spans, &CommentSpan{Text: body})
+
 		default:
 			panic(fmt.Sprintf("Unexpected label %T", l))
 		}

@@ -192,6 +192,10 @@ func (*render) code(code *godoc.Code) template.HTML {
 		switch b := b.(type) {
 		case *godoc.TextSpan:
 			template.HTMLEscape(&buf, b.Text)
+		case *godoc.CommentSpan:
+			buf.WriteString(`<span class="comment">`)
+			template.HTMLEscape(&buf, b.Text)
+			buf.WriteString(`</span>`)
 		case *godoc.AnchorSpan:
 			fmt.Fprintf(&buf, "<a id=%q>", b.ID)
 			template.HTMLEscape(&buf, b.Text)

@@ -26,6 +26,11 @@ type (
 		Dest string
 	}
 
+	// CommentSpan renders as slightly muted text.
+	CommentSpan struct {
+		Text []byte
+	}
+
 	// ErrorSpan is a special span
 	// that represents a failure operation.
 	//
@@ -42,9 +47,11 @@ var (
 	_ Span = (*AnchorSpan)(nil)
 	_ Span = (*LinkSpan)(nil)
 	_ Span = (*ErrorSpan)(nil)
+	_ Span = (*CommentSpan)(nil)
 )
 
-func (*TextSpan) span()   {}
-func (*AnchorSpan) span() {}
-func (*LinkSpan) span()   {}
-func (*ErrorSpan) span()  {}
+func (*TextSpan) span()    {}
+func (*AnchorSpan) span()  {}
+func (*LinkSpan) span()    {}
+func (*ErrorSpan) span()   {}
+func (*CommentSpan) span() {}
