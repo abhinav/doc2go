@@ -2,14 +2,12 @@ package gosrc
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"go.abhg.dev/doc2go/internal/slices"
-	"go.uber.org/multierr"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -36,6 +34,8 @@ type PackageRef struct {
 //
 // The zero value of this is ready to use.
 type Finder struct {
+	PackagesConfig *packages.Config
+
 	// Build tags to enable when searching for packages.
 	Tags []string
 
@@ -58,12 +58,16 @@ const _finderLoadMode = packages.NeedName | packages.NeedCompiledGoFiles
 // FindPackages searches for packages matching the given import path patterns,
 // and returns references to them.
 func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
-	cfg := packages.Config{
-		Mode: _finderLoadMode,
-		// We want to find tests as well,
-		// but Tests can not be set to true
-		// in NeedName/NeedCompiledGoFiles mode.
+	var cfg packages.Config
+	if f.PackagesConfig != nil {
+		cfg = *f.PackagesConfig
 	}
+
+	// We want to find tests as well,
+	// but Tests can not be set to true
+	// in NeedName/NeedCompiledGoFiles mode.
+	cfg.Mode = _finderLoadMode
+	cfg.Tests = false
 	if ts := f.Tags; len(ts) > 0 {
 		cfg.BuildFlags = append(cfg.BuildFlags, "-tags", strings.Join(ts, ","))
 	}
@@ -86,10 +90,13 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 	}
 
 	infos := make([]*PackageRef, 0, len(pkgs))
-	var resultErr error
 	for _, pkg := range pkgs {
-		if err := combinePackageErrors(pkg); err != nil {
-			resultErr = multierr.Append(resultErr, err)
+		var pkgFailed bool
+		for _, err := range pkg.Errors {
+			pkgFailed = true
+			f.Log.Printf("[%v] %v", pkg.PkgPath, err)
+		}
+		if pkgFailed {
 			continue
 		}
 
@@ -99,7 +106,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			})
 
 		if len(compiledGoFiles) == 0 {
-			f.Log.Printf("[%v] Skipping: no files found.", pkg.PkgPath)
+			f.Log.Printf("[%v] No non-test Go files. Skipping.", pkg.PkgPath)
 			continue
 		}
 
@@ -108,6 +115,10 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		if ents, err := os.ReadDir(pkgDir); err != nil {
 			f.Log.Printf("[%v] Skipping tests: unable to read directory: %v", pkg.PkgPath, err)
 		} else {
+			// FIXME: This ignores build tags in test files.
+			// Maybe, it should be two load calls:
+			// find and then,
+			// for each package, list files and test files.
 			for _, ent := range ents {
 				if !ent.IsDir() && strings.HasSuffix(ent.Name(), "_test.go") {
 					testFiles = append(testFiles, filepath.Join(pkgDir, ent.Name()))
@@ -122,16 +133,5 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			TestFiles:  testFiles,
 		})
 	}
-	return infos, resultErr
-}
-
-func combinePackageErrors(pkg *packages.Package) error {
-	var errs error
-	for _, perr := range pkg.Errors {
-		errs = multierr.Append(errs, perr)
-	}
-	if errs != nil {
-		return fmt.Errorf("package %v (%v): %w", pkg.Name, pkg.PkgPath, errs)
-	}
-	return nil
+	return infos, nil
 }
