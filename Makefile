@@ -9,13 +9,15 @@ GO_FILES = $(shell find . \
 	   -path '*/.*' -prune -o \
 	   '(' -type f -a -name '*.go' ')' -print)
 
+GO_SRC_FILES = $(filter-out %_test.go,$(GO_FILES))
+
 .PHONY: all
 all: build lint test
 
 .PHONY: build
 build: $(DOC2GO)
 
-$(DOC2GO): FORCE
+$(DOC2GO): $(GO_SRC_FILES)
 	go install go.abhg.dev/doc2go
 
 .PHONY: lint
@@ -51,7 +53,3 @@ $(STATICCHECK): tools/go.mod
 
 $(REVIVE): tools/go.mod
 	cd tools && go install github.com/mgechev/revive
-
-# Targets that depend on this are always rebuilt.
-.PHONY: FORCE
-FORCE:
