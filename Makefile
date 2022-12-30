@@ -43,7 +43,7 @@ test:
 
 .PHONY: cover
 cover:
-	go test -race -coverprofile=cover.out -coverpkg=./... ./...
+	go test -coverprofile=cover.out -coverpkg=./... ./...
 	go tool cover -html=cover.out -o cover.html
 
 $(STATICCHECK): tools/go.mod
