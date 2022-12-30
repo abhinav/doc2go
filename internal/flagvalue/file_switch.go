@@ -51,7 +51,7 @@ func (fs *FileSwitch) Bool() bool {
 //   - the flag wasn't passed in: returns an [io.Discard]
 //   - the flag was passed without a value: returns the provided fallback
 //   - the flag was passed with a value: opens the file and returns it
-func (fs *FileSwitch) Create(fallback io.Writer) (w io.Writer, close func() error, err error) {
+func (fs *FileSwitch) Create(fallback io.Writer) (w io.Writer, done func() error, err error) {
 	switch *fs {
 	case "":
 		return io.Discard, nopClose, nil
