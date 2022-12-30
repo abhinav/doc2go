@@ -3,7 +3,7 @@ module go.abhg.dev/doc2go
 go 1.19
 
 require (
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.1
 	go.uber.org/multierr v1.8.0
 	golang.org/x/tools v0.2.0
 )
@@ -14,5 +14,5 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -99,6 +99,5 @@ func TestList_error(t *testing.T) {
 	fset.Var(ListOf(&got), "x", "")
 
 	err := fset.Parse([]string{"-x=foo", "-x=fail", "-x", "bar"})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "great sadness")
+	assert.ErrorContains(t, err, "great sadness")
 }
