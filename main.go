@@ -78,19 +78,12 @@ func (cmd *mainCmd) run(opts *params) error {
 		return fmt.Errorf("find packages: %w", err)
 	}
 
-	var pkgDocTmpls templateTree
+	var linker docLinker
 	for _, lt := range opts.PackageDocTemplates {
-		pkgDocTmpls.Set(lt.Path, lt.Template)
+		linker.Template(lt.Path, lt.Template)
 	}
-
-	knownImports := make(map[string]struct{}, len(pkgRefs))
 	for _, ref := range pkgRefs {
-		knownImports[ref.ImportPath] = struct{}{}
-	}
-
-	linker := docLinker{
-		knownImports: knownImports,
-		templates:    pkgDocTmpls,
+		linker.LocalPackage(ref.ImportPath)
 	}
 
 	g := Generator{

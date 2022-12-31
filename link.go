@@ -10,11 +10,26 @@ import (
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
-type templateTree = pathtree.Root[*template.Template]
-
 type docLinker struct {
 	knownImports map[string]struct{}
-	templates    templateTree
+	templates    pathtree.Root[*template.Template]
+}
+
+// LocalPackage marks an import path as a "local" package.
+//
+// A local package is part of the current documentation generation scope,
+// so links to these packages will be relative.
+func (rl *docLinker) LocalPackage(importPath string) {
+	if rl.knownImports == nil {
+		rl.knownImports = make(map[string]struct{})
+	}
+	rl.knownImports[importPath] = struct{}{}
+}
+
+// Template specifies a package documentation template
+// for packages at this import path and its descendants.
+func (rl *docLinker) Template(path string, tmpl *template.Template) {
+	rl.templates.Set(path, tmpl)
 }
 
 func (rl *docLinker) packageDocURL(fromPkg, pkg string) string {

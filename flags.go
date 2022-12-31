@@ -118,7 +118,7 @@ func (pt *pathTemplate) Set(s string) error {
 	var err error
 	pt.Template, err = template.New(pt.Path).Parse(pt.rawTmpl)
 	if err != nil {
-		return fmt.Errorf("parse template: %w", err)
+		return fmt.Errorf("bad template: %w", err)
 	}
 
 	return nil
