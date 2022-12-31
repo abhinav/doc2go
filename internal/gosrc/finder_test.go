@@ -182,3 +182,50 @@ func TestFinder_NoPackages(t *testing.T) {
 		assert.ErrorContains(t, err, "no packages found")
 	})
 }
+
+func TestFinder_ImportedPackage(t *testing.T) {
+	packagestest.TestAll(t, testFinderImportedPackage)
+}
+
+func testFinderImportedPackage(t *testing.T, exporter packagestest.Exporter) {
+	exported := packagestest.Export(t, exporter, []packagestest.Module{
+		{
+			Name: "example.com/foo",
+			Files: map[string]any{
+				"foo.go": "package foo\n" +
+					`import "example.com/bar-go"` + "\n" +
+					"type Foo = bar.Foo\n",
+			},
+		},
+		{
+			Name: "example.com/bar-go",
+			Files: map[string]any{
+				"bar.go": "package bar\ntype Foo int",
+			},
+		},
+	})
+
+	f := Finder{
+		Log:            log.New(iotest.Writer(t), "", 0),
+		PackagesConfig: exported.Config,
+	}
+	refs, err := f.FindPackages("./...")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]*PackageRef{
+			{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Files: []string{
+					exported.File("example.com/foo", "foo.go"),
+				},
+				Imports: []ImportedPackage{
+					{
+						Name:       "bar",
+						ImportPath: "example.com/bar-go",
+					},
+				},
+			},
+		}, refs)
+}

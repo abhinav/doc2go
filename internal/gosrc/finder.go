@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"go.abhg.dev/doc2go/internal/slices"
@@ -27,6 +28,15 @@ type PackageRef struct {
 
 	// List of _test.go files in the package.
 	TestFiles []string
+
+	// Packages imported by this package.
+	Imports []ImportedPackage
+}
+
+// ImportedPackage is a package imported by another package.
+type ImportedPackage struct {
+	Name       string
+	ImportPath string
 }
 
 // Finder searches for and returns Go package references
@@ -53,7 +63,7 @@ type Finder struct {
 	loadGoPackages func(*packages.Config, ...string) ([]*packages.Package, error)
 }
 
-const _finderLoadMode = packages.NeedName | packages.NeedCompiledGoFiles
+const _finderLoadMode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports
 
 // FindPackages searches for packages matching the given import path patterns,
 // and returns references to them.
@@ -126,11 +136,26 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			}
 		}
 
+		var imports []ImportedPackage
+		if len(pkg.Imports) > 0 {
+			imports = make([]ImportedPackage, 0, len(pkg.Imports))
+			for _, imp := range pkg.Imports {
+				imports = append(imports, ImportedPackage{
+					Name:       imp.Name,
+					ImportPath: imp.PkgPath,
+				})
+			}
+		}
+		sort.Slice(imports, func(i, j int) bool {
+			return imports[i].ImportPath < imports[j].ImportPath
+		})
+
 		infos = append(infos, &PackageRef{
 			Name:       pkg.Name,
 			ImportPath: pkg.PkgPath,
 			Files:      compiledGoFiles,
 			TestFiles:  testFiles,
+			Imports:    imports,
 		})
 	}
 	return infos, nil

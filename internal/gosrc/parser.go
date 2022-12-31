@@ -59,7 +59,7 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	}
 
 	var topLevel []string
-	if pkg, _ := ast.NewPackage(fset, files, nil, nil); pkg != nil {
+	if pkg, _ := ast.NewPackage(fset, files, packageRefImporter(ref), nil); pkg != nil {
 		topLevel = make([]string, 0, len(pkg.Scope.Objects))
 		for name := range pkg.Scope.Objects {
 			topLevel = append(topLevel, name)
@@ -84,4 +84,27 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		Fset:          fset,
 		TopLevelDecls: topLevel,
 	}, nil
+}
+
+func packageRefImporter(ref *PackageRef) ast.Importer {
+	packageNames := make(map[string]string, len(ref.Imports)) // import path => name
+	for _, imp := range ref.Imports {
+		packageNames[imp.ImportPath] = imp.Name
+	}
+
+	return func(imports map[string]*ast.Object, path string) (pkg *ast.Object, err error) {
+		if pkg := imports[path]; pkg != nil {
+			return pkg, nil
+		}
+
+		name, ok := packageNames[path]
+		if !ok {
+			return nil, fmt.Errorf("package %q not found", path)
+		}
+
+		pkg = ast.NewObj(ast.Pkg, name)
+		pkg.Data = ast.NewScope(nil)
+		imports[path] = pkg
+		return pkg, nil
+	}
 }
