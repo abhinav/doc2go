@@ -185,10 +185,16 @@ func (r *render) static(p string) string {
 }
 
 func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {
+	if doc == nil {
+		return ""
+	}
 	return template.HTML(r.DocPrinter.WithHeadingLevel(lvl).HTML(doc))
 }
 
 func (*render) code(code *godoc.Code) template.HTML {
+	if code == nil {
+		return ""
+	}
 	var buf bytes.Buffer
 	for _, b := range code.Spans {
 		switch b := b.(type) {
