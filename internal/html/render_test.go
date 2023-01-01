@@ -106,11 +106,11 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 			doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
 			require.NoError(t, err, "invalid HTML:\n%v", buff.String())
 
-			headTitle := cascadia.MustCompile("title").MatchFirst(doc)
+			headTitle := querySelector(doc, "title")
 			require.NotNil(t, headTitle)
 			assert.Equal(t, tt.wantHeadTitle, allText(headTitle))
 
-			bodyTitle := cascadia.MustCompile("#pkg-overview").MatchFirst(doc)
+			bodyTitle := querySelector(doc, "#pkg-overview")
 			require.NotNil(t, bodyTitle)
 			assert.Equal(t, tt.wantBodyTitle, allText(bodyTitle))
 		})
@@ -233,10 +233,10 @@ func TestRenderPackage_index(t *testing.T) {
 		doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
 		require.NoError(t, err, "invalid HTML:\n%v", buff.String())
 
-		index := cascadia.MustCompile("#pkg-index + ul").MatchFirst(doc)
+		index := querySelector(doc, "#pkg-index + ul")
 		var items []string
 		if index != nil {
-			for _, li := range cascadia.QueryAll(index, cascadia.MustCompile("li > a")) {
+			for _, li := range querySelectorAll(index, "li > a") {
 				items = append(items, text(li))
 			}
 		}
@@ -350,7 +350,7 @@ func TestRenderPackage_headers(t *testing.T) {
 	}
 
 	var headers []header
-	for _, h := range cascadia.QueryAll(doc, cascadia.MustCompile("h1, h2, h3, h4, h5, h6")) {
+	for _, h := range querySelectorAll(doc, "h1, h2, h3, h4, h5, h6") {
 		lvl, err := strconv.Atoi(strings.TrimPrefix(h.Data, "h"))
 		require.NoError(t, err, "Could not determine level of <%v>", h.Data)
 
@@ -382,6 +382,175 @@ func TestRenderPackage_headers(t *testing.T) {
 		{4, "SomeType.Print", "func (SomeType) Print"},
 		{5, "hdr-Method", "Method"},
 	}, headers)
+}
+
+func TestRenderPackage_breadcrumbs(t *testing.T) {
+	t.Parallel()
+
+	crumbs := []Breadcrumb{
+		{Text: "example.com", Path: "example.com"},
+		{Text: "foo", Path: "example.com/foo"},
+		{Text: "bar", Path: "example.com/foo/bar"},
+	}
+	pinfo := PackageInfo{
+		Package: &godoc.Package{
+			Name:       "foo",
+			ImportPath: "example.com/foo/bar/baz",
+		},
+		DocPrinter:  new(CommentDocPrinter),
+		Breadcrumbs: crumbs,
+	}
+
+	var buff bytes.Buffer
+	require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+
+	doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
+	require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+
+	type link struct {
+		href string
+		body string
+	}
+
+	var got []link
+	for _, a := range querySelectorAll(doc, "nav > a") {
+		got = append(got, link{
+			href: attr(a, "href"),
+			body: text(a),
+		})
+	}
+
+	assert.Equal(t, []link{
+		{"../../..", "example.com"},
+		{"../..", "foo"},
+		{"..", "bar"},
+	}, got)
+}
+
+func TestRenderPackage_subpackages(t *testing.T) {
+	t.Parallel()
+
+	pinfo := PackageInfo{
+		Package: &godoc.Package{
+			Name:       "foo",
+			ImportPath: "example.com/foo/bar/baz",
+		},
+		DocPrinter: new(CommentDocPrinter),
+		Subpackages: []Subpackage{
+			{
+				RelativePath: "internal/foo",
+				Synopsis:     "Does things with foo",
+			},
+			{
+				RelativePath: "bar",
+				Synopsis:     "Public package bar",
+			},
+		},
+	}
+
+	var buff bytes.Buffer
+	require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+
+	doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
+	require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+
+	table := querySelector(doc, "#pkg-directories + table")
+	require.NotNil(t, table, "pkg-directories not found:\n%v", buff.String())
+
+	type link struct {
+		href     string
+		synopsis string
+	}
+
+	var got []link
+	for _, tr := range querySelectorAll(table, "tbody > tr") {
+		got = append(got, link{
+			href:     attr(querySelector(tr, "td > a"), "href"),
+			synopsis: text(querySelector(tr, "td + td")),
+		})
+	}
+
+	assert.Equal(t, []link{
+		{"internal/foo", "Does things with foo"},
+		{"bar", "Public package bar"},
+	}, got)
+}
+
+func TestRenderPackageIndex(t *testing.T) {
+	t.Parallel()
+
+	pidx := PackageIndex{
+		Path: "example.com/foo/bar/baz",
+		Breadcrumbs: []Breadcrumb{
+			{Text: "example.com", Path: "example.com"},
+			{Text: "foo", Path: "example.com/foo"},
+			{Text: "bar", Path: "example.com/foo/bar"},
+		},
+		Subpackages: []Subpackage{
+			{
+				RelativePath: "internal/foo",
+				Synopsis:     "Does things with foo",
+			},
+			{
+				RelativePath: "bar",
+				Synopsis:     "Public package bar",
+			},
+		},
+	}
+
+	var buff bytes.Buffer
+	require.NoError(t, new(Renderer).RenderPackageIndex(&buff, &pidx))
+
+	doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
+	require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+
+	type crumb struct {
+		href string
+		body string
+	}
+
+	type subdir struct {
+		href     string
+		synopsis string
+	}
+
+	var crumbs []crumb
+	for _, a := range querySelectorAll(doc, "nav > a") {
+		crumbs = append(crumbs, crumb{
+			href: attr(a, "href"),
+			body: text(a),
+		})
+	}
+
+	table := querySelector(doc, "#pkg-directories + table")
+	require.NotNil(t, table, "pkg-directories not found:\n%v", buff.String())
+
+	var subdirs []subdir
+	for _, tr := range querySelectorAll(table, "tbody > tr") {
+		subdirs = append(subdirs, subdir{
+			href:     attr(querySelector(tr, "td > a"), "href"),
+			synopsis: text(querySelector(tr, "td + td")),
+		})
+	}
+
+	assert.Equal(t, []crumb{
+		{"../../..", "example.com"},
+		{"../..", "foo"},
+		{"..", "bar"},
+	}, crumbs)
+
+	assert.Equal(t, []subdir{
+		{"internal/foo", "Does things with foo"},
+		{"bar", "Public package bar"},
+	}, subdirs)
+}
+
+func querySelector(n *html.Node, query string) *html.Node {
+	return cascadia.Query(n, cascadia.MustCompile(query))
+}
+
+func querySelectorAll(n *html.Node, query string) []*html.Node {
+	return cascadia.QueryAll(n, cascadia.MustCompile(query))
 }
 
 func allText(n *html.Node) string {
