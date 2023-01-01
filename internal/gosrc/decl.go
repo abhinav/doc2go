@@ -21,14 +21,14 @@ type DeclFormatter struct {
 }
 
 // NewDeclFormatter builds a new DeclFormatter for the given package.
-func NewDeclFormatter(pkg *Package) *DeclFormatter {
-	topLevel := make(map[string]struct{}, len(pkg.TopLevelDecls))
-	for _, name := range pkg.TopLevelDecls {
+func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string) *DeclFormatter {
+	topLevel := make(map[string]struct{}, len(topLevelDecls))
+	for _, name := range topLevelDecls {
 		topLevel[name] = struct{}{}
 	}
 
 	return &DeclFormatter{
-		fset:     pkg.Fset,
+		fset:     fset,
 		topLevel: topLevel,
 	}
 }

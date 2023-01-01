@@ -44,7 +44,7 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 	}
 
 	return (&assembly{
-		fmt:        gosrc.NewDeclFormatter(bpkg),
+		fmt:        gosrc.NewDeclFormatter(bpkg.Fset, bpkg.TopLevelDecls),
 		fset:       bpkg.Fset,
 		cparse:     dpkg.Parser(),
 		linker:     a.Linker,
