@@ -99,9 +99,7 @@
 {{- define "funcOrMethod" -}}
   {{ $id := .Name -}}
   {{ with .RecvType }}{{ $id = printf "%s.%s" . $id }}{{ end -}}
-  <h4 id="{{ $id }}">
-    func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}
-  </h4>
+  <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}</h4>
   <pre><code>{{ .Decl | code }}</code></pre>
   {{ .Doc | doc 5 -}}
   {{- /* TODO: function examples */ -}}

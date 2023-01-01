@@ -2,9 +2,11 @@ package html
 
 import (
 	"bytes"
+	"go/doc/comment"
 	"io/fs"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -261,6 +263,127 @@ func TestRenderPackage_index(t *testing.T) {
 	}
 }
 
+func TestRenderPackage_headers(t *testing.T) {
+	t.Parallel()
+
+	pkg := godoc.Package{
+		Name:       "foo",
+		ImportPath: "example.com/foo",
+		Doc:        parseDoc("# Some package"),
+		Constants: []*godoc.Value{
+			{
+				Names: []string{"ConstantValue"},
+				Decl:  textSpan("const ConstantValue = 42"),
+				Doc:   parseDoc("# Some constant"),
+			},
+		},
+		Variables: []*godoc.Value{
+			{
+				Names: []string{"VariableValue"},
+				Decl:  textSpan("var VariableValue = 42"),
+				Doc:   parseDoc("# Some variable"),
+			},
+		},
+		Functions: []*godoc.Function{
+			{
+				Name:      "DoStuff",
+				Doc:       parseDoc("# Doer of stuff"),
+				Decl:      textSpan("func DoStuff()"),
+				ShortDecl: "func DoStuff()",
+			},
+		},
+		Types: []*godoc.Type{
+			{
+				Name: "SomeType",
+				Doc:  parseDoc("# My type"),
+				Decl: textSpan("type SomeType string"),
+				Constants: []*godoc.Value{
+					{
+						Names: []string{"DefaultSomeType"},
+						Decl:  textSpan(`const DefaultSomeType SomeType = "42"`),
+						Doc:   parseDoc("# Default Some Type"),
+					},
+				},
+				Variables: []*godoc.Value{
+					{
+						Names: []string{"SharedSomeType"},
+						Decl:  textSpan(`var SharedSomeType = SomeType("foo")`),
+						Doc:   parseDoc("# Shared Some Type"),
+					},
+				},
+				Functions: []*godoc.Function{
+					{
+						Name:      "NewSomeType",
+						Doc:       parseDoc("# Constructor"),
+						Decl:      textSpan("func NewSomeType() SomeType"),
+						ShortDecl: "func NewSomeType() SomeType",
+					},
+				},
+				Methods: []*godoc.Function{
+					{
+						Name:      "Print",
+						Doc:       parseDoc("# Method"),
+						Decl:      textSpan("func (SomeType) Print()"),
+						Recv:      "SomeType",
+						RecvType:  "SomeType",
+						ShortDecl: "func (SomeType) Print()",
+					},
+				},
+			},
+		},
+	}
+	pinfo := PackageInfo{
+		Package:    &pkg,
+		DocPrinter: new(CommentDocPrinter),
+	}
+
+	var buff bytes.Buffer
+	require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+
+	doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
+	require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+
+	type header struct {
+		level int
+		id    string
+		body  string
+	}
+
+	var headers []header
+	for _, h := range cascadia.QueryAll(doc, cascadia.MustCompile("h1, h2, h3, h4, h5, h6")) {
+		lvl, err := strconv.Atoi(strings.TrimPrefix(h.Data, "h"))
+		require.NoError(t, err, "Could not determine level of <%v>", h.Data)
+
+		headers = append(headers, header{
+			level: lvl,
+			id:    attr(h, "id"),
+			body:  allText(h),
+		})
+	}
+
+	assert.Equal(t, []header{
+		{2, "pkg-overview", "package foo"},
+		{3, "hdr-Some_package", "Some package"},
+		{3, "pkg-index", "Index"},
+		{3, "pkg-constants", "Constants"},
+		{4, "hdr-Some_constant", "Some constant"},
+		{3, "pkg-variables", "Variables"},
+		{4, "hdr-Some_variable", "Some variable"},
+		{3, "pkg-functions", "Functions"},
+		{3, "DoStuff", "func DoStuff"},
+		{4, "hdr-Doer_of_stuff", "Doer of stuff"},
+		{3, "pkg-types", "Types"},
+		{3, "SomeType", "type SomeType"},
+		{4, "hdr-My_type", "My type"},
+		{4, "hdr-Default_Some_Type", "Default Some Type"},
+		{4, "hdr-Shared_Some_Type", "Shared Some Type"},
+		{4, "NewSomeType", "func NewSomeType"},
+		{5, "hdr-Constructor", "Constructor"},
+		{4, "SomeType.Print", "func (SomeType) Print"},
+		{5, "hdr-Method", "Method"},
+	}, headers)
+}
+
 func allText(n *html.Node) string {
 	var (
 		sb    strings.Builder
@@ -296,4 +419,17 @@ func textSpan(str string) *godoc.Code {
 			},
 		},
 	}
+}
+
+func parseDoc(s string) *comment.Doc {
+	return new(comment.Parser).Parse(s)
+}
+
+func attr(n *html.Node, key string) string {
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return a.Val
+		}
+	}
+	return ""
 }
