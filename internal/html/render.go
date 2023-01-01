@@ -57,12 +57,6 @@ func (r *Renderer) templateName() string {
 	return "Page"
 }
 
-// DocPrinter formats godoc comments as HTML.
-type DocPrinter interface {
-	HTML(*comment.Doc) []byte
-	WithHeadingLevel(int) DocPrinter
-}
-
 // WriteStatic dumps the contents of static/ into the given directory.
 //
 // This is a no-op if the renderer is running in embedded mode.

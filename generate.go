@@ -175,7 +175,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 		Package:     dpkg,
 		Breadcrumbs: crumbs,
 		Subpackages: r.subpackages(dpkg.ImportPath, subpkgs),
-		DocPrinter: &docPrinter{
+		DocPrinter: &html.CommentDocPrinter{
 			Printer: comment.Printer{
 				DocLinkURL: func(link *comment.DocLink) string {
 					return r.DocLinker.DocLinkURL(dpkg.ImportPath, link)
@@ -221,12 +221,4 @@ func buildTrees(refs []*gosrc.PackageRef) []packageTree {
 		root.Set(ref.ImportPath, ref)
 	}
 	return root.Snapshot()
-}
-
-type docPrinter struct{ comment.Printer }
-
-func (dp *docPrinter) WithHeadingLevel(lvl int) html.DocPrinter {
-	out := *dp
-	out.HeadingLevel = lvl
-	return &out
 }
