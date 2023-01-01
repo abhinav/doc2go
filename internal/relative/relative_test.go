@@ -8,6 +8,8 @@ import (
 )
 
 func TestPath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		src  string
@@ -65,7 +67,10 @@ func TestPath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got := Path(tt.src, tt.dst)
 			assert.Equal(t, tt.want, got)
 		})
@@ -73,6 +78,8 @@ func TestPath(t *testing.T) {
 }
 
 func TestFilepath(t *testing.T) {
+	t.Parallel()
+
 	// Minimal tests here since the logic is shared.
 	tests := []struct {
 		desc string
@@ -95,7 +102,10 @@ func TestFilepath(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got := Filepath(tt.src, tt.dst)
 			assert.Equal(t, tt.want, got)
 		})
@@ -103,6 +113,8 @@ func TestFilepath(t *testing.T) {
 }
 
 func TestPath_absoluteRelativeMismatch(t *testing.T) {
+	t.Parallel()
+
 	assert.Panics(t, func() { Path("/foo", "bar") })
 	assert.Panics(t, func() { Path("foo", "/bar") })
 }

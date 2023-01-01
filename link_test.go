@@ -10,6 +10,8 @@ import (
 )
 
 func TestDocLinker(t *testing.T) {
+	t.Parallel()
+
 	var linker docLinker
 	linker.LocalPackage("example.com/foo")
 	linker.LocalPackage("example.com/bar")
@@ -103,7 +105,10 @@ func TestDocLinker(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got := linker.DocLinkURL(tt.from, &tt.link)
 			assert.Equal(t, tt.want, got)
 		})

@@ -13,6 +13,8 @@ import (
 )
 
 func TestFinder(t *testing.T) {
+	t.Parallel()
+
 	packagestest.TestAll(t, testFinder)
 }
 
@@ -137,7 +139,10 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			exported := packagestest.Export(t, exporter, []packagestest.Module{
 				{
 					Name:  tt.path,
@@ -166,6 +171,8 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 }
 
 func TestFinder_NoPackages(t *testing.T) {
+	t.Parallel()
+
 	packagestest.TestAll(t, func(t *testing.T, exporter packagestest.Exporter) {
 		exported := packagestest.Export(t, exporter, []packagestest.Module{
 			{
@@ -184,6 +191,8 @@ func TestFinder_NoPackages(t *testing.T) {
 }
 
 func TestFinder_ImportedPackage(t *testing.T) {
+	t.Parallel()
+
 	packagestest.TestAll(t, testFinderImportedPackage)
 }
 

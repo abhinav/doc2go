@@ -13,6 +13,8 @@ import (
 )
 
 func TestFileSwitch_NoArg(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give []string
@@ -42,7 +44,10 @@ func TestFileSwitch_NoArg(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 			var fs FileSwitch
 			fset.Var(&fs, "x", "")
@@ -56,6 +61,8 @@ func TestFileSwitch_NoArg(t *testing.T) {
 }
 
 func TestFileSwitch_Create(t *testing.T) {
+	t.Parallel()
+
 	parse := func(t *testing.T, args ...string) *FileSwitch {
 		fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 		var fs FileSwitch
@@ -99,6 +106,8 @@ func TestFileSwitch_Create(t *testing.T) {
 }
 
 func TestFileSwitch_Create_error(t *testing.T) {
+	t.Parallel()
+
 	path := filepath.Join(t.TempDir(), "does_not_exist", "foo.txt")
 	fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 

@@ -7,6 +7,8 @@ import (
 )
 
 func TestRemoveCommonPrefix(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc         string
 		giveA, giveB []int
@@ -50,7 +52,10 @@ func TestRemoveCommonPrefix(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			gotA, gotB := RemoveCommonPrefix(tt.giveA, tt.giveB)
 			assert.Equal(t, tt.wantA, gotA, "a")
 			assert.Equal(t, tt.wantB, gotB, "b")

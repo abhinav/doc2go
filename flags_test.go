@@ -11,6 +11,8 @@ import (
 )
 
 func TestCLIParser(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give []string
@@ -47,7 +49,10 @@ func TestCLIParser(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := (&cliParser{
 				Stderr: iotest.Writer(t),
 			}).Parse(tt.give)
@@ -78,6 +83,8 @@ func TestCLIParser(t *testing.T) {
 }
 
 func TestCLIParser_Errors(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give []string
@@ -95,7 +102,10 @@ func TestCLIParser_Errors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			var stderr bytes.Buffer
 			_, err := (&cliParser{Stderr: &stderr}).Parse(tt.give)
 			require.Error(t, err)
@@ -105,6 +115,8 @@ func TestCLIParser_Errors(t *testing.T) {
 }
 
 func TestPathTemplate(t *testing.T) {
+	t.Parallel()
+
 	fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 	fset.SetOutput(iotest.Writer(t))
 
@@ -123,6 +135,8 @@ func TestPathTemplate(t *testing.T) {
 }
 
 func TestPathTemplate_Errors(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give string
@@ -141,7 +155,10 @@ func TestPathTemplate_Errors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 			fset.SetOutput(iotest.Writer(t))
 

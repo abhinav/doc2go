@@ -8,6 +8,8 @@ import (
 )
 
 func TestTransform(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give []int
@@ -27,7 +29,10 @@ func TestTransform(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got := Transform(tt.give, tt.fn)
 			assert.Equal(t, tt.want, got)
 		})

@@ -16,6 +16,8 @@ import (
 )
 
 func TestRenderer_WriteStatic(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	new(Renderer).WriteStatic(dir)
 
@@ -45,6 +47,8 @@ func TestRenderer_WriteStatic(t *testing.T) {
 }
 
 func TestRenderer_WriteStatic_embedded(t *testing.T) {
+	t.Parallel()
+
 	dir := t.TempDir()
 	(&Renderer{Embedded: true}).WriteStatic(dir)
 
@@ -54,6 +58,8 @@ func TestRenderer_WriteStatic_embedded(t *testing.T) {
 }
 
 func TestRenderer_RenderPackage_title(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc          string
 		give          godoc.Package
@@ -82,7 +88,10 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			pinfo := PackageInfo{
 				Package:    &tt.give,
 				DocPrinter: new(CommentDocPrinter),
@@ -107,6 +116,8 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 }
 
 func TestRenderPackage_index(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc string
 		give godoc.Package
@@ -206,7 +217,10 @@ func TestRenderPackage_index(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			pinfo := PackageInfo{
 				Package:    &tt.give,
 				DocPrinter: new(CommentDocPrinter),

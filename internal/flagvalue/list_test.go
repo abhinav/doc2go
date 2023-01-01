@@ -22,6 +22,8 @@ func (sv *stringValue) Set(s string) error {
 }
 
 func TestList(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		desc       string
 		give       []string
@@ -59,7 +61,10 @@ func TestList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 
 			var got []stringValue
@@ -92,6 +97,8 @@ func (sv *fallibleStringValue) Set(s string) error {
 }
 
 func TestList_error(t *testing.T) {
+	t.Parallel()
+
 	fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
 	fset.SetOutput(io.Discard)
 

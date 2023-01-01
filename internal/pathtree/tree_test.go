@@ -9,6 +9,8 @@ import (
 )
 
 func TestEmpty(t *testing.T) {
+	t.Parallel()
+
 	var r Root[int]
 	_, ok := r.Lookup("foo")
 	require.False(t, ok)
@@ -19,6 +21,8 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestSetAndGet(t *testing.T) {
+	t.Parallel()
+
 	ensure := ensurer[int](t)
 
 	var r Root[int]
@@ -44,6 +48,8 @@ func TestSetAndGet(t *testing.T) {
 }
 
 func TestExtraneousSlashes(t *testing.T) {
+	t.Parallel()
+
 	ensure := ensurer[int](t)
 
 	var r Root[int]
@@ -60,6 +66,8 @@ func TestExtraneousSlashes(t *testing.T) {
 }
 
 func TestDescendantOverride(t *testing.T) {
+	t.Parallel()
+
 	ensure := ensurer[int](t)
 
 	var r Root[int]

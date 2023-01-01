@@ -7,6 +7,8 @@ import (
 )
 
 func TestRemoveFunc(t *testing.T) {
+	t.Parallel()
+
 	type skipfn func(int) bool
 	always := func(b bool) skipfn { return func(int) bool { return b } }
 
@@ -50,7 +52,10 @@ func TestRemoveFunc(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			got := RemoveFunc(tt.give, tt.skip)
 			assert.Equal(t, tt.want, got)
 		})
