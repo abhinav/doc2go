@@ -2,9 +2,7 @@
 package html
 
 import (
-	"bytes"
 	"embed"
-	"fmt"
 	"go/doc/comment"
 	"html/template"
 	"io"
@@ -170,7 +168,7 @@ type render struct {
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
 		"doc":          r.doc,
-		"code":         r.code,
+		"code":         renderCode,
 		"static":       r.static,
 		"relativePath": r.relativePath,
 	}
@@ -189,39 +187,4 @@ func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {
 		return ""
 	}
 	return template.HTML(r.DocPrinter.WithHeadingLevel(lvl).HTML(doc))
-}
-
-func (*render) code(code *godoc.Code) template.HTML {
-	if code == nil {
-		return ""
-	}
-	var buf bytes.Buffer
-	for _, b := range code.Spans {
-		switch b := b.(type) {
-		case *godoc.TextSpan:
-			template.HTMLEscape(&buf, b.Text)
-		case *godoc.CommentSpan:
-			buf.WriteString(`<span class="comment">`)
-			template.HTMLEscape(&buf, b.Text)
-			buf.WriteString(`</span>`)
-		case *godoc.AnchorSpan:
-			fmt.Fprintf(&buf, "<span id=%q>", b.ID)
-			template.HTMLEscape(&buf, b.Text)
-			buf.WriteString("</span>")
-		case *godoc.LinkSpan:
-			fmt.Fprintf(&buf, "<a href=%q>", b.Dest)
-			template.HTMLEscape(&buf, b.Text)
-			buf.WriteString("</a>")
-		case *godoc.ErrorSpan:
-			buf.WriteString("<strong>")
-			template.HTMLEscape(&buf, []byte(b.Msg))
-			buf.WriteString("</strong>")
-			buf.WriteString("<pre><code>")
-			template.HTMLEscape(&buf, []byte(b.Err.Error()))
-			buf.WriteString("</code></pre>")
-		default:
-			panic(fmt.Sprintf("unrecognized node type %T", b))
-		}
-	}
-	return template.HTML(buf.String())
 }
