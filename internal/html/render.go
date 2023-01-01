@@ -64,7 +64,13 @@ type DocPrinter interface {
 }
 
 // WriteStatic dumps the contents of static/ into the given directory.
-func (*Renderer) WriteStatic(dir string) error {
+//
+// This is a no-op if the renderer is running in embedded mode.
+func (r *Renderer) WriteStatic(dir string) error {
+	if r.Embedded {
+		return nil
+	}
+
 	dir = filepath.Join(dir, _staticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {

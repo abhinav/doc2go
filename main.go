@@ -98,7 +98,6 @@ func (cmd *mainCmd) run(opts *params) error {
 		},
 		OutDir:    opts.OutputDir,
 		Internal:  opts.Internal,
-		Embedded:  opts.Embedded,
 		DocLinker: &linker,
 	}
 

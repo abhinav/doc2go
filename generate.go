@@ -61,16 +61,13 @@ type Generator struct {
 	Renderer  Renderer
 	OutDir    string
 	Internal  bool
-	Embedded  bool
 	DocLinker godoc.Linker
 }
 
 // Generate runs the generator over the provided packages.
 func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
-	if !r.Embedded {
-		if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
-			return err
-		}
+	if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
+		return err
 	}
 
 	_, err := r.renderTrees(nil, buildTrees(pkgRefs))
