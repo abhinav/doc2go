@@ -118,11 +118,13 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 func TestRenderPackage_index(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
+	type testCase struct {
 		desc string
 		give godoc.Package
 		want []string
-	}{
+	}
+
+	tests := []testCase{
 		{desc: "empty"},
 		{
 			desc: "constants",
@@ -216,31 +218,45 @@ func TestRenderPackage_index(t *testing.T) {
 		},
 	}
 
+	runTest := func(t *testing.T, renderer *Renderer, tt testCase) {
+		pinfo := PackageInfo{
+			Package:    &tt.give,
+			DocPrinter: new(CommentDocPrinter),
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t,
+			renderer.RenderPackage(&buff, &pinfo))
+
+		doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
+		require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+
+		index := cascadia.MustCompile("#pkg-index + ul").MatchFirst(doc)
+		var items []string
+		if index != nil {
+			for _, li := range cascadia.QueryAll(index, cascadia.MustCompile("li > a")) {
+				items = append(items, text(li))
+			}
+		}
+		assert.Equal(t, tt.want, items)
+	}
+
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
-			pinfo := PackageInfo{
-				Package:    &tt.give,
-				DocPrinter: new(CommentDocPrinter),
-			}
+			t.Run("Embedded", func(t *testing.T) {
+				t.Parallel()
 
-			var buff bytes.Buffer
-			require.NoError(t,
-				new(Renderer).RenderPackage(&buff, &pinfo))
+				runTest(t, &Renderer{Embedded: true}, tt)
+			})
 
-			doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
-			require.NoError(t, err, "invalid HTML:\n%v", buff.String())
+			t.Run("Standalone", func(t *testing.T) {
+				t.Parallel()
 
-			index := cascadia.MustCompile("#pkg-index + ul").MatchFirst(doc)
-			var items []string
-			if index != nil {
-				for _, li := range cascadia.QueryAll(index, cascadia.MustCompile("li > a")) {
-					items = append(items, text(li))
-				}
-			}
-			assert.Equal(t, tt.want, items)
+				runTest(t, new(Renderer), tt)
+			})
 		})
 	}
 }
