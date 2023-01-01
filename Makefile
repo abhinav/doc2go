@@ -21,7 +21,7 @@ $(DOC2GO): $(GO_SRC_FILES)
 	go install go.abhg.dev/doc2go
 
 .PHONY: lint
-lint: gofmt staticcheck revive
+lint: gofmt tidy-check staticcheck revive
 
 .PHONY: gofmt
 gofmt:
@@ -38,6 +38,19 @@ staticcheck: $(STATICCHECK)
 .PHONY: revive
 revive: $(REVIVE)
 	revive -config revive.toml ./...
+
+.PHONY: tidy
+tidy:
+	go mod tidy
+	cd tools && go mod tidy
+
+.PHONY: tidy-check
+tidy-check: tidy
+	@if ! git diff --quiet {.,tools}/go.{mod,sum}; then \
+		echo "go mod tidy changed files:" && \
+		git status --porcelain && \
+		false; \
+	fi
 
 .PHONY: test
 test:
