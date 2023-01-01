@@ -68,7 +68,7 @@ type Generator struct {
 // Generate runs the generator over the provided packages.
 func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 	if !r.Embedded {
-		if err := r.Renderer.WriteStatic(filepath.Join(r.OutDir, "_")); err != nil {
+		if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
 			return err
 		}
 	}

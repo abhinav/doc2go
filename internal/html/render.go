@@ -17,6 +17,8 @@ import (
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
+const _staticDir = "_"
+
 var (
 	//go:embed tmpl/*.html
 	_tmplFS embed.FS
@@ -63,6 +65,7 @@ type DocPrinter interface {
 
 // WriteStatic dumps the contents of static/ into the given directory.
 func (*Renderer) WriteStatic(dir string) error {
+	dir = filepath.Join(dir, _staticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {
 		return err
@@ -178,7 +181,7 @@ func (r *render) relativePath(p string) string {
 }
 
 func (r *render) static(p string) string {
-	return r.relativePath(path.Join("_", p))
+	return r.relativePath(path.Join(_staticDir, p))
 }
 
 func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {
