@@ -24,21 +24,11 @@ type Linker interface {
 // Assembler assembles a [Package] from a [go/doc.Package].
 type Assembler struct {
 	Linker Linker
-
-	// Reference to doc.NewFromFiles.
-	//
-	// May be overridden during tests.
-	docNewFromFiles func(*token.FileSet, []*ast.File, string, ...any) (*doc.Package, error)
 }
 
 // Assemble runs the assembler on the given doc.Package.
 func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
-	docNewFromFiles := doc.NewFromFiles
-	if a.docNewFromFiles != nil {
-		docNewFromFiles = a.docNewFromFiles
-	}
-
-	dpkg, err := docNewFromFiles(bpkg.Fset, bpkg.Syntax, bpkg.ImportPath)
+	dpkg, err := doc.NewFromFiles(bpkg.Fset, bpkg.Syntax, bpkg.ImportPath)
 	if err != nil {
 		return nil, fmt.Errorf("assemble documentation: %w", err)
 	}

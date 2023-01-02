@@ -30,20 +30,15 @@ type Package struct {
 }
 
 // Parser loads the contents of a package by parsing it from source.
-type Parser struct {
-	// Reference to go/parser.ParseFile.
-	//
-	// May be overridden during tests.
-	parseFile func(*token.FileSet, string, any, parser.Mode) (*ast.File, error)
-}
+type Parser struct{}
 
 // ParsePackage parses all files in the package at the given path
 // and fills a Package object with the result.
-func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
+func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	fset := token.NewFileSet()
 
 	files := make(map[string]*ast.File)
-	syntax, err := p.parseFiles(fset, ref.Files, files)
+	syntax, err := parseFiles(fset, ref.Files, files)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +52,7 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		sort.Strings(topLevel)
 	}
 
-	testSyntax, err := p.parseFiles(fset, ref.TestFiles, nil)
+	testSyntax, err := parseFiles(fset, ref.TestFiles, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -76,20 +71,15 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 // and returns ASTs for them in the same order.
 // If fmap is non-nil, this will also populate the map with entries
 // for the parsed files.
-func (p *Parser) parseFiles(fset *token.FileSet, files []string, fmap map[string]*ast.File) ([]*ast.File, error) {
+func parseFiles(fset *token.FileSet, files []string, fmap map[string]*ast.File) ([]*ast.File, error) {
 	if len(files) == 0 {
 		return nil, nil
-	}
-
-	parseFile := p.parseFile
-	if parseFile == nil {
-		parseFile = parser.ParseFile
 	}
 
 	syntax := make([]*ast.File, len(files))
 	for i, file := range files {
 		var err error
-		syntax[i], err = parseFile(fset, file, nil, parser.ParseComments)
+		syntax[i], err = parser.ParseFile(fset, file, nil, parser.ParseComments)
 		if err != nil {
 			return nil, fmt.Errorf("parse file %q: %w", file, err)
 		}
