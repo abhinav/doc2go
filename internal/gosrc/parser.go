@@ -40,22 +40,12 @@ type Parser struct {
 // ParsePackage parses all files in the package at the given path
 // and fills a Package object with the result.
 func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
-	parseFile := parser.ParseFile
-	if p.parseFile != nil {
-		parseFile = p.parseFile
-	}
-
 	fset := token.NewFileSet()
 
-	syntax := make([]*ast.File, len(ref.Files))
 	files := make(map[string]*ast.File)
-	for i, file := range ref.Files {
-		var err error
-		syntax[i], err = parseFile(fset, file, nil, parser.ParseComments)
-		if err != nil {
-			return nil, fmt.Errorf("parse file %q: %w", file, err)
-		}
-		files[file] = syntax[i]
+	syntax, err := p.parseFiles(fset, ref.Files, files)
+	if err != nil {
+		return nil, err
 	}
 
 	var topLevel []string
@@ -67,13 +57,9 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		sort.Strings(topLevel)
 	}
 
-	testSyntax := make([]*ast.File, len(ref.TestFiles))
-	for i, file := range ref.TestFiles {
-		var err error
-		testSyntax[i], err = parseFile(fset, file, nil, parser.ParseComments)
-		if err != nil {
-			return nil, fmt.Errorf("parse file %q: %w", file, err)
-		}
+	testSyntax, err := p.parseFiles(fset, ref.TestFiles, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Package{
@@ -84,6 +70,35 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		Fset:          fset,
 		TopLevelDecls: topLevel,
 	}, nil
+}
+
+// parseFiles parses the given list of files,
+// and returns ASTs for them in the same order.
+// If fmap is non-nil, this will also populate the map with entries
+// for the parsed files.
+func (p *Parser) parseFiles(fset *token.FileSet, files []string, fmap map[string]*ast.File) ([]*ast.File, error) {
+	if len(files) == 0 {
+		return nil, nil
+	}
+
+	parseFile := p.parseFile
+	if parseFile == nil {
+		parseFile = parser.ParseFile
+	}
+
+	syntax := make([]*ast.File, len(files))
+	for i, file := range files {
+		var err error
+		syntax[i], err = parseFile(fset, file, nil, parser.ParseComments)
+		if err != nil {
+			return nil, fmt.Errorf("parse file %q: %w", file, err)
+		}
+		if fmap != nil {
+			fmap[file] = syntax[i]
+		}
+	}
+
+	return syntax, nil
 }
 
 func packageRefImporter(ref *PackageRef) ast.Importer {
