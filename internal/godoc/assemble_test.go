@@ -286,7 +286,7 @@ func TestAssembler(t *testing.T) {
 					"",
 					"// Bool registers a new boolean flag.",
 					"func (f *FlagSet) Bool(name string, value bool, usage string) *bool {",
-					`	panic("TODO")`,
+					`	panic("not yet implemented")`,
 					"}",
 				},
 			},
