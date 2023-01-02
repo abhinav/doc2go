@@ -27,7 +27,7 @@ func TestWriter(t *testing.T) {
 	w := Writer(&fakeT)
 	io.WriteString(w, "foo")
 	assert.Equal(t, "foo\n", fakeT.Buffer.String())
-	// TODO: If we wanted this to be more accurate, we would have it buffer
-	// the input on newlines simillar to the log-based io.Writer. It
-	// doesn't matter here.
+	// If we wanted this to be more accurate, we would have it buffer
+	// the input on newlines simillar to the log-based io.Writer.
+	// It doesn't matter here.
 }
