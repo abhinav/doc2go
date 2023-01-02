@@ -56,11 +56,6 @@ type Finder struct {
 	//
 	// Use nil to disable debug logging.
 	DebugLog *log.Logger
-
-	// Reference to packages.Load.
-	//
-	// May be overridden during tests.
-	loadGoPackages func(*packages.Config, ...string) ([]*packages.Package, error)
 }
 
 const _finderLoadMode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports
@@ -85,12 +80,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		cfg.Logf = f.DebugLog.Printf
 	}
 
-	loadGoPackages := packages.Load
-	if f.loadGoPackages != nil {
-		loadGoPackages = f.loadGoPackages
-	}
-
-	pkgs, err := loadGoPackages(&cfg, patterns...)
+	pkgs, err := packages.Load(&cfg, patterns...)
 	if err != nil {
 		return nil, err
 	}
