@@ -1,12 +1,12 @@
 // This file is adapted from
 // https://github.com/golang/pkgsite/blob/096256eedb99538baa3cf13d10500bcaf9103a9e/internal/godoc/dochtml/internal/render/synopsis.go.
 // and is made available under the same license.
-
-//////////////////////////////////////////////////////
+//
+// Original license follows:
+//
 // Copyright 2017 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//////////////////////////////////////////////////////
 
 package godoc
 
@@ -85,7 +85,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 		var params []string
 		if n.Params != nil {
 			for _, field := range n.Params.List {
-				params = append(params, OneLineField(fset, field, depth))
+				params = append(params, oneLineField(fset, field, depth))
 			}
 		}
 		needParens := false
@@ -94,7 +94,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 			needParens = needParens || len(n.Results.List) > 1
 			for _, field := range n.Results.List {
 				needParens = needParens || len(field.Names) > 0
-				results = append(results, OneLineField(fset, field, depth))
+				results = append(results, oneLineField(fset, field, depth))
 			}
 		}
 
@@ -125,7 +125,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 			return ""
 		}
 		if len(n.List) == 1 {
-			return OneLineField(fset, n.List[0], depth)
+			return oneLineField(fset, n.List[0], depth)
 		}
 		return dotDotDot
 
@@ -198,8 +198,8 @@ func constOrVarSynopsis(valueSpec *ast.ValueSpec, fset *token.FileSet, tok token
 	return fmt.Sprintf("%s %s%s%s%s", tok, valueSpec.Names[0], typ, val, trailer)
 }
 
-// OneLineField returns a one-line summary of the field.
-func OneLineField(fset *token.FileSet, field *ast.Field, depth int) string {
+// oneLineField returns a one-line summary of the field.
+func oneLineField(fset *token.FileSet, field *ast.Field, depth int) string {
 	var names []string
 	for _, name := range field.Names {
 		names = append(names, name.Name)

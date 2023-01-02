@@ -21,9 +21,27 @@ type Linker interface {
 	DocLinkURL(fromPkg string, link *comment.DocLink) string
 }
 
+// DeclFormatter formats an AST declaration for rendering in documentation.
+type DeclFormatter interface {
+	FormatDecl(ast.Decl) (src []byte, regions []gosrc.Region, err error)
+}
+
+var _ DeclFormatter = (*gosrc.DeclFormatter)(nil)
+
+// newDefaultDeclFormatter builds a DeclFormatter based on
+// [gosrc.DeclFormatter].
+func newDefaultDeclFormatter(pkg *gosrc.Package) DeclFormatter {
+	return gosrc.NewDeclFormatter(pkg.Fset, pkg.TopLevelDecls)
+}
+
 // Assembler assembles a [Package] from a [go/doc.Package].
 type Assembler struct {
 	Linker Linker
+
+	// newDeclFormatter builds a DeclFormatter for the given package.
+	//
+	// This may be overriden from tests.
+	newDeclFormatter func(*gosrc.Package) DeclFormatter
 }
 
 // Assemble runs the assembler on the given doc.Package.
@@ -33,8 +51,13 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 		return nil, fmt.Errorf("assemble documentation: %w", err)
 	}
 
+	newDeclFormatter := newDefaultDeclFormatter
+	if a.newDeclFormatter != nil {
+		newDeclFormatter = a.newDeclFormatter
+	}
+
 	return (&assembly{
-		fmt:        gosrc.NewDeclFormatter(bpkg.Fset, bpkg.TopLevelDecls),
+		fmt:        newDeclFormatter(bpkg),
 		fset:       bpkg.Fset,
 		cparse:     dpkg.Parser(),
 		linker:     a.Linker,
@@ -43,7 +66,7 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 }
 
 type assembly struct {
-	fmt        *gosrc.DeclFormatter
+	fmt        DeclFormatter
 	fset       *token.FileSet
 	cparse     *comment.Parser
 	linker     Linker
@@ -51,6 +74,9 @@ type assembly struct {
 }
 
 func (as *assembly) doc(doc string) *comment.Doc {
+	if len(doc) == 0 {
+		return nil
+	}
 	return as.cparse.Parse(doc)
 }
 
