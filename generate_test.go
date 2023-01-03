@@ -58,6 +58,11 @@ func TestGenerator_hierarchy(t *testing.T) {
 						{RelativePath: "foo/bar", Synopsis: "package bar does things."},
 					},
 				},
+				"": {
+					Subpackages: []html.Subpackage{
+						{RelativePath: "example.com/foo/bar", Synopsis: "package bar does things."},
+					},
+				},
 			},
 		},
 		{
@@ -90,6 +95,13 @@ func TestGenerator_hierarchy(t *testing.T) {
 				},
 			},
 			wantDirs: map[string]*renderInfo{
+				"": {
+					Subpackages: []html.Subpackage{
+						{RelativePath: "a/b/c", Synopsis: "package c"},
+						{RelativePath: "a/b/e", Synopsis: "package e"},
+						{RelativePath: "a/d", Synopsis: "package d"},
+					},
+				},
 				"a": {
 					Breadcrumbs: []html.Breadcrumb{
 						{Text: "a", Path: "a"},
