@@ -3,7 +3,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +14,8 @@ import (
 	"go.abhg.dev/doc2go/internal/html"
 	"golang.org/x/tools/go/packages"
 )
+
+var _version = "dev"
 
 func main() {
 	cmd := mainCmd{
@@ -39,10 +40,13 @@ type mainCmd struct {
 func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.log = log.New(cmd.Stderr, "", 0)
 
-	opts, err := (&cliParser{Stderr: cmd.Stderr}).Parse(args)
+	opts, err := (&cliParser{
+		Stdout: cmd.Stdout,
+		Stderr: cmd.Stderr,
+	}).Parse(args)
 	if err != nil {
 		// '$cmd -h' should exit with zero.
-		if errors.Is(err, flag.ErrHelp) {
+		if errors.Is(err, errHelp) {
 			return 0
 		}
 		// No need to print anything.

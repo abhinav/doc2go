@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io/fs"
 	"os"
 	"testing"
@@ -19,6 +20,20 @@ func TestMainCmd_help(t *testing.T) {
 		Stderr: iotest.Writer(t),
 	}).Run([]string{"-h"})
 	assert.Zero(t, exitCode, "-h should have zero status code")
+}
+
+func TestMainCmd_version(t *testing.T) {
+	t.Parallel()
+
+	var buff bytes.Buffer
+	exitCode := (&mainCmd{
+		Stdout: &buff,
+		Stderr: iotest.Writer(t),
+	}).Run([]string{"-version"})
+	assert.Zero(t, exitCode, "-version should have zero status code")
+
+	assert.Contains(t, buff.String(), "doc2go")
+	assert.Contains(t, buff.String(), _version)
 }
 
 func TestMainCmd_unknownFlag(t *testing.T) {

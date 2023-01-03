@@ -11,6 +11,8 @@ import (
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
 
+var errHelp = flag.ErrHelp
+
 const _shortUsage = `USAGE: doc2go [OPTIONS] PATTERN ...`
 
 // params holds all arguments for doc2go.
@@ -27,6 +29,7 @@ type params struct {
 
 // cliParser parses the command line arguments for doc2go.
 type cliParser struct {
+	Stdout io.Writer
 	Stderr io.Writer
 }
 
@@ -78,8 +81,14 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 
 func (cmd *cliParser) Parse(args []string) (*params, error) {
 	p, flag := cmd.newFlagSet()
+	version := flag.Bool("version", false, "report the tool version.")
 	if err := flag.Parse(args); err != nil {
 		return nil, err
+	}
+
+	if *version {
+		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
+		return nil, errHelp
 	}
 
 	p.Patterns = flag.Args()
