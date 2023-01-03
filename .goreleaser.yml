@@ -1,0 +1,59 @@
+project_name: doc2go
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: ["386", amd64, arm, arm64]
+    goarm: [5, 6, 7]
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: darwin
+        goarch: arm
+    ldflags: '-s -w -X main._version={{.Version}}'
+    flags:
+      - -trimpath
+
+aurs:
+  - name: doc2go-bin
+    homepage: https://github.com/abhinav/doc2go
+    description: "Your Go project's documentation, to-go."
+    maintainers:
+      - 'Abhinav Gupta <mail@abhinavg.net>'
+    license: "Apache"
+    git_url: "ssh://aur@aur.archlinux.org/doc2go-bin.git"
+    skip_upload: auto
+    private_key: '{{ .Env.AUR_KEY }}'
+    package: |-
+      install -Dm755 "./doc2go" "${pkgdir}/usr/bin/doc2go"
+      install -Dm755 "./LICENSE" "${pkgdir}/usr/share/licenses/doc2go/LICENSE"
+    commit_author:
+      name: Abhinav Gupta
+      email: mail@abhinavg.net
+
+brews:
+  - tap:
+      owner: abhinav
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "{{ .ProjectName }}: Update formula to {{ .Tag }}"
+    commit_author:
+      name: Abhinav Gupta
+      email: mail@abhinavg.net
+    homepage: https://github.com/abhinav/doc2go
+    description: "Your Go project's documentation, to-go."
+    license: "Apache-2.0"
+    skip_upload: auto
+    test: |
+      system "#{bin}/doc2go -version"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incminor .Tag }}-dev"
+
+changelog:
+  # A commit log is not a changelog.
+  skip: true
