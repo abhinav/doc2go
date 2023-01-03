@@ -88,16 +88,15 @@ func (cmd *mainCmd) run(opts *params) error {
 
 	g := Generator{
 		Log:    cmd.log,
-		Finder: &finder,
 		Parser: new(gosrc.Parser),
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
 		},
 		Renderer: &html.Renderer{
 			Embedded: opts.Embedded,
+			Internal: opts.Internal,
 		},
 		OutDir:    opts.OutputDir,
-		Internal:  opts.Internal,
 		DocLinker: &linker,
 	}
 

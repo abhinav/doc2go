@@ -7,21 +7,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
 	"go.abhg.dev/doc2go/internal/pathtree"
 	"go.abhg.dev/doc2go/internal/relative"
+	"go.abhg.dev/doc2go/internal/slices"
 )
-
-// Finder searches for packages on-disk based on the provided patterns.
-type Finder interface {
-	FindPackages(patterns ...string) ([]*gosrc.PackageRef, error)
-}
-
-var _ Finder = (*gosrc.Finder)(nil)
 
 // Parser loads a package reference from disk
 // and parses its contents.
@@ -54,14 +47,24 @@ var _ Renderer = (*html.Renderer)(nil)
 // Generator's purpose is to add a separation between main
 // and the program's core logic to aid in testability.
 type Generator struct {
-	Log       *log.Logger
-	Finder    Finder
-	Parser    Parser
+	Log *log.Logger
+
+	// Parser parses package information from PackageRefs.
+	Parser Parser
+
+	// Assembler converts parsed Package ASTs
+	// into a documentation-level IR.
 	Assembler Assembler
-	Renderer  Renderer
-	OutDir    string
-	Internal  bool
+
+	// Renderer renders a package's documentation IR
+	// into HTML.
+	Renderer Renderer
+
 	DocLinker godoc.Linker
+
+	// OutDir is the destination directory.
+	// It will be created it if it doesn't exist.
+	OutDir string
 }
 
 // Generate runs the generator over the provided packages.
@@ -126,7 +129,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	idx := html.PackageIndex{
 		Path:        t.Path,
-		Subpackages: r.subpackages(t.Path, subpkgs),
+		Subpackages: htmlSubpackages(t.Path, subpkgs),
 		Breadcrumbs: crumbs,
 	}
 	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
@@ -174,7 +177,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 	info := html.PackageInfo{
 		Package:     dpkg,
 		Breadcrumbs: crumbs,
-		Subpackages: r.subpackages(dpkg.ImportPath, subpkgs),
+		Subpackages: htmlSubpackages(dpkg.ImportPath, subpkgs),
 		DocPrinter: &html.CommentDocPrinter{
 			Printer: comment.Printer{
 				DocLinkURL: func(link *comment.DocLink) string {
@@ -193,24 +196,16 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 	}, nil
 }
 
-func (r *Generator) subpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
-	subpkgs := make([]html.Subpackage, 0, len(rpkgs))
-	for _, rpkg := range rpkgs {
+func htmlSubpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
+	return slices.Transform(rpkgs, func(rpkg *renderedPackage) html.Subpackage {
 		// TODO: track this on packageTree?
 		relPath := relative.Filepath(from, rpkg.ImportPath)
 
-		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
-			if !r.Internal {
-				continue
-			}
-		}
-
-		subpkgs = append(subpkgs, html.Subpackage{
+		return html.Subpackage{
 			RelativePath: relPath,
 			Synopsis:     rpkg.Synopsis,
-		})
-	}
-	return subpkgs
+		}
+	})
 }
 
 type packageTree = pathtree.Snapshot[*gosrc.PackageRef]

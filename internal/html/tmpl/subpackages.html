@@ -2,7 +2,7 @@
 
 <table>
   <tbody>
-    {{ range .Subpackages -}}
+    {{ range (filterSubpackages .Subpackages) -}}
       <tr>
         <td><a href="{{ .RelativePath }}">{{ .RelativePath }}</a></td>
         <td>
