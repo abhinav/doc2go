@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
+	"golang.org/x/tools/go/packages"
 )
 
 func main() {
@@ -31,6 +32,8 @@ type mainCmd struct {
 	log      *log.Logger
 	debugLog *log.Logger
 	debug    bool
+
+	packagesConfig *packages.Config
 }
 
 func (cmd *mainCmd) Run(args []string) (exitCode int) {
@@ -66,8 +69,9 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 
 func (cmd *mainCmd) run(opts *params) error {
 	finder := gosrc.Finder{
-		Tags: strings.Split(opts.Tags, ","),
-		Log:  cmd.log,
+		Tags:           strings.Split(opts.Tags, ","),
+		Log:            cmd.log,
+		PackagesConfig: cmd.packagesConfig,
 	}
 	if cmd.debug {
 		finder.DebugLog = cmd.debugLog
