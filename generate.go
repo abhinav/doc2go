@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
@@ -47,7 +48,7 @@ var _ Renderer = (*html.Renderer)(nil)
 // Generator's purpose is to add a separation between main
 // and the program's core logic to aid in testability.
 type Generator struct {
-	Log *log.Logger
+	DebugLog *log.Logger
 
 	// Parser parses package information from PackageRefs.
 	Parser Parser
@@ -65,10 +66,22 @@ type Generator struct {
 	// OutDir is the destination directory.
 	// It will be created it if it doesn't exist.
 	OutDir string
+
+	once sync.Once
+}
+
+func (r *Generator) init() {
+	r.once.Do(func() {
+		if r.DebugLog == nil {
+			r.DebugLog = log.New(io.Discard, "", 0)
+		}
+	})
 }
 
 // Generate runs the generator over the provided packages.
 func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
+	r.init()
+
 	if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
 		return err
 	}
@@ -118,7 +131,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 		return nil, err
 	}
 
-	r.Log.Printf("Rendering index %v", t.Path)
+	r.DebugLog.Printf("Rendering directory %v", t.Path)
 
 	dir := filepath.Join(r.OutDir, t.Path)
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
@@ -155,7 +168,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 	}
 
 	ref := *t.Value
-	r.Log.Printf("Rendering package %v", t.Path)
+	r.DebugLog.Printf("Rendering package %v", t.Path)
 	bpkg, err := r.Parser.ParsePackage(ref)
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
