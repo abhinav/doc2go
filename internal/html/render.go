@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -45,7 +46,14 @@ var (
 
 // Renderer renders components into HTML.
 type Renderer struct {
+	// Whether we're in embedded mode.
+	// In this mode, output will only contain the documentation output
+	// and will not generate complete, stylized HTML pages.
 	Embedded bool
+
+	// Internal specifies whether directory listings
+	// should include internal packages.
+	Internal bool
 }
 
 func (r *Renderer) templateName() string {
@@ -115,6 +123,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 	render := render{
 		Path:       info.ImportPath,
 		DocPrinter: info.DocPrinter,
+		Internal:   r.Internal,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -151,7 +160,8 @@ type Subpackage struct {
 // as HTML.
 func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 	render := render{
-		Path: pidx.Path,
+		Path:     pidx.Path,
+		Internal: r.Internal,
 	}
 	return template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -161,16 +171,19 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 type render struct {
 	Path string
 
+	Internal bool
+
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
 }
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
-		"doc":          r.doc,
-		"code":         renderCode,
-		"static":       r.static,
-		"relativePath": r.relativePath,
+		"doc":               r.doc,
+		"code":              renderCode,
+		"static":            r.static,
+		"relativePath":      r.relativePath,
+		"filterSubpackages": r.filterSubpackages,
 	}
 }
 
@@ -187,4 +200,21 @@ func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {
 		return ""
 	}
 	return template.HTML(r.DocPrinter.WithHeadingLevel(lvl).HTML(doc))
+}
+
+func (r *render) filterSubpackages(pkgs []Subpackage) []Subpackage {
+	// No filtering if listing internal packages.
+	if r.Internal {
+		return pkgs
+	}
+
+	filtered := make([]Subpackage, 0, len(pkgs))
+	for _, pkg := range pkgs {
+		relPath := pkg.RelativePath
+		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
+			continue
+		}
+		filtered = append(filtered, pkg)
+	}
+	return filtered
 }
