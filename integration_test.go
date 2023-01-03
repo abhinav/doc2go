@@ -34,6 +34,10 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 			desc:    "x-net",
 			pattern: "golang.org/x/net/...",
 		},
+		{
+			desc:    "x-tools",
+			pattern: "golang.org/x/tools/...",
+		},
 	}
 
 	for _, tt := range tests {
