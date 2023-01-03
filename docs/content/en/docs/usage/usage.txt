@@ -1,0 +1,32 @@
+USAGE: doc2go [OPTIONS] PATTERN ...
+
+Generates API documentation for packages matching PATTERNs.
+Specify ./... to match the package in the current directory
+and all its descendants.
+
+	doc2go ./...
+
+OPTIONS
+
+  -basename NAME
+	base name of generated files. Defaults to index.html.
+  -out DIR
+	write files to DIR. Defaults to _site.
+  -embed
+	generate partial HTML pages fit for embedding.
+  -internal
+	include internal packages in package listings.
+  -frontmatter FILE
+	generate front matter in HTML files via template in FILE.
+	See -help=frontmatter for more information.
+  -pkg-doc PATH=TEMPLATE
+	generate links for PATH and its children via TEMPLATE.
+	See -help=pkg-doc for more information.
+  -tags TAG,...
+	list of comma-separated build tags.
+  -debug[=FILE]
+	print debugging output to stderr or FILE, if specified.
+  -version
+	report the tool version.
+  -h, -help
+	prints this message.

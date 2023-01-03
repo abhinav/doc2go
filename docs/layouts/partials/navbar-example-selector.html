@@ -1,0 +1,8 @@
+<a class="btn nav-link dropdown-toggle mr-md-2" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+  <i class="fa-solid fa-flask"></i> Examples
+</a>
+<div class="dropdown-menu dropdown-menu-md-right">
+  {{ range .Site.Params.menu.examples }}
+    <a class="dropdown-item" href="{{ relURL .url }}">{{ .name }}</a>
+  {{ end }}
+</div>

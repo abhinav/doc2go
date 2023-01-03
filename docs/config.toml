@@ -1,0 +1,60 @@
+baseURL = 'https://abhinav.github.io/doc2go'
+languageCode = 'en-us'
+title = 'doc2go'
+
+contentDir = "content/en"
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
+disableKinds = ['taxonomy', 'taxonomyTerm']
+enableRobotsTXT = true
+enableGitInfo = true
+
+googleAnalytics = "G-JS3R8KGQQQ"
+
+[[menu.main]]
+name = "GitHub"
+weight = 15
+url = "https://github.com/abhinav/doc2go"
+pre = '<i class="pl-1 fa-brands fa-github" aria-hidden="true"></i>'
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+      style = "tango"
+      codeFences = true
+
+[params]
+github_repo = "https://github.com/abhinav/doc2go"
+github_subdir = "docs"
+github_branch= "main"
+offlineSearch = true
+
+[params.ui]
+navbar_logo = false
+sidebar_search_disable = true
+# sidebar_menu_foldable = true
+footer_about_disable = true
+sidebar_menu_compact = false
+
+[[params.menu.examples]]
+  name = "Embedded"
+  url = "api/go.abhg.dev/doc2go"
+[[params.menu.examples]]
+  name = "Standalone"
+  url = "example/go.abhg.dev/doc2go"
+
+[params.links]
+  [[params.links.developer]]
+    name = "GitHub"
+    url = "https://github.com/abhinav/doc2go"
+    icon = "fa-brands fa-github"
+    desc = "Development takes place here"
+
+[module]
+  proxy = "direct"
+  [[module.imports]]
+    path = "github.com/google/docsy"
+  [[module.imports]]
+    path = "github.com/google/docsy/dependencies"
