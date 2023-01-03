@@ -73,7 +73,9 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		return err
 	}
 
-	_, err := r.renderTrees(nil, buildTrees(pkgRefs))
+	_, err := r.renderTree(nil, packageTree{
+		Children: buildTrees(pkgRefs),
+	})
 	return err
 }
 
@@ -96,7 +98,9 @@ func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*rend
 	} else {
 		crumbText = t.Path
 	}
-	crumbs = append(crumbs, html.Breadcrumb{Text: crumbText, Path: t.Path})
+	if len(crumbText) > 0 {
+		crumbs = append(crumbs, html.Breadcrumb{Text: crumbText, Path: t.Path})
+	}
 
 	if t.Value == nil {
 		return r.renderPackageIndex(crumbs, t)

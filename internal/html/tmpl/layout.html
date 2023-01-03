@@ -8,16 +8,18 @@
     {{ template "Head" $ -}}
   </head>
   <body>
-    <nav>
-      {{ range $idx, $crumb := .Breadcrumbs -}}
-        {{ if gt $idx 0 }}/{{ end -}}
-        {{ with (relativePath .Path) -}}
-          <a href="{{ . }}">{{ $crumb.Text }}</a>
-        {{- else -}}
-          {{ $crumb.Text -}}
+    {{ with .Breadcrumbs -}}
+      <nav>
+        {{ range $idx, $crumb := . -}}
+          {{ if gt $idx 0 }}/{{ end -}}
+          {{ with (relativePath .Path) -}}
+            <a href="{{ . }}">{{ $crumb.Text }}</a>
+          {{- else -}}
+            {{ $crumb.Text -}}
+          {{ end -}}
         {{ end -}}
-      {{ end -}}
-    </nav>
+      </nav>
+    {{- end -}}
     <main>{{ template "Body" $ -}}</main>
     <script src="{{ static "js/permalink.js" }}"></script>
   </body>
