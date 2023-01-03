@@ -162,7 +162,7 @@ func TestGenerator_hierarchy(t *testing.T) {
 			}
 
 			g := Generator{
-				Log:       log.New(iotest.Writer(t), "", 0),
+				DebugLog:  log.New(iotest.Writer(t), "", 0),
 				Parser:    &parser,
 				Assembler: &assembler,
 				Renderer:  &renderer,

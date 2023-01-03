@@ -91,8 +91,8 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	g := Generator{
-		Log:    cmd.log,
-		Parser: new(gosrc.Parser),
+		DebugLog: cmd.debugLog,
+		Parser:   new(gosrc.Parser),
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
 		},
