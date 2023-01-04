@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -171,6 +172,55 @@ func TestGenerator_hierarchy(t *testing.T) {
 			require.NoError(t, g.Generate(refs))
 		})
 	}
+}
+
+func TestGenerator_basename(t *testing.T) {
+	pkgs := map[string]*fakePackage{
+		"foo": {ImportPath: "foo"},
+	}
+	parser := fakeParser{
+		t:        t,
+		packages: pkgs,
+	}
+	assembler := fakeAssembler{t: t, packages: pkgs}
+
+	renderer := fakeRenderer{
+		t: t,
+		wantPackages: map[string]*renderInfo{
+			"foo": {
+				Breadcrumbs: []html.Breadcrumb{
+					{Text: "foo", Path: "foo"},
+				},
+			},
+		},
+		wantDirectories: map[string]*renderInfo{
+			"": {
+				Subpackages: []html.Subpackage{
+					{RelativePath: "foo"},
+				},
+			},
+		},
+	}
+
+	outDir := t.TempDir()
+	g := Generator{
+		DebugLog:  log.New(iotest.Writer(t), "", 0),
+		Parser:    &parser,
+		Assembler: &assembler,
+		Renderer:  &renderer,
+		OutDir:    outDir,
+		Basename:  "_index.html",
+	}
+	require.NoError(t, g.Generate([]*gosrc.PackageRef{
+		{
+			Name:       "foo",
+			ImportPath: "foo",
+		},
+	}))
+
+	indexPath := filepath.Join(outDir, "foo", "_index.html")
+	_, err := os.Stat(indexPath)
+	require.NoError(t, err, "file must exist: %v", indexPath)
 }
 
 type fakePackage struct {

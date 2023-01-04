@@ -23,6 +23,7 @@ type params struct {
 	Patterns  []string
 	Internal  bool
 	Embedded  bool
+	Basename  string
 
 	PackageDocTemplates []pathTemplate
 }
@@ -76,6 +77,8 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag.Var(&p.Debug, "debug", "print debugging output to stderr or FILE,\n"+
 		"if specified in the form -debug=FILE.")
 	flag.StringVar(&p.Tags, "tags", "", "list of comma-separated build tags.")
+	flag.StringVar(&p.Basename, "basename", "", "base name of generated files.\n"+
+		"Defaults to index.html.")
 	return &p, flag
 }
 

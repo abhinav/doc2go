@@ -67,6 +67,11 @@ type Generator struct {
 	// It will be created it if it doesn't exist.
 	OutDir string
 
+	// Basename of generated files.
+	//
+	// Defaults to index.html.
+	Basename string
+
 	once sync.Once
 }
 
@@ -74,6 +79,9 @@ func (r *Generator) init() {
 	r.once.Do(func() {
 		if r.DebugLog == nil {
 			r.DebugLog = log.New(io.Discard, "", 0)
+		}
+		if r.Basename == "" {
+			r.Basename = "index.html"
 		}
 	})
 }
@@ -138,7 +146,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 		return nil, err
 	}
 
-	f, err := os.Create(filepath.Join(dir, "index.html"))
+	f, err := os.Create(filepath.Join(dir, r.Basename))
 	if err != nil {
 		return nil, err
 	}
@@ -184,8 +192,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 		return nil, err
 	}
 
-	// TODO: For Hugo, this should be _index.html.
-	f, err := os.Create(filepath.Join(dir, "index.html"))
+	f, err := os.Create(filepath.Join(dir, r.Basename))
 	if err != nil {
 		return nil, err
 	}

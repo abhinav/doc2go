@@ -105,6 +105,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			Internal: opts.Internal,
 		},
 		OutDir:    opts.OutputDir,
+		Basename:  opts.Basename,
 		DocLinker: &linker,
 	}
 
