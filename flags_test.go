@@ -46,6 +46,15 @@ func TestCLIParser(t *testing.T) {
 				Patterns:  []string{"std", "example.com/..."},
 			},
 		},
+		{
+			desc: "basename",
+			give: []string{"-basename", "_index.html", "./..."},
+			want: params{
+				OutputDir: "_site",
+				Basename:  "_index.html",
+				Patterns:  []string{"./..."},
+			},
+		},
 	}
 
 	for _, tt := range tests {

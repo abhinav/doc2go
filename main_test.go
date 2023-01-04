@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,55 +54,85 @@ func TestMainCmd_generate(t *testing.T) {
 }
 
 func testMainCmdGenerate(t *testing.T, exporter packagestest.Exporter) {
-	exported := packagestest.Export(t, exporter, []packagestest.Module{
+	tests := []struct {
+		desc     string
+		flags    []string
+		basename string
+	}{
 		{
-			Name: "example.com/foo/bar",
-			Files: map[string]any{
-				"doc.go": "// Package bar does things.\npackage bar\n",
-				"types.go": "package bar\n" +
-					"// Bar implements the core logic.\n" +
-					"type Bar struct{}",
-			},
+			desc:     "default",
+			basename: "index.html",
 		},
-	})
-
-	outDir := t.TempDir()
-	exitCode := (&mainCmd{
-		Stdout:         iotest.Writer(t),
-		Stderr:         iotest.Writer(t),
-		packagesConfig: exported.Config,
-	}).Run([]string{"-out", outDir, "-debug", "-embed", "./..."})
-	require.Zero(t, exitCode, "expected success")
-
-	fsys := os.DirFS(outDir)
-	gotFiles := make(map[string]string)
-	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-
-		got, err := fs.ReadFile(fsys, path)
-		if err != nil {
-			return err
-		}
-		gotFiles[path] = string(got)
-		t.Logf("Found file %v", path)
-		return nil
-	})
-	require.NoError(t, err)
-
-	if body, ok := gotFiles["example.com/foo/bar/index.html"]; assert.True(t, ok) {
-		assert.Contains(t, body, "Package bar does things")
-		assert.Contains(t, body, "Bar implements the core logic")
+		{
+			desc:     "different basename",
+			flags:    []string{"-basename", "_index.html"},
+			basename: "_index.html",
+		},
 	}
 
-	if body, ok := gotFiles["example.com/foo/index.html"]; assert.True(t, ok) {
-		assert.Contains(t, body, `href="bar"`)
-		assert.Contains(t, body, "Package bar does things")
-	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
 
-	if body, ok := gotFiles["example.com/index.html"]; assert.True(t, ok) {
-		assert.Contains(t, body, ">foo/bar<")
-		assert.Contains(t, body, "Package bar does things")
+			exported := packagestest.Export(t, exporter, []packagestest.Module{
+				{
+					Name: "example.com/foo/bar",
+					Files: map[string]any{
+						"doc.go": "// Package bar does things.\npackage bar\n",
+						"types.go": "package bar\n" +
+							"// Bar implements the core logic.\n" +
+							"type Bar struct{}",
+					},
+				},
+			})
+
+			outDir := t.TempDir()
+			args := append(tt.flags, "-out", outDir, "-debug", "-embed", "./...")
+
+			exitCode := (&mainCmd{
+				Stdout:         iotest.Writer(t),
+				Stderr:         iotest.Writer(t),
+				packagesConfig: exported.Config,
+			}).Run(args)
+			require.Zero(t, exitCode, "expected success")
+
+			fsys := os.DirFS(outDir)
+			gotFiles := make(map[string]string)
+			err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+
+				got, err := fs.ReadFile(fsys, path)
+				if err != nil {
+					return err
+				}
+				gotFiles[path] = string(got)
+				t.Logf("Found file %v", path)
+				return nil
+			})
+			require.NoError(t, err)
+
+			getFile := func(p string) (string, bool) {
+				body, ok := gotFiles[filepath.Join(filepath.FromSlash(p), tt.basename)]
+				return body, ok
+			}
+
+			if body, ok := getFile("example.com/foo/bar"); assert.True(t, ok) {
+				assert.Contains(t, body, "Package bar does things")
+				assert.Contains(t, body, "Bar implements the core logic")
+			}
+
+			if body, ok := getFile("example.com/foo"); assert.True(t, ok) {
+				assert.Contains(t, body, `href="bar"`)
+				assert.Contains(t, body, "Package bar does things")
+			}
+
+			if body, ok := getFile("example.com"); assert.True(t, ok) {
+				assert.Contains(t, body, ">foo/bar<")
+				assert.Contains(t, body, "Package bar does things")
+			}
+		})
 	}
 }
