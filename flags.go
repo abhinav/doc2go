@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -26,6 +27,8 @@ type params struct {
 	Basename  string
 
 	PackageDocTemplates []pathTemplate
+
+	version bool
 }
 
 // cliParser parses the command line arguments for doc2go.
@@ -48,6 +51,9 @@ and all its descendants.
 	doc2go ./...
 `
 
+//go:embed flags.txt
+var _flagDefaults string
+
 func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
@@ -55,41 +61,38 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 		fmt.Fprintln(cmd.Stderr, _shortUsage)
 		fmt.Fprint(cmd.Stderr, _about+"\n")
 		fmt.Fprint(cmd.Stderr, "OPTIONS\n\n")
-		flag.PrintDefaults()
+		fmt.Fprint(cmd.Stderr, _flagDefaults)
 	}
 
 	var p params
-	flag.StringVar(&p.OutputDir, "out", "_site", "write files to `DIR`.")
-	flag.BoolVar(&p.Internal, "internal", false, "include internal packages in package listings.\n"+
-		"We always generate documentation for internal packages,\n"+
-		"but by default, we do not include them in package lists.\n"+
-		"Use this flag to have them listed.")
-	flag.BoolVar(&p.Embedded, "embed", false, "generate partial HTML pages fit for embedding.\n"+
-		"Instead of generating a standalone HTML website, generate partial HTML pages\n"+
-		"that can be incorporated into a website using a static site generator.")
-	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc", "use TEMPLATE to generate documentation links for PATH and its children.\n"+
-		"  -pkg-doc example.com=https://godoc.example.com/{{.ImportPath}}\n"+
-		"The argument must be in the form `PATH=TEMPLATE`.\n"+
-		"The template is a text/template that gets the following variables:\n"+
-		"  ImportPath: import path of the package\n"+
-		"Pass this in multiple times to specify different patterns\n"+
-		"for different import path scopes.")
-	flag.Var(&p.Debug, "debug", "print debugging output to stderr or FILE,\n"+
-		"if specified in the form -debug=FILE.")
-	flag.StringVar(&p.Tags, "tags", "", "list of comma-separated build tags.")
-	flag.StringVar(&p.Basename, "basename", "", "base name of generated files.\n"+
-		"Defaults to index.html.")
+
+	// Filesystem:
+	flag.StringVar(&p.OutputDir, "out", "_site", "")
+	flag.StringVar(&p.OutputDir, "o", "_site", "")
+	flag.StringVar(&p.Basename, "basename", "", "")
+
+	// HTML output:
+	flag.BoolVar(&p.Internal, "internal", false, "")
+	flag.BoolVar(&p.Embedded, "embed", false, "")
+	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc", "")
+
+	// Go build system:
+	flag.StringVar(&p.Tags, "tags", "", "")
+
+	// Program-level:
+	flag.Var(&p.Debug, "debug", "")
+	flag.BoolVar(&p.version, "version", false, "")
+
 	return &p, flag
 }
 
 func (cmd *cliParser) Parse(args []string) (*params, error) {
 	p, flag := cmd.newFlagSet()
-	version := flag.Bool("version", false, "report the tool version.")
 	if err := flag.Parse(args); err != nil {
 		return nil, err
 	}
 
-	if *version {
+	if p.version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
 		return nil, errHelp
 	}

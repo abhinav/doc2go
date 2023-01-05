@@ -1,0 +1,29 @@
+  -basename NAME
+	base name of generated files. Defaults to index.html.
+  -o, -out DIR
+	write files to DIR. Defaults to _site.
+  -embed
+	generate partial HTML pages fit for embedding.
+	Instead of generating a standalone HTML website, generate partial HTML
+	pages that can be incorporated into a website using a static site
+	generator.
+  -internal
+	include internal packages in package listings.
+	We always generate documentation for internal packages, but without
+	this flag set, we will not include them in package lists.
+  -pkg-doc PATH=TEMPLATE
+	use TEMPLATE to generate documentation links for PATH and its children.
+	  -pkg-doc example.com=https://godoc.example.com/{{.ImportPath}}
+	The template is a text/template that gets the following object:
+		struct {
+			// Import path of the target package.
+			ImportPath string
+		}
+	Pass this in multiple times to specify different patterns for different
+	import path scopes.
+  -tags TAG,...
+	list of comma-separated build tags.
+  -debug[=FILE]
+	print debugging output to stderr or FILE, if specified.
+  -version
+	report the tool version.
