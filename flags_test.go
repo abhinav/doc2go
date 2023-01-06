@@ -12,11 +12,11 @@ import (
 )
 
 func TestFlagHelp(t *testing.T) {
-	// Verifies that all registered flags are documented in flags.txt.
+	// Verifies that all registered flags are documented in _defaultHelp.
 
 	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet()
 	fset.VisitAll(func(f *flag.Flag) {
-		assert.Contains(t, _flagDefaults, "-"+f.Name)
+		assert.Contains(t, _defaultHelp, "-"+f.Name)
 	})
 }
 
