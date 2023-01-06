@@ -438,6 +438,7 @@ func TestRenderSubpackages(t *testing.T) {
 	assertLinks := func(t *testing.T, want []link, output []byte) {
 		doc, err := html.Parse(bytes.NewReader(output))
 		require.NoError(t, err, "invalid HTML:\n%s", output)
+		assert.Contains(t, string(output), "Directories")
 
 		table := querySelector(doc, "#pkg-directories + table")
 		require.NotNil(t, table, "pkg-directories not found:\n%s", output)
@@ -489,6 +490,52 @@ func TestRenderSubpackages(t *testing.T) {
 			})
 		})
 	}
+}
+
+// If all we have is internal subpackages,
+// and we're not rendering internal packages,
+// don't generate a subpackages section.
+func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
+	subpackages := []Subpackage{
+		{RelativePath: "internal/foo"},
+		{RelativePath: "internal/bar"},
+		{RelativePath: "internal/baz"},
+	}
+
+	assertNoSubpackages := func(t *testing.T, output []byte) {
+		doc, err := html.Parse(bytes.NewReader(output))
+		require.NoError(t, err, "invalid HTML:\n%s", output)
+
+		h := querySelector(doc, "#pkg-directories")
+		assert.Nil(t, h, "There should be no pkg-directories:\n%s", output)
+		assert.NotContains(t, string(output), "Directories")
+	}
+
+	t.Run("package", func(t *testing.T) {
+		pinfo := PackageInfo{
+			Package: &godoc.Package{
+				Name:       "foo",
+				ImportPath: "example.com/fo",
+			},
+			DocPrinter:  new(CommentDocPrinter),
+			Subpackages: subpackages,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+		assertNoSubpackages(t, buff.Bytes())
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		pidx := PackageIndex{
+			Path:        "example.com/foo",
+			Subpackages: subpackages,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, new(Renderer).RenderPackageIndex(&buff, &pidx))
+		assertNoSubpackages(t, buff.Bytes())
+	})
 }
 
 func TestRenderBreadcrumbs(t *testing.T) {
