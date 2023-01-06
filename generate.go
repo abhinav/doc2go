@@ -154,6 +154,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	idx := html.PackageIndex{
 		Path:        t.Path,
+		NumChildren: len(t.Children),
 		Subpackages: htmlSubpackages(t.Path, subpkgs),
 		Breadcrumbs: crumbs,
 	}
@@ -200,6 +201,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 
 	info := html.PackageInfo{
 		Package:     dpkg,
+		NumChildren: len(t.Children),
 		Breadcrumbs: crumbs,
 		Subpackages: htmlSubpackages(dpkg.ImportPath, subpkgs),
 		DocPrinter: &html.CommentDocPrinter{

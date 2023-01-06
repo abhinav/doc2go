@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	ttemplate "text/template"
 
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
@@ -601,6 +602,115 @@ func TestRenderBreadcrumbs(t *testing.T) {
 		require.NoError(t, new(Renderer).RenderPackageIndex(&buff, &pidx))
 		assertCrumbs(t, buff.Bytes())
 	})
+}
+
+func TestFrontmatter(t *testing.T) {
+	t.Parallel()
+
+	smallPkg := PackageInfo{
+		NumChildren: 5,
+		Package: &godoc.Package{
+			Name:       "foo",
+			ImportPath: "example.com/foo",
+		},
+	}
+	smallDir := PackageIndex{
+		Path:        "example.com/foo/bar",
+		NumChildren: 6,
+	}
+
+	tests := []struct {
+		desc string
+		tmpl string
+
+		// One of the following two must be set.
+		pkg *PackageInfo
+		dir *PackageIndex
+
+		want string
+	}{
+		{
+			desc: "pkg",
+			tmpl: "{{.Path}}\n{{.Basename}}\n{{.NumChildren}}",
+			pkg:  &smallPkg,
+			want: "example.com/foo\nfoo\n5\n\n",
+		},
+		{
+			desc: "dir",
+			tmpl: "{{.Path}}\n{{.Basename}}\n{{.NumChildren}}",
+			dir:  &smallDir,
+			want: "example.com/foo/bar\nbar\n6\n\n",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			tmpl, err := ttemplate.New(t.Name()).Parse(tt.tmpl)
+			require.NoError(t, err)
+
+			rnd := Renderer{
+				Frontmatter: tmpl,
+			}
+
+			var buff bytes.Buffer
+			if tt.pkg != nil {
+				require.NoError(t, rnd.RenderPackage(&buff, tt.pkg))
+			} else if tt.dir != nil {
+				require.NoError(t, rnd.RenderPackageIndex(&buff, tt.dir))
+			} else {
+				t.Fatal("Bad test case: one of pkg or dir must be set")
+			}
+
+			require.True(t, strings.HasPrefix(buff.String(), tt.want),
+				"file must start with %q, got:\n%s", tt.want, buff.String())
+		})
+	}
+}
+
+func TestBasename(t *testing.T) {
+	t.Parallel()
+
+	type hasBasename interface{ Basename() string }
+
+	tests := []struct {
+		desc string
+		give hasBasename
+		want string
+	}{
+		{
+			desc: "package",
+			give: &PackageInfo{
+				Package: &godoc.Package{
+					ImportPath: "example.com/foo/bar/baz",
+				},
+			},
+			want: "baz",
+		},
+		{
+			desc: "directory",
+			give: &PackageIndex{
+				Path: "example.com/foo/bar",
+			},
+			want: "bar",
+		},
+		{
+			desc: "root directory",
+			give: &PackageIndex{},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, tt.give.Basename())
+		})
+	}
 }
 
 func querySelector(n *html.Node, query string) *html.Node {

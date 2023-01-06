@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,4 +148,101 @@ func testMainCmdGenerate(t *testing.T, exporter packagestest.Exporter) {
 			}
 		})
 	}
+}
+
+func TestMainCmd_frontmatter(t *testing.T) {
+	t.Parallel()
+
+	const template = "---\ntitle: {{.Path}}\n---"
+
+	frontmatterFile := filepath.Join(t.TempDir(), "frontmatter.txt")
+	require.NoError(t,
+		os.WriteFile(frontmatterFile, []byte(template), 0o644))
+
+	mod := packagestest.Module{
+		Name: "foo/bar",
+		Files: map[string]any{
+			"bar.go": "package bar",
+		},
+	}
+	assertFileHasPrefix := func(t *testing.T, path, want string) {
+		bs, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		got := string(bs)
+		if !strings.HasPrefix(got, want) {
+			t.Errorf("File %v must start with %q\nGot:\n%v", path, want, got)
+		}
+	}
+
+	tests := []struct {
+		desc    string
+		give    []string
+		wantFoo string
+		wantBar string
+	}{
+		{
+			desc: "frontmatter flag",
+			give: []string{
+				"-frontmatter", template,
+			},
+			wantFoo: "---\ntitle: foo\n---\n\n",
+			wantBar: "---\ntitle: foo/bar\n---\n\n",
+		},
+		{
+			desc: "frontmatter file",
+			give: []string{
+				"-frontmatter-file", frontmatterFile,
+			},
+			wantFoo: "---\ntitle: foo\n---\n\n",
+			wantBar: "---\ntitle: foo/bar\n---\n\n",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			exported := packagestest.Export(t,
+				packagestest.Modules, []packagestest.Module{mod})
+
+			outDir := t.TempDir()
+			args := append(tt.give, "-out", outDir, "-debug", "./...")
+
+			exitCode := (&mainCmd{
+				Stdout:         iotest.Writer(t),
+				Stderr:         iotest.Writer(t),
+				packagesConfig: exported.Config,
+			}).Run(args)
+			require.Zero(t, exitCode, "expected success")
+
+			assertFileHasPrefix(t,
+				filepath.Join(outDir, "foo/index.html"), tt.wantFoo)
+			assertFileHasPrefix(t,
+				filepath.Join(outDir, "foo/bar/index.html"), tt.wantBar)
+		})
+	}
+}
+
+func TestMainCmd_frontmatter_errors(t *testing.T) {
+	t.Run("bad syntax", func(t *testing.T) {
+		var buff bytes.Buffer
+		exitCode := (&mainCmd{
+			Stdout: iotest.Writer(t),
+			Stderr: &buff,
+		}).Run([]string{"-frontmatter", "{{", "./..."})
+		require.NotZero(t, exitCode, "expected success")
+		assert.Contains(t, buff.String(), "bad frontmatter template")
+	})
+
+	t.Run("file does not exist", func(t *testing.T) {
+		var buff bytes.Buffer
+		exitCode := (&mainCmd{
+			Stdout: iotest.Writer(t),
+			Stderr: &buff,
+		}).Run([]string{"-frontmatter-file", "does-not-exist.txt", "./..."})
+		require.NotZero(t, exitCode, "expected success")
+		assert.Contains(t, buff.String(), "no such file or directory")
+	})
 }

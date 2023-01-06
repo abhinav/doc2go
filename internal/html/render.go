@@ -2,6 +2,7 @@
 package html
 
 import (
+	"bytes"
 	"embed"
 	"go/doc/comment"
 	"html/template"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	ttemplate "text/template"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -54,6 +56,9 @@ type Renderer struct {
 	// Internal specifies whether directory listings
 	// should include internal packages.
 	Internal bool
+
+	// Frontmatter to include at the top of each file, if any.
+	Frontmatter *ttemplate.Template
 }
 
 func (r *Renderer) templateName() string {
@@ -95,6 +100,38 @@ func (r *Renderer) WriteStatic(dir string) error {
 	})
 }
 
+type frontmatterPackageData struct {
+	Name     string
+	Synopsis string
+}
+
+type frontmatterData struct {
+	Path        string
+	Basename    string
+	NumChildren int
+	Package     frontmatterPackageData
+}
+
+func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
+	if r.Frontmatter == nil {
+		return nil
+	}
+
+	var buff bytes.Buffer
+	if err := r.Frontmatter.Execute(&buff, d); err != nil {
+		return err
+	}
+
+	bs := bytes.TrimSpace(buff.Bytes())
+	if len(bs) == 0 {
+		return nil
+	}
+	bs = append(bs, '\n', '\n')
+
+	_, err := w.Write(bs)
+	return err
+}
+
 // Breadcrumb holds information about parents of a page
 // so that we can leave a trail up for navigation.
 type Breadcrumb struct {
@@ -110,6 +147,7 @@ type PackageInfo struct {
 	// Parsed package documentation information.
 	*godoc.Package
 
+	NumChildren int
 	Subpackages []Subpackage
 	Breadcrumbs []Breadcrumb
 
@@ -117,9 +155,26 @@ type PackageInfo struct {
 	DocPrinter DocPrinter
 }
 
+// Basename is the last component of this package's path.
+func (b *PackageInfo) Basename() string {
+	return filepath.Base(b.ImportPath)
+}
+
 // RenderPackage renders the documentation for a single Go package.
 // It does not include subpackage information.
 func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
+	err := r.renderFrontmatter(w, frontmatterData{
+		Path:        info.ImportPath,
+		Basename:    info.Basename(),
+		NumChildren: info.NumChildren,
+		Package: frontmatterPackageData{
+			Name:     info.Name,
+			Synopsis: info.Synopsis,
+		},
+	})
+	if err != nil {
+		return err
+	}
 	render := render{
 		Path:       info.ImportPath,
 		DocPrinter: info.DocPrinter,
@@ -135,8 +190,18 @@ type PackageIndex struct {
 	// Path to this package index.
 	Path string
 
+	NumChildren int
 	Subpackages []Subpackage
 	Breadcrumbs []Breadcrumb
+}
+
+// Basename is the last component of this directory's path,
+// or if it's the top level directory, an empty string.
+func (idx *PackageIndex) Basename() string {
+	if len(idx.Path) == 0 {
+		return ""
+	}
+	return filepath.Base(idx.Path)
 }
 
 // Subpackage is a descendant of a Go package.
@@ -159,6 +224,11 @@ type Subpackage struct {
 // RenderPackageIndex renders the list of descendants for a package
 // as HTML.
 func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
+	r.renderFrontmatter(w, frontmatterData{
+		Path:        pidx.Path,
+		Basename:    pidx.Basename(),
+		NumChildren: pidx.NumChildren,
+	})
 	render := render{
 		Path:     pidx.Path,
 		Internal: r.Internal,
