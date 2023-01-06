@@ -3,12 +3,22 @@ package main
 import (
 	"bytes"
 	"flag"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/iotest"
 )
+
+func TestFlagHelp(t *testing.T) {
+	// Verifies that all registered flags are documented in flags.txt.
+
+	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet()
+	fset.VisitAll(func(f *flag.Flag) {
+		assert.Contains(t, _flagDefaults, "-"+f.Name)
+	})
+}
 
 func TestCLIParser(t *testing.T) {
 	t.Parallel()
