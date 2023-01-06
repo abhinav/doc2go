@@ -86,7 +86,7 @@
   {{ end -}}
 {{ end -}}
 
-{{ if .Subpackages -}}
+{{ with (filterSubpackages .Subpackages) -}}
   {{ template "subpackages.html" . -}}
 {{ end -}}
 {{ end -}}

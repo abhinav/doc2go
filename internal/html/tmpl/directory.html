@@ -3,5 +3,7 @@
 {{ end -}}
 
 {{ define "Body" -}}
-  {{ template "subpackages.html" . -}}
+  {{ with (filterSubpackages .Subpackages) -}}
+    {{ template "subpackages.html" . -}}
+  {{ end -}}
 {{ end -}}
