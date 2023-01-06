@@ -65,6 +65,28 @@ func TestCLIParser(t *testing.T) {
 				Patterns:  []string{"./..."},
 			},
 		},
+		{
+			desc: "package doc templates",
+			give: []string{
+				"-pkg-doc", "example.com/foo=https://godocs.io/{{.ImportPath}}",
+				"-pkg-doc=example.com/bar=https://go.example.com/{{.ImportPath}}",
+				"./...",
+			},
+			want: params{
+				PackageDocTemplates: []pathTemplate{
+					{
+						Path:     "example.com/foo",
+						Template: "https://godocs.io/{{.ImportPath}}",
+					},
+					{
+						Path:     "example.com/bar",
+						Template: "https://go.example.com/{{.ImportPath}}",
+					},
+				},
+				Patterns:  []string{"./..."},
+				OutputDir: "_site",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -79,26 +101,6 @@ func TestCLIParser(t *testing.T) {
 			assert.Equal(t, tt.want, *got)
 		})
 	}
-
-	t.Run("package doc templates", func(t *testing.T) {
-		got, err := (&cliParser{
-			Stderr: iotest.Writer(t),
-		}).Parse([]string{
-			"-pkg-doc", "example.com/foo=https://godocs.io/{{.ImportPath}}",
-			"-pkg-doc=example.com/bar=https://go.example.com/{{.ImportPath}}",
-			"./...",
-		})
-		require.NoError(t, err)
-
-		tmpls := got.PackageDocTemplates
-		require.Len(t, tmpls, 2)
-
-		assert.Equal(t, "example.com/foo", tmpls[0].Path)
-		assert.Equal(t, "https://godocs.io/{{.ImportPath}}", tmpls[0].rawTmpl)
-
-		assert.Equal(t, "example.com/bar", tmpls[1].Path)
-		assert.Equal(t, "https://go.example.com/{{.ImportPath}}", tmpls[1].rawTmpl)
-	})
 }
 
 func TestCLIParser_Errors(t *testing.T) {
@@ -117,6 +119,11 @@ func TestCLIParser_Errors(t *testing.T) {
 			desc: "unrecognized",
 			give: []string{"-foo=bar", "./..."},
 			want: "flag provided but not defined: -foo",
+		},
+		{
+			desc: "missing '=' in template",
+			give: []string{"-pkg-doc", "foo"},
+			want: "expected form 'path=template'",
 		},
 	}
 
@@ -146,44 +153,9 @@ func TestPathTemplate(t *testing.T) {
 	}))
 
 	assert.Equal(t, "foo", pt.Path)
-	assert.Equal(t, "bar", pt.rawTmpl)
+	assert.Equal(t, "bar", pt.Template)
 	assert.NotNil(t, pt.Template)
 
 	assert.NotNil(t, pt.Get(), "Get")
 	assert.Equal(t, "foo=bar", pt.String())
-}
-
-func TestPathTemplate_Errors(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		desc string
-		give string
-		want string // expected error
-	}{
-		{
-			desc: "no '='",
-			give: "foo",
-			want: "expected form 'path=template'",
-		},
-		{
-			desc: "invalid template",
-			give: "foo=bar{{.baz",
-			want: "bad template",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.desc, func(t *testing.T) {
-			t.Parallel()
-
-			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
-			fset.SetOutput(iotest.Writer(t))
-
-			fset.Var(new(pathTemplate), "x", "")
-			err := fset.Parse([]string{"-x", tt.give})
-			assert.ErrorContains(t, err, tt.want)
-		})
-	}
 }

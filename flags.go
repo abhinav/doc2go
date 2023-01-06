@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/template"
 
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
@@ -109,8 +108,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 
 type pathTemplate struct {
 	Path     string
-	Template *template.Template
-	rawTmpl  string
+	Template string
 }
 
 var _ flag.Getter = (*pathTemplate)(nil)
@@ -118,7 +116,7 @@ var _ flag.Getter = (*pathTemplate)(nil)
 func (pt *pathTemplate) Get() any { return pt }
 
 func (pt *pathTemplate) String() string {
-	return fmt.Sprintf("%s=%s", pt.Path, pt.rawTmpl)
+	return fmt.Sprintf("%s=%s", pt.Path, pt.Template)
 }
 
 func (pt *pathTemplate) Set(s string) error {
@@ -128,13 +126,6 @@ func (pt *pathTemplate) Set(s string) error {
 	}
 
 	pt.Path = s[:idx]
-	pt.rawTmpl = s[idx+1:]
-
-	var err error
-	pt.Template, err = template.New(pt.Path).Parse(pt.rawTmpl)
-	if err != nil {
-		return fmt.Errorf("bad template: %w", err)
-	}
-
+	pt.Template = s[idx+1:]
 	return nil
 }
