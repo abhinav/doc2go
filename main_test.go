@@ -47,6 +47,18 @@ func TestMainCmd_unknownFlag(t *testing.T) {
 	assert.NotZero(t, exitCode, "unknown flag should have non-zero status code")
 }
 
+func TestMainCmd_badTemplate(t *testing.T) {
+	t.Parallel()
+
+	var buff bytes.Buffer
+	exitCode := (&mainCmd{
+		Stdout: iotest.Writer(t),
+		Stderr: &buff,
+	}).Run([]string{"-pkg-doc", "foo=bar{{.baz", "./..."})
+	assert.NotZero(t, exitCode)
+	assert.Contains(t, buff.String(), "bad package documentation template")
+}
+
 func TestMainCmd_generate(t *testing.T) {
 	t.Parallel()
 

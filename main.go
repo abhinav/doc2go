@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"text/template"
 
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
@@ -88,7 +89,11 @@ func (cmd *mainCmd) run(opts *params) error {
 
 	var linker docLinker
 	for _, lt := range opts.PackageDocTemplates {
-		linker.Template(lt.Path, lt.Template)
+		t, err := template.New(lt.Path).Parse(lt.Template)
+		if err != nil {
+			return fmt.Errorf("bad package documentation template %q: %w", lt.String(), err)
+		}
+		linker.Template(lt.Path, t)
 	}
 	for _, ref := range pkgRefs {
 		linker.LocalPackage(ref.ImportPath)
