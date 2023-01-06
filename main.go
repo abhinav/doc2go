@@ -88,7 +88,7 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	var linker docLinker
-	for _, lt := range opts.PackageDocTemplates {
+	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
 		if err != nil {
 			return fmt.Errorf("bad package documentation template %q: %w", lt.String(), err)
@@ -106,7 +106,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			Linker: &linker,
 		},
 		Renderer: &html.Renderer{
-			Embedded: opts.Embedded,
+			Embedded: opts.Embed,
 			Internal: opts.Internal,
 		},
 		OutDir:    opts.OutputDir,
