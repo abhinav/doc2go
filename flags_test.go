@@ -52,7 +52,7 @@ func TestCLIParser(t *testing.T) {
 				Debug:     "log.txt",
 				OutputDir: "build/site",
 				Internal:  true,
-				Embedded:  true,
+				Embed:     true,
 				Patterns:  []string{"std", "example.com/..."},
 			},
 		},
@@ -73,7 +73,7 @@ func TestCLIParser(t *testing.T) {
 				"./...",
 			},
 			want: params{
-				PackageDocTemplates: []pathTemplate{
+				PkgDocs: []pathTemplate{
 					{
 						Path:     "example.com/foo",
 						Template: "https://godocs.io/{{.ImportPath}}",

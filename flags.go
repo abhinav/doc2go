@@ -17,17 +17,19 @@ const _shortUsage = `USAGE: doc2go [OPTIONS] PATTERN ...`
 
 // params holds all arguments for doc2go.
 type params struct {
-	Tags      string
-	Debug     flagvalue.FileSwitch
-	OutputDir string
-	Patterns  []string
-	Internal  bool
-	Embedded  bool
-	Basename  string
-
-	PackageDocTemplates []pathTemplate
-
 	version bool
+
+	Tags  string
+	Debug flagvalue.FileSwitch
+
+	Basename  string
+	OutputDir string
+
+	Embed    bool
+	Internal bool
+	PkgDocs  []pathTemplate
+
+	Patterns []string
 }
 
 // cliParser parses the command line arguments for doc2go.
@@ -72,8 +74,8 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 
 	// HTML output:
 	flag.BoolVar(&p.Internal, "internal", false, "")
-	flag.BoolVar(&p.Embedded, "embed", false, "")
-	flag.Var(flagvalue.ListOf(&p.PackageDocTemplates), "pkg-doc", "")
+	flag.BoolVar(&p.Embed, "embed", false, "")
+	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 
 	// Go build system:
 	flag.StringVar(&p.Tags, "tags", "", "")
