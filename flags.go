@@ -25,11 +25,10 @@ type params struct {
 	Basename  string
 	OutputDir string
 
-	Embed           bool
-	Internal        bool
-	PkgDocs         []pathTemplate
-	Frontmatter     string
-	FrontmatterFile string
+	Embed       bool
+	Internal    bool
+	PkgDocs     []pathTemplate
+	Frontmatter string
 
 	Patterns []string
 }
@@ -78,7 +77,6 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag.BoolVar(&p.Internal, "internal", false, "")
 	flag.BoolVar(&p.Embed, "embed", false, "")
 	flag.StringVar(&p.Frontmatter, "frontmatter", "", "")
-	flag.StringVar(&p.FrontmatterFile, "frontmatter-file", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 
 	// Go build system:
@@ -100,12 +98,6 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	if p.version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
 		return nil, errHelp
-	}
-
-	if len(p.Frontmatter) > 0 && len(p.FrontmatterFile) > 0 {
-		fmt.Fprintln(cmd.Stderr, "Only one of -frontmatter and -frontmatter-file may be specified.")
-		cmd.printShortUsage()
-		return nil, errInvalidArguments
 	}
 
 	p.Patterns = flag.Args()
