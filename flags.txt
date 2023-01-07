@@ -11,9 +11,9 @@
 	include internal packages in package listings.
 	We always generate documentation for internal packages, but without
 	this flag set, we will not include them in package lists.
-  -frontmatter TEMPLATE
-	generate front matter in HTML files via TEMPLATE.
-	TEMPLATE executes with the following object:
+  -frontmatter FILE
+	generate front matter in HTML files via template in FILE.
+	The template inside FILE runs with the following object:
 		struct {
 			// Path to the package or directory from module root.
 			// Path is empty for the root index page.
@@ -31,13 +31,10 @@
 			}
 		}
 	By default, generates files do not have front matter.
-  -frontmatter-file FILE
-	read front matter template from FILE.
-	See -frontmatter for more details.
   -pkg-doc PATH=TEMPLATE
 	generate documentation links for PATH and its children via TEMPLATE.
 	  -pkg-doc example.com=https://godoc.example.com/{{.ImportPath}}
-	TEMPLATE executes with the following object:
+	TEMPLATE runs with the following object:
 		struct {
 			// Import path of the target package.
 			ImportPath string

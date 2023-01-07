@@ -100,18 +100,15 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	var frontmatter *template.Template
-	if path := opts.FrontmatterFile; len(path) > 0 {
+	if path := opts.Frontmatter; len(path) > 0 {
 		bs, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("frontmatter file %q: %w", path, err)
+			return fmt.Errorf("-frontmatter: %w", err)
 		}
-		opts.Frontmatter = string(bs)
-	}
-	if fm := opts.Frontmatter; len(fm) > 0 {
-		var err error
-		frontmatter, err = template.New("frontmatter").Parse(fm)
+
+		frontmatter, err = template.New(path).Parse(string(bs))
 		if err != nil {
-			return fmt.Errorf("bad frontmatter template: %w\n%s", err, fm)
+			return fmt.Errorf("bad frontmatter template: %w\n%s", err, bs)
 		}
 	}
 
