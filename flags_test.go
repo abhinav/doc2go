@@ -87,6 +87,30 @@ func TestCLIParser(t *testing.T) {
 				OutputDir: "_site",
 			},
 		},
+		{
+			desc: "frontmatter",
+			give: []string{
+				"-frontmatter", "{{.Path}}",
+				"./...",
+			},
+			want: params{
+				Frontmatter: "{{.Path}}",
+				Patterns:    []string{"./..."},
+				OutputDir:   "_site",
+			},
+		},
+		{
+			desc: "frontmatter-file",
+			give: []string{
+				"-frontmatter-file", "frontmatter.tmpl",
+				"./...",
+			},
+			want: params{
+				FrontmatterFile: "frontmatter.tmpl",
+				Patterns:        []string{"./..."},
+				OutputDir:       "_site",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -124,6 +148,15 @@ func TestCLIParser_Errors(t *testing.T) {
 			desc: "missing '=' in template",
 			give: []string{"-pkg-doc", "foo"},
 			want: "expected form 'path=template'",
+		},
+		{
+			desc: "frontmatter and frontmatter-file",
+			give: []string{
+				"-frontmatter={{.Path}}",
+				"-frontmatter-file=file.txt",
+				"./...",
+			},
+			want: "Only one of -frontmatter and -frontmatter-file",
 		},
 	}
 

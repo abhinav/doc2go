@@ -99,6 +99,22 @@ func (cmd *mainCmd) run(opts *params) error {
 		linker.LocalPackage(ref.ImportPath)
 	}
 
+	var frontmatter *template.Template
+	if path := opts.FrontmatterFile; len(path) > 0 {
+		bs, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("frontmatter file %q: %w", path, err)
+		}
+		opts.Frontmatter = string(bs)
+	}
+	if fm := opts.Frontmatter; len(fm) > 0 {
+		var err error
+		frontmatter, err = template.New("frontmatter").Parse(fm)
+		if err != nil {
+			return fmt.Errorf("bad frontmatter template: %w\n%s", err, fm)
+		}
+	}
+
 	g := Generator{
 		DebugLog: cmd.debugLog,
 		Parser:   new(gosrc.Parser),
@@ -106,8 +122,9 @@ func (cmd *mainCmd) run(opts *params) error {
 			Linker: &linker,
 		},
 		Renderer: &html.Renderer{
-			Embedded: opts.Embed,
-			Internal: opts.Internal,
+			Embedded:    opts.Embed,
+			Internal:    opts.Internal,
+			Frontmatter: frontmatter,
 		},
 		OutDir:    opts.OutputDir,
 		Basename:  opts.Basename,
