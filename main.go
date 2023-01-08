@@ -100,7 +100,7 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	var frontmatter *template.Template
-	if path := opts.Frontmatter; len(path) > 0 {
+	if path := opts.FrontMatter; len(path) > 0 {
 		bs, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("-frontmatter: %w", err)
@@ -121,7 +121,7 @@ func (cmd *mainCmd) run(opts *params) error {
 		Renderer: &html.Renderer{
 			Embedded:    opts.Embed,
 			Internal:    opts.Internal,
-			Frontmatter: frontmatter,
+			FrontMatter: frontmatter,
 		},
 		OutDir:    opts.OutputDir,
 		Basename:  opts.Basename,

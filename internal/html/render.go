@@ -57,8 +57,8 @@ type Renderer struct {
 	// should include internal packages.
 	Internal bool
 
-	// Frontmatter to include at the top of each file, if any.
-	Frontmatter *ttemplate.Template
+	// FrontMatter to include at the top of each file, if any.
+	FrontMatter *ttemplate.Template
 }
 
 func (r *Renderer) templateName() string {
@@ -113,12 +113,12 @@ type frontmatterData struct {
 }
 
 func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
-	if r.Frontmatter == nil {
+	if r.FrontMatter == nil {
 		return nil
 	}
 
 	var buff bytes.Buffer
-	if err := r.Frontmatter.Execute(&buff, d); err != nil {
+	if err := r.FrontMatter.Execute(&buff, d); err != nil {
 		return err
 	}
 

@@ -25,8 +25,8 @@ const (
 	// when no topic is selected.
 	DefaultHelp Help = "default"
 
-	// FrontmatterHelp explains how to use the -frontmatter flag.
-	FrontmatterHelp Help = "frontmatter"
+	// FrontMatterHelp explains how to use the -frontmatter flag.
+	FrontMatterHelp Help = "frontmatter"
 
 	// PackageDocHelp explains how to use the -pkg-doc flag.
 	PackageDocHelp Help = "pkg-doc"
@@ -73,7 +73,7 @@ func init() { _helpTopics[DefaultHelp] = _defaultHelp }
 
 const _frontmatterHelp = `-frontmatter FILE
 
-FILE specifies a text/template to generate frontmatter.
+FILE specifies a text/template to generate front matter.
 doc2go will execute the template for each generated page,
 and put the result at the top of each file,
 separated from the rest of the content by an empty line.
@@ -120,7 +120,7 @@ For example:
 	---
 `
 
-func init() { _helpTopics[FrontmatterHelp] = _frontmatterHelp }
+func init() { _helpTopics[FrontMatterHelp] = _frontmatterHelp }
 
 const _packageDocHelp = `-pkg-doc PATH=TEMPLATE
 
