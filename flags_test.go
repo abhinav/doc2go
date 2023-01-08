@@ -94,7 +94,7 @@ func TestCLIParser(t *testing.T) {
 				"./...",
 			},
 			want: params{
-				Frontmatter: "fm.txt",
+				FrontMatter: "fm.txt",
 				Patterns:    []string{"./..."},
 				OutputDir:   "_site",
 			},

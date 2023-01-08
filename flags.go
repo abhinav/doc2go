@@ -29,7 +29,7 @@ type params struct {
 	Embed       bool
 	Internal    bool
 	PkgDocs     []pathTemplate
-	Frontmatter string
+	FrontMatter string
 
 	Patterns []string
 }
@@ -56,7 +56,7 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	// HTML output:
 	flag.BoolVar(&p.Internal, "internal", false, "")
 	flag.BoolVar(&p.Embed, "embed", false, "")
-	flag.StringVar(&p.Frontmatter, "frontmatter", "", "")
+	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 
 	// Go build system:

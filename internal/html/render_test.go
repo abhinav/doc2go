@@ -652,7 +652,7 @@ func TestFrontmatter(t *testing.T) {
 			require.NoError(t, err)
 
 			rnd := Renderer{
-				Frontmatter: tmpl,
+				FrontMatter: tmpl,
 			}
 
 			var buff bytes.Buffer
