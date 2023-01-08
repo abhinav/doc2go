@@ -56,13 +56,7 @@ the following use cases:
 * distributing static documentation websites alongside your software
 * deploying your Go API reference with your project's user guide
 * adding custom branding to your Go documentation
-
-## Non-goals
-
-doc2go does not aim to
-introduce new syntax to the Go documentation syntax.
-All comments processed by doc2go must remain valid Go documentation
-that can be read with the official tooling.
+* keep offline copies of documentation of libraries you use
 
 ## License
 

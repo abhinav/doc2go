@@ -15,6 +15,9 @@ builds:
     flags:
       - -trimpath
 
+archives:
+  - name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
 aurs:
   - name: doc2go-bin
     homepage: https://github.com/abhinav/doc2go

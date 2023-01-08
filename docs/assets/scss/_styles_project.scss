@@ -1,0 +1,19 @@
+pre span.comment {
+  color: #666;
+}
+
+/* Don't show "create child page" or "create doc issue" links. */
+.td-page-meta--child { display: none !important; }
+.td-page-meta--issue { display: none !important; }
+
+/*
+  Don't show "edit this page" links on API reference pages.
+  To do that, hide all and only show those inside the docs directory.
+ */
+a[href^="https://github.com/abhinav/doc2go"].td-page-meta--edit {
+  display: none !important;
+}
+a[href^="https://github.com/abhinav/doc2go/edit/main/docs"].td-page-meta--edit {
+  display: block !important;
+}
+
