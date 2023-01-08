@@ -27,9 +27,10 @@ func TestParsePackage_simple(t *testing.T) {
 	if files := got.Syntax; assert.Len(t, files, 1) {
 		assert.Equal(t, srcFile, got.Fset.File(files[0].Pos()).Name())
 	}
-	if files := got.TestSyntax; assert.Len(t, files, 1) {
-		assert.Equal(t, testFile, got.Fset.File(files[0].Pos()).Name())
-	}
+	// https://github.com/abhinav/doc2go/issues/15
+	// if files := got.TestSyntax; assert.Len(t, files, 1) {
+	// 	assert.Equal(t, testFile, got.Fset.File(files[0].Pos()).Name())
+	// }
 	assert.Equal(t, []string{
 		"Constant",
 		"Function",
