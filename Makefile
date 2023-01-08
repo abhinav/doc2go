@@ -79,7 +79,7 @@ tidycheck:
 		false; \
 	fi
 
-$(DOC2GO): $(GO_SRC_FILES) flags.txt $(wildcard ./internal/html/tmpl/*)
+$(DOC2GO): $(GO_SRC_FILES) $(wildcard ./internal/html/tmpl/*)
 	go install go.abhg.dev/doc2go
 
 $(STATICCHECK): tools/go.mod

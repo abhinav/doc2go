@@ -17,11 +17,40 @@ import (
 func TestMainCmd_help(t *testing.T) {
 	t.Parallel()
 
-	exitCode := (&mainCmd{
-		Stdout: iotest.Writer(t),
-		Stderr: iotest.Writer(t),
-	}).Run([]string{"-h"})
-	assert.Zero(t, exitCode, "-h should have zero status code")
+	tests := []struct {
+		desc string
+		args []string
+	}{
+		{
+			desc: "default help",
+			args: []string{"-h"},
+		},
+		{
+			desc: "default help long form",
+			args: []string{"--help"},
+		},
+		{
+			desc: "help topic",
+			args: []string{"-h=frontmatter"},
+		},
+		{
+			desc: "help topic separate arg",
+			args: []string{"-h", "frontmatter"},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			exitCode := (&mainCmd{
+				Stdout: iotest.Writer(t),
+				Stderr: iotest.Writer(t),
+			}).Run(tt.args)
+			assert.Zero(t, exitCode, "-h should have zero status code")
+		})
+	}
 }
 
 func TestMainCmd_version(t *testing.T) {

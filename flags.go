@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,13 +10,15 @@ import (
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
 
-var errHelp = flag.ErrHelp
-
-const _shortUsage = `USAGE: doc2go [OPTIONS] PATTERN ...`
+var (
+	errHelp             = flag.ErrHelp
+	errInvalidArguments = errors.New("invalid arguments")
+)
 
 // params holds all arguments for doc2go.
 type params struct {
 	version bool
+	help    Help
 
 	Tags  string
 	Debug flagvalue.FileSwitch
@@ -39,31 +40,11 @@ type cliParser struct {
 	Stderr io.Writer
 }
 
-func (cmd *cliParser) printShortUsage() {
-	fmt.Fprintln(cmd.Stderr, _shortUsage)
-}
-
-var errInvalidArguments = errors.New("invalid arguments")
-
-const _about = `
-Generates API documentation for packages matching PATTERNs.
-Specify ./... to match the package in the current directory
-and all its descendants.
-
-	doc2go ./...
-`
-
-//go:embed flags.txt
-var _flagDefaults string
-
 func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		fmt.Fprintln(cmd.Stderr, _shortUsage)
-		fmt.Fprint(cmd.Stderr, _about+"\n")
-		fmt.Fprint(cmd.Stderr, "OPTIONS\n\n")
-		fmt.Fprint(cmd.Stderr, _flagDefaults)
+		DefaultHelp.Write(cmd.Stderr)
 	}
 
 	var p params
@@ -84,6 +65,8 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	// Program-level:
 	flag.Var(&p.Debug, "debug", "")
 	flag.BoolVar(&p.version, "version", false, "")
+	flag.Var(&p.help, "help", "")
+	flag.Var(&p.help, "h", "")
 
 	return &p, flag
 }
@@ -93,16 +76,38 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	if err := flag.Parse(args); err != nil {
 		return nil, err
 	}
+	args = flag.Args()
 
 	if p.version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
 		return nil, errHelp
 	}
 
-	p.Patterns = flag.Args()
+	if p.help == DefaultHelp && len(args) > 0 {
+		// The user might have done "-h foo"
+		// instead of "-h=foo".
+		// If the argument is a known help topic,
+		// take it.
+		var h Help
+		if err := h.Set(args[0]); err == nil {
+			p.help = h
+		}
+	}
+
+	switch p.help {
+	case NoHelp:
+		// proceed as usual
+	default:
+		if err := p.help.Write(cmd.Stderr); err != nil {
+			fmt.Fprintln(cmd.Stderr, err)
+		}
+		return nil, errHelp
+	}
+
+	p.Patterns = args
 	if len(p.Patterns) == 0 {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
-		cmd.printShortUsage()
+		UsageHelp.Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 
