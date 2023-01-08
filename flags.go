@@ -70,7 +70,6 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
-	flag.StringVar(&p.OutputDir, "o", "_site", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
 
 	// HTML output:
