@@ -18,4 +18,11 @@ path_base_for_github_subdir:
 {{ else -}}
 github_repo: ""
 {{ end -}}
+{{ with .Package.Synopsis -}}
+  description: {{ printf "%q" . }}
+{{ else -}}
+  description: " "
+  # Use an empty description
+  # instead of inheriting the site description.
+{{ end }}
 ---

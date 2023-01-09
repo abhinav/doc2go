@@ -30,6 +30,7 @@ github_repo = "https://github.com/abhinav/doc2go"
 github_subdir = "docs"
 github_branch= "main"
 offlineSearch = true
+description = "Your Go documentation, to-go."
 
 [params.ui]
 navbar_logo = false
