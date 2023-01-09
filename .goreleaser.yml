@@ -21,7 +21,7 @@ archives:
 aurs:
   - name: doc2go-bin
     homepage: https://github.com/abhinav/doc2go
-    description: "Your Go project's documentation, to-go."
+    description: "Your Go documentation, to-go."
     maintainers:
       - 'Abhinav Gupta <mail@abhinavg.net>'
     license: "Apache"
@@ -45,7 +45,7 @@ brews:
       name: Abhinav Gupta
       email: mail@abhinavg.net
     homepage: https://github.com/abhinav/doc2go
-    description: "Your Go project's documentation, to-go."
+    description: "Your Go documentation, to-go."
     license: "Apache-2.0"
     skip_upload: auto
     test: |
