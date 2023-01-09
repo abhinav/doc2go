@@ -5,16 +5,23 @@ that generates static HTML documentation from your Go code.
 It is a self-hosted static alternative to
 https://pkg.go.dev/ and https://godocs.io/.
 
+Documentation for the tool is available at https://abhinav.github.io/doc2go/.
+
 ## Installation
 
-Build and install doc2go from source by running:
+See <https://abhinav.github.io/doc2go/docs/install/>,
+but in short, use one of the following methods:
 
 ```bash
+# Homebrew/Linuxbrew:
+brew install abhinav/tap/doc2go
+
+# ArchLinux User Repository
+yay -S doc2go-bin
+
+# Build from source
 go install go.abhg.dev/doc2go@latest
 ```
-
-For more comprehensive instructions, see
-<https://abhinav.github.io/doc2go/docs/install/>.
 
 ## Getting Started
 
