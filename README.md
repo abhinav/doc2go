@@ -1,5 +1,8 @@
 # doc2go
 
+[![CI](https://github.com/abhinav/doc2go/actions/workflows/go.yml/badge.svg)](https://github.com/abhinav/doc2go/actions/workflows/go.yml)
+[![codecov](https://codecov.io/gh/abhinav/doc2go/branch/main/graph/badge.svg?token=CD4YAVNVJF)](https://codecov.io/gh/abhinav/doc2go)
+
 doc2go is a command line tool
 that generates static HTML documentation from your Go code.
 It is a self-hosted static alternative to
