@@ -21,7 +21,7 @@ jobs:
         cache: true
 
     - name: Install parse-changelog
-      uses: taiki-e/install-action@v1
+      uses: taiki-e/install-action@v2
       with:
         tool: parse-changelog@0.5.1
 
