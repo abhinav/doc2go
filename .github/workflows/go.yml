@@ -1,4 +1,4 @@
-name: Go
+name: CI
 
 on:
   push:
@@ -31,6 +31,5 @@ jobs:
       env:
         TEST_FLAGS: '-v -race'
 
-    # TODO: Enable after public
-    # - name: Upload coverage
-    #   uses: codecov/codecov-action@v3
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
