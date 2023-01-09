@@ -28,6 +28,13 @@ You can use doc2go to generate standalone HTML websites
 or embed your documentation inside another static website
 ([example](api/go.abhg.dev/doc2go)).
 
+<a class="btn btn-dark" href="{{< relref "docs/publish/github-pages" >}}">
+  <i class="fa-brands fa-github"></i> Publish to GitHub Pages
+</a>
+<a class="btn btn-dark" href="{{< relref "docs/embed" >}}">
+  <i class="fa-solid fa-folder-tree"></i> Embed into another website
+</a>
+
 </div>
 <div class="col-md-auto">
 
