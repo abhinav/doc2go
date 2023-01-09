@@ -28,6 +28,10 @@ go install go.abhg.dev/doc2go@latest
 To get started with doc2go, see
 <https://abhinav.github.io/doc2go/docs/start/>.
 
+If you just want a copy-paste-friendly setup
+to publish your documentation to GitHub Pages,
+see <https://abhinav.github.io/doc2go/docs/publish/github-pages/>.
+
 ## License
 
 This software is licensed under the Apache 2.0 License
