@@ -1,5 +1,6 @@
 ---
 title: doc2go
+description: "Your Go documentation, to-go."
 ---
 
 {{< blocks/cover height="min" title="Welcome to doc2go" color="dark" >}}
