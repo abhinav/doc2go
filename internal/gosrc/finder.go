@@ -58,7 +58,7 @@ type Finder struct {
 	DebugLog *log.Logger
 }
 
-const _finderLoadMode = packages.NeedName | packages.NeedCompiledGoFiles | packages.NeedImports
+const _finderLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports
 
 // FindPackages searches for packages matching the given import path patterns,
 // and returns references to them.
@@ -70,7 +70,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 
 	// We want to find tests as well,
 	// but Tests can not be set to true
-	// in NeedName/NeedCompiledGoFiles mode.
+	// in NeedName/NeedFiles mode.
 	cfg.Mode = _finderLoadMode
 	cfg.Tests = false
 	if ts := f.Tags; len(ts) > 0 {
@@ -100,17 +100,17 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			continue
 		}
 
-		compiledGoFiles := slices.RemoveFunc(pkg.CompiledGoFiles,
+		goFiles := slices.RemoveFunc(pkg.GoFiles,
 			func(path string) bool {
 				return !strings.HasSuffix(path, ".go")
 			})
 
-		if len(compiledGoFiles) == 0 {
+		if len(goFiles) == 0 {
 			f.Log.Printf("[%v] No non-test Go files. Skipping.", pkg.PkgPath)
 			continue
 		}
 
-		pkgDir := filepath.Dir(compiledGoFiles[0])
+		pkgDir := filepath.Dir(goFiles[0])
 		var testFiles []string
 		if ents, err := os.ReadDir(pkgDir); err != nil {
 			f.Log.Printf("[%v] Skipping tests: unable to read directory: %v", pkg.PkgPath, err)
@@ -143,7 +143,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		infos = append(infos, &PackageRef{
 			Name:       pkg.Name,
 			ImportPath: pkg.PkgPath,
-			Files:      compiledGoFiles,
+			Files:      goFiles,
 			TestFiles:  testFiles,
 			Imports:    imports,
 		})
