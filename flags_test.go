@@ -99,6 +99,15 @@ func TestCLIParser(t *testing.T) {
 				OutputDir:   "_site",
 			},
 		},
+		{
+			desc: "home",
+			give: []string{"-home", "go.abhg.dev/doc2go", "./..."},
+			want: params{
+				Home:      "go.abhg.dev/doc2go",
+				Patterns:  []string{"./..."},
+				OutputDir: "_site",
+			},
+		},
 	}
 
 	for _, tt := range tests {

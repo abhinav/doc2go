@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
+	"go.abhg.dev/doc2go/internal/pathx"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -87,6 +88,18 @@ func (cmd *mainCmd) run(opts *params) error {
 		return fmt.Errorf("find packages: %w", err)
 	}
 
+	if home := opts.Home; home != "" {
+		refs := pkgRefs[:0]
+		for _, r := range pkgRefs {
+			if !pathx.Descends(home, r.ImportPath) {
+				cmd.log.Printf("[%s] Not rooted under %v. Skipping.", r.ImportPath, home)
+				continue
+			}
+			refs = append(refs, r)
+		}
+		pkgRefs = refs
+	}
+
 	var linker docLinker
 	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
@@ -113,6 +126,7 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	g := Generator{
+		Home:     opts.Home,
 		DebugLog: cmd.debugLog,
 		Parser:   new(gosrc.Parser),
 		Assembler: &godoc.Assembler{

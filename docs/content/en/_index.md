@@ -25,9 +25,9 @@ It's a simpler, self-hosted alternative to services like
 https://pkg.go.dev/ and https://godocs.io/.
 
 You can use doc2go to generate standalone HTML websites
-([example](example/go.abhg.dev/doc2go)),
+([example](example/)),
 or embed your documentation inside another static website
-([example](api/go.abhg.dev/doc2go)).
+([example](api/)).
 
 <a class="btn btn-dark" href="{{< relref "docs/publish/github-pages" >}}">
   <i class="fa-brands fa-github"></i> Publish to GitHub Pages

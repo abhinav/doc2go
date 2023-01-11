@@ -22,10 +22,16 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 	tests := []struct {
 		desc    string
 		pattern string
+		args    []string
 	}{
 		{
 			desc:    "self",
 			pattern: "./...",
+		},
+		{
+			desc:    "self/home",
+			pattern: "./...",
+			args:    []string{"-home", "go.abhg.dev/doc2go"},
 		},
 		{
 			desc:    "testify",
@@ -47,10 +53,12 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 			t.Parallel()
 
 			outDir := t.TempDir()
+			args := append(tt.args, "-out="+outDir, "-debug", "-internal", tt.pattern)
+
 			exitCode := (&mainCmd{
 				Stdout: iotest.Writer(t),
 				Stderr: iotest.Writer(t),
-			}).Run([]string{"-out=" + outDir, "-debug", "-internal", tt.pattern})
+			}).Run(args)
 			require.Zero(t, exitCode)
 
 			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(outDir))))

@@ -139,3 +139,29 @@ on:
 ```
 
 Use `master` above if the name of your main branch is `master`.
+
+## Changing the home page
+
+The generated website includes the import path of the package in the URL.
+This can result in longer URLs than desirable.
+For example, for `github.com/$user/$proj`,
+the documentation will be at:
+
+    https://$user.github.io/$proj/github.com/$user/$proj
+
+If you'd like to change this, change the "Generate API reference"
+step above to:
+
+```yaml
+          - name: Generate API reference
+            run: doc2go -home github.com/${{ github.repository }} ./...
+```
+
+Now, the documentation for that package will be at:
+
+    https://$user.github.io/$proj/
+
+{{% alert title="Note" %}}
+Use the import path for your module instead of the above
+if you're using a vanity import path.
+{{% /alert %}}

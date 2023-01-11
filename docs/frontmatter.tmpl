@@ -8,16 +8,11 @@ title: "
 "
 no_list: true
 type: docs
-{{ $base := "go.abhg.dev/doc2go" -}}
-{{ if ge (len .Path) (len $base) -}}
 github_repo: "https://github.com/abhinav/doc2go"
 github_subdir: ""
 path_base_for_github_subdir:
-  from: "content/en/api/{{ $base }}(/(.*?))?/_index.html"
+  from: "content/en/api(/(.*?))?/_index.html"
   to: "$2"
-{{ else -}}
-github_repo: ""
-{{ end -}}
 {{ with .Package.Synopsis -}}
   description: {{ printf "%q" . }}
 {{ else -}}

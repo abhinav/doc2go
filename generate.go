@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
 	"go.abhg.dev/doc2go/internal/pathtree"
+	"go.abhg.dev/doc2go/internal/pathx"
 	"go.abhg.dev/doc2go/internal/relative"
 	"go.abhg.dev/doc2go/internal/slices"
 )
@@ -72,6 +73,10 @@ type Generator struct {
 	// Defaults to index.html.
 	Basename string
 
+	// Home page of the documentation.
+	// Anything not under this path will be discarded.
+	Home string
+
 	once sync.Once
 }
 
@@ -94,9 +99,12 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		return err
 	}
 
-	_, err := r.renderTree(nil, packageTree{
-		Children: buildTrees(pkgRefs),
-	})
+	trees := buildTrees(pkgRefs)
+	if r.Home != "" {
+		trees = filterTrees(r.Home, trees)
+	}
+
+	_, err := r.renderTrees(nil, trees)
 	return err
 }
 
@@ -141,7 +149,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	r.DebugLog.Printf("Rendering directory %v", t.Path)
 
-	dir := filepath.Join(r.OutDir, t.Path)
+	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -188,7 +196,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 		return nil, fmt.Errorf("assemble: %w", err)
 	}
 
-	dir := filepath.Join(r.OutDir, t.Path)
+	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -241,5 +249,17 @@ func buildTrees(refs []*gosrc.PackageRef) []packageTree {
 	for _, ref := range refs {
 		root.Set(ref.ImportPath, ref)
 	}
-	return root.Snapshot()
+	return []packageTree{{Children: root.Snapshot()}}
+}
+
+func filterTrees(root string, is []packageTree) []packageTree {
+	var os []packageTree
+	for _, i := range is {
+		if pathx.Descends(root, i.Path) {
+			os = append(os, i)
+		} else {
+			os = append(os, filterTrees(root, i.Children)...)
+		}
+	}
+	return os
 }

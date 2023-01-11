@@ -243,3 +243,36 @@ func TestMainCmd_frontmatter_errors(t *testing.T) {
 		assert.Contains(t, buff.String(), "no such file or directory")
 	})
 }
+
+func TestMainCmd_home(t *testing.T) {
+	t.Parallel()
+
+	exported := packagestest.Export(t,
+		packagestest.Modules, []packagestest.Module{
+			{
+				Name: "foo",
+				Files: map[string]any{
+					"bar/bar.go":     "package bar",
+					"bar/baz/baz.go": "package baz",
+					"qux/qux.go":     "package qux",
+				},
+			},
+		})
+
+	outDir := t.TempDir()
+	exitCode := (&mainCmd{
+		Stdout:         iotest.Writer(t),
+		Stderr:         iotest.Writer(t),
+		packagesConfig: exported.Config,
+	}).Run([]string{"-home", "foo/bar", "-out", outDir, "./..."})
+	require.Zero(t, exitCode, "expected success")
+
+	assertFileContains := func(p, c string) {
+		bs, err := os.ReadFile(filepath.Join(outDir, p))
+		require.NoError(t, err)
+		assert.Contains(t, string(bs), c)
+	}
+
+	assertFileContains("index.html", "package bar")
+	assertFileContains("baz/index.html", "package baz")
+}

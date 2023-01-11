@@ -55,14 +55,14 @@ check out the following links:
 
 {{< cardpane >}}
 
-{{% card header="[**Standalone**](../example/go.abhg.dev/doc2go/)" %}}
+{{% card header="[**Standalone**](../example/)" %}}
 A documentation website generated from doc2go's own source code
-is available [here](../example/go.abhg.dev/doc2go/).
+is available [here](../example/).
 {{% /card %}}
 
-{{% card header="[**Embedded**](../api/go.abhg.dev/doc2go/)" %}}
+{{% card header="[**Embedded**](../api/)" %}}
 A copy of the same documentation embedded into this website
-is available [here](../api/go.abhg.dev/doc2go/).
+is available [here](../api/).
 {{% /card %}}
 
 {{< /cardpane >}}
