@@ -48,6 +48,9 @@ var (
 
 // Renderer renders components into HTML.
 type Renderer struct {
+	// Path to the home page of the generated site.
+	Home string
+
 	// Whether we're in embedded mode.
 	// In this mode, output will only contain the documentation output
 	// and will not generate complete, stylized HTML pages.
@@ -176,6 +179,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		return err
 	}
 	render := render{
+		Home:       r.Home,
 		Path:       info.ImportPath,
 		DocPrinter: info.DocPrinter,
 		Internal:   r.Internal,
@@ -230,6 +234,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		NumChildren: pidx.NumChildren,
 	})
 	render := render{
+		Home:     r.Home,
 		Path:     pidx.Path,
 		Internal: r.Internal,
 	}
@@ -239,6 +244,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 }
 
 type render struct {
+	Home string
 	Path string
 
 	Internal bool
@@ -262,7 +268,7 @@ func (r *render) relativePath(p string) string {
 }
 
 func (r *render) static(p string) string {
-	return r.relativePath(path.Join(_staticDir, p))
+	return r.relativePath(path.Join(r.Home, _staticDir, p))
 }
 
 func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {

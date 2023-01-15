@@ -133,6 +133,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			Linker: &linker,
 		},
 		Renderer: &html.Renderer{
+			Home:        opts.Home,
 			Embedded:    opts.Embed,
 			Internal:    opts.Internal,
 			FrontMatter: frontmatter,
