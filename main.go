@@ -17,7 +17,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-var _version = "0.2.0"
+var _version = "dev"
 
 func main() {
 	cmd := mainCmd{
