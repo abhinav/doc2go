@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/andybalholm/cascadia"
@@ -23,6 +24,7 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 		desc    string
 		pattern string
 		args    []string
+		subDir  string
 	}{
 		{
 			desc:    "self",
@@ -31,6 +33,17 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 		{
 			desc:    "self/home",
 			pattern: "./...",
+			args:    []string{"-home", "go.abhg.dev/doc2go"},
+		},
+		{
+			desc:    "self/subdir",
+			pattern: "./...",
+			subDir:  "api",
+		},
+		{
+			desc:    "self/home/subdir",
+			pattern: "./...",
+			subDir:  "api",
 			args:    []string{"-home", "go.abhg.dev/doc2go"},
 		},
 		{
@@ -52,7 +65,12 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
-			outDir := t.TempDir()
+			root := t.TempDir()
+			outDir := root
+			if len(tt.subDir) > 0 {
+				outDir = filepath.Join(outDir, tt.subDir)
+			}
+
 			args := append(tt.args, "-out="+outDir, "-debug", "-internal", tt.pattern)
 
 			exitCode := (&mainCmd{
@@ -61,11 +79,17 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 			}).Run(args)
 			require.Zero(t, exitCode)
 
-			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(outDir))))
+			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
 			t.Cleanup(srv.Close)
 
+			u, err := url.Parse(srv.URL)
+			require.NoError(t, err)
+			if len(tt.subDir) > 0 {
+				u = u.JoinPath(tt.subDir)
+			}
+
 			w := newURLWalker(t)
-			w.Walk(srv.URL)
+			w.Walk(u.String())
 		})
 	}
 }
