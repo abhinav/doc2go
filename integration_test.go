@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,43 +22,39 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		desc    string
 		pattern string
-		args    []string
-		subDir  string
+		home    string
 	}{
-		{
-			desc:    "self",
-			pattern: "./...",
-		},
-		{
-			desc:    "self/home",
-			pattern: "./...",
-			args:    []string{"-home", "go.abhg.dev/doc2go"},
-		},
-		{
-			desc:    "self/subdir",
-			pattern: "./...",
-			subDir:  "api",
-		},
-		{
-			desc:    "self/home/subdir",
-			pattern: "./...",
-			subDir:  "api",
-			args:    []string{"-home", "go.abhg.dev/doc2go"},
-		},
-		{
-			desc:    "testify",
-			pattern: "github.com/stretchr/testify/...",
-		},
-		{
-			desc:    "x-net",
-			pattern: "golang.org/x/net/...",
-		},
-		{
-			desc:    "x-tools",
-			pattern: "golang.org/x/tools/...",
-		},
+		{pattern: "./..."},
+		{pattern: "./...", home: "go.abhg.dev"},
+		{pattern: "./...", home: "go.abhg.dev/doc2go"},
+		{pattern: "github.com/stretchr/testify/..."},
+		{pattern: "github.com/stretchr/testify/...", home: "github.com/stretchr/testify/assert"},
+		{pattern: "golang.org/x/net/..."},
+		{pattern: "golang.org/x/net/...", home: "golang.org/x/net"},
+		{pattern: "golang.org/x/tools/..."},
+		{pattern: "golang.org/x/tools/...", home: "golang.org/x/tools/go/packages"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		name := tt.pattern
+		if len(tt.home) > 0 {
+			name += fmt.Sprintf("/home=%v", tt.home)
+		}
+		t.Run(name, func(t *testing.T) {
+			testIntegrationNoBrokenLinks(t, tt.pattern, tt.home)
+		})
+	}
+}
+
+func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
+	tests := []struct {
+		desc   string
+		subDir string
+	}{
+		{desc: "default"},
+		{desc: "subdir", subDir: "foo"},
 	}
 
 	for _, tt := range tests {
@@ -71,7 +68,11 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 				outDir = filepath.Join(outDir, tt.subDir)
 			}
 
-			args := append(tt.args, "-out="+outDir, "-debug", "-internal", tt.pattern)
+			args := []string{"-out=" + outDir, "-debug", "-internal"}
+			if len(home) > 0 {
+				args = append(args, "-home", home)
+			}
+			args = append(args, pattern)
 
 			exitCode := (&mainCmd{
 				Stdout: iotest.Writer(t),
