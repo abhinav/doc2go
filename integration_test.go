@@ -1,14 +1,15 @@
 package main
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"testing"
 
+	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/iotest"
@@ -108,34 +109,31 @@ func (w *urlWalker) visit(dest *url.URL) {
 		return
 	}
 
-	tokz := html.NewTokenizer(res.Body)
-	for {
-		if tokz.Next() == html.ErrorToken {
-			err := tokz.Err()
-			if errors.Is(err, io.EOF) {
-				err = nil
-			}
-			assert.NoError(w.t, err, "error reading %v", dest)
-			break
-		}
+	if path.Ext(dest.Path) == ".css" {
+		_, err := io.ReadAll(res.Body)
+		assert.NoError(w.t, err, "error reading %v", dest)
+		return
+	}
 
-		tok := tokz.Token()
-		if tok.Data != "a" || tok.Type != html.StartTagToken {
-			continue
+	doc, err := html.Parse(res.Body)
+	require.NoError(w.t, err)
+
+	for _, tag := range cascadia.QueryAll(doc, cascadia.MustCompile("script, link, a")) {
+		dstAttr := "href"
+		if tag.Data == "script" {
+			dstAttr = "src"
 		}
 
 		var href string
-		for _, attr := range tok.Attr {
-			if attr.Key == "href" {
+		for _, attr := range tag.Attr {
+			if attr.Key == dstAttr {
 				href = attr.Val
 				break
 			}
 		}
-
-		if len(href) == 0 {
-			continue
+		if len(href) != 0 {
+			w.push(dest, href)
 		}
-		w.push(dest, href)
 	}
 }
 
