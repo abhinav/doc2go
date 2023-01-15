@@ -76,6 +76,30 @@ doc2go -out public ./...
 
 The directory will be created if it doesn't exist.
 
+### Home page
+
+By default, the landing page of the generated website
+is an index of the topmost Go packages in the generation scope.
+
+So if you're generating documentation for the package `example.com/foo`,
+in the generated website:
+
+- `/` is a page that links to `example.com/foo`
+- `/example.com/foo` holds documentation for  `example.com/foo`
+- `/example.com/foo/bar` holds documentation for  `example.com/foo/bar`
+
+doc2go supports a `-home` flag that allows you to change this.
+Given the above, if you run:
+
+```bash
+doc2go -home example.com/foo ./...
+```
+
+Then, in the generated website:
+
+- `/` holds documentation for  `example.com/foo`
+- `/bar` holds documentation for  `example.com/foo/bar`
+
 #### Base name
 
 All generated pages use the name "index.html".

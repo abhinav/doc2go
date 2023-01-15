@@ -30,12 +30,16 @@ standalone: $(STANDALONE_REF)
 embedded: $(EMBEDDED_REF)
 
 $(STANDALONE_REF): $(DOC2GO)
-	cd .. && $(DOC2GO) -internal -out docs/content/en/example ./...
+	cd .. && $(DOC2GO) \
+		-internal \
+		-home go.abhg.dev/doc2go \
+		-out docs/content/en/example ./...
 
 $(EMBEDDED_REF): $(DOC2GO) frontmatter.tmpl
 	cd .. && $(DOC2GO) \
 		-basename _index.html -embed -internal \
 		-frontmatter docs/frontmatter.tmpl \
+		-home go.abhg.dev/doc2go \
 		-out docs/content/en/api ./...
 
 content/en/docs/usage/usage.txt: $(DOC2GO)

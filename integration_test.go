@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/andybalholm/cascadia"
@@ -20,25 +22,39 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		desc    string
 		pattern string
+		home    string
 	}{
-		{
-			desc:    "self",
-			pattern: "./...",
-		},
-		{
-			desc:    "testify",
-			pattern: "github.com/stretchr/testify/...",
-		},
-		{
-			desc:    "x-net",
-			pattern: "golang.org/x/net/...",
-		},
-		{
-			desc:    "x-tools",
-			pattern: "golang.org/x/tools/...",
-		},
+		{pattern: "./..."},
+		{pattern: "./...", home: "go.abhg.dev"},
+		{pattern: "./...", home: "go.abhg.dev/doc2go"},
+		{pattern: "github.com/stretchr/testify/..."},
+		{pattern: "github.com/stretchr/testify/...", home: "github.com/stretchr/testify/assert"},
+		{pattern: "golang.org/x/net/..."},
+		{pattern: "golang.org/x/net/...", home: "golang.org/x/net"},
+		{pattern: "golang.org/x/tools/..."},
+		{pattern: "golang.org/x/tools/...", home: "golang.org/x/tools/go/packages"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		name := tt.pattern
+		if len(tt.home) > 0 {
+			name += fmt.Sprintf("/home=%v", tt.home)
+		}
+		t.Run(name, func(t *testing.T) {
+			testIntegrationNoBrokenLinks(t, tt.pattern, tt.home)
+		})
+	}
+}
+
+func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
+	tests := []struct {
+		desc   string
+		subDir string
+	}{
+		{desc: "default"},
+		{desc: "subdir", subDir: "foo"},
 	}
 
 	for _, tt := range tests {
@@ -46,18 +62,35 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
-			outDir := t.TempDir()
+			root := t.TempDir()
+			outDir := root
+			if len(tt.subDir) > 0 {
+				outDir = filepath.Join(outDir, tt.subDir)
+			}
+
+			args := []string{"-out=" + outDir, "-debug", "-internal"}
+			if len(home) > 0 {
+				args = append(args, "-home", home)
+			}
+			args = append(args, pattern)
+
 			exitCode := (&mainCmd{
 				Stdout: iotest.Writer(t),
 				Stderr: iotest.Writer(t),
-			}).Run([]string{"-out=" + outDir, "-debug", "-internal", tt.pattern})
+			}).Run(args)
 			require.Zero(t, exitCode)
 
-			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(outDir))))
+			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
 			t.Cleanup(srv.Close)
 
+			u, err := url.Parse(srv.URL)
+			require.NoError(t, err)
+			if len(tt.subDir) > 0 {
+				u = u.JoinPath(tt.subDir)
+			}
+
 			w := newURLWalker(t)
-			w.Walk(srv.URL)
+			w.Walk(u.String())
 		})
 	}
 }

@@ -49,6 +49,9 @@ OPTIONS
 	base name of generated files. Defaults to index.html.
   -out DIR
 	write files to DIR. Defaults to _site.
+  -home PATH
+	import path for the home page of the documentation.
+	Packages that aren't descendants of this path will be omitted.
   -embed
 	generate partial HTML pages fit for embedding.
   -internal

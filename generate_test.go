@@ -21,6 +21,7 @@ func TestGenerator_hierarchy(t *testing.T) {
 	tests := []struct {
 		desc     string
 		packages []*fakePackage
+		home     string
 		wantPkgs map[string]*renderInfo // import path => info
 		wantDirs map[string]*renderInfo // dir path => info
 	}{
@@ -125,6 +126,36 @@ func TestGenerator_hierarchy(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "home",
+			home: "example.com/foo/bar",
+			packages: []*fakePackage{
+				{
+					ImportPath: "example.com/foo/bar",
+					Synopsis:   "package bar does things.",
+				},
+				{
+					ImportPath: "example.com/foo/bar/baz",
+					Synopsis:   "package baz does other things.",
+				},
+			},
+			wantPkgs: map[string]*renderInfo{
+				"example.com/foo/bar": {
+					Breadcrumbs: []html.Breadcrumb{
+						{Text: "example.com/foo/bar", Path: "example.com/foo/bar"},
+					},
+					Subpackages: []html.Subpackage{
+						{RelativePath: "baz", Synopsis: "package baz does other things."},
+					},
+				},
+				"example.com/foo/bar/baz": {
+					Breadcrumbs: []html.Breadcrumb{
+						{Text: "example.com/foo/bar", Path: "example.com/foo/bar"},
+						{Text: "baz", Path: "example.com/foo/bar/baz"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -168,8 +199,16 @@ func TestGenerator_hierarchy(t *testing.T) {
 				Assembler: &assembler,
 				Renderer:  &renderer,
 				OutDir:    t.TempDir(),
+				Home:      tt.home,
 			}
 			require.NoError(t, g.Generate(refs))
+
+			for k := range tt.wantDirs {
+				t.Errorf("Missed directory: %q", k)
+			}
+			for k := range tt.wantPkgs {
+				t.Errorf("Missed package: %q", k)
+			}
 		})
 	}
 }
@@ -295,7 +334,7 @@ func (r *fakeRenderer) RenderPackageIndex(_ io.Writer, idx *html.PackageIndex) e
 	path := idx.Path
 	want, ok := r.wantDirectories[path]
 	require.True(r.t, ok, "unexpected directory %q", path)
-	delete(r.wantPackages, path)
+	delete(r.wantDirectories, path)
 
 	assert.Equal(r.t, want.Breadcrumbs, idx.Breadcrumbs, "breadcrumbs for %q", path)
 	assert.Equal(r.t, want.Subpackages, idx.Subpackages, "subpackages for %q", path)

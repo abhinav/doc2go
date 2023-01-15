@@ -25,6 +25,7 @@ type params struct {
 
 	Basename  string
 	OutputDir string
+	Home      string
 
 	Embed       bool
 	Internal    bool
@@ -52,6 +53,7 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
+	flag.StringVar(&p.Home, "home", "", "")
 
 	// HTML output:
 	flag.BoolVar(&p.Internal, "internal", false, "")

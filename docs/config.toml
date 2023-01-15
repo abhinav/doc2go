@@ -41,10 +41,10 @@ sidebar_menu_compact = false
 
 [[params.menu.examples]]
   name = "Embedded"
-  url = "api/go.abhg.dev/doc2go"
+  url = "api/"
 [[params.menu.examples]]
   name = "Standalone"
-  url = "example/go.abhg.dev/doc2go"
+  url = "example/"
 
 [params.links]
   [[params.links.developer]]
