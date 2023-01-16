@@ -54,22 +54,38 @@ doc2go -out www/ ./...</code></pre>
 {{% /blocks/section %}}
 
 {{% blocks/section color="orange" %}}
-{{% blocks/feature title="Easy to host" icon="fa-solid fa-server" %}}
+{{% blocks/feature title="Easy to publish" icon="fa-solid fa-server" url="docs/publish" %}}
 doc2go generates static websites
 that you can host on
 [GitHub Pages]({{< relref "docs/publish/github-pages" >}})
 or any other static website hosting service.
 {{% /blocks/feature %}}
 
-{{% blocks/feature icon="fa-solid fa-book" title="Everything in one place" %}}
+{{% blocks/feature icon="fa-solid fa-book" title="Everything in one place" url="docs/embed" %}}
 Embed your API Reference into a bigger static website
 with [Hugo]({{< relref "/docs/embed/hugo" >}})
-or [Jekyll]({{< relref "/docs/embed/jekyll" >}})
+or [Jekyll]({{< relref "/docs/embed/jekyll" >}}).
 All your documentation in one place, on one website.
+{{% /blocks/feature %}}
+
+{{% blocks/feature icon="fa-solid fa-file-code" title="Syntax highlighting" url="docs/usage/highlight" %}}
+Get syntax highlighting in your documentation out of the box.
+Choose from over 50 themes.
+{{% /blocks/feature %}}
+
+{{% blocks/feature icon="fa-brands fa-css3-alt" title="Style it your way" %}}
+With [embedding]({{< relref "/docs/embed" >}}),
+doc2go gives you full control of your documentation's CSS.
+Brand it, style it, go wild.
 {{% /blocks/feature %}}
 
 {{% blocks/feature icon="fa-solid fa-box-archive" title="Take it with you" %}}
 Store offline copies of API documentation for projects you use frequently.
 Keep using it even with a bad internet connection.
+{{% /blocks/feature %}}
+
+{{% blocks/feature icon="fa-solid fa-feather-pointed" title="Lightweight" %}}
+doc2go is lightweight and composes with other systems
+instead of trying to replace them.
 {{% /blocks/feature %}}
 {{% /blocks/section %}}

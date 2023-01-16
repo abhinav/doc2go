@@ -7,7 +7,8 @@ STANDALONE_REF = content/en/example/index.html
 DEPS = \
 	standalone \
 	embedded \
-	content/en/docs/usage/usage.txt
+	content/en/docs/usage/usage.txt \
+	assets/scss/_chroma.scss
 
 .PHONY: build
 build: $(DEPS)
@@ -39,8 +40,12 @@ $(EMBEDDED_REF): $(DOC2GO) frontmatter.tmpl
 	cd .. && $(DOC2GO) \
 		-basename _index.html -embed -internal \
 		-frontmatter docs/frontmatter.tmpl \
+		-highlight classes:tango \
 		-home go.abhg.dev/doc2go \
 		-out docs/content/en/api ./...
+
+assets/scss/_chroma.scss: $(DOC2GO)
+	$(DOC2GO) -highlight=tango -highlight-print-css > $@
 
 content/en/docs/usage/usage.txt: $(DOC2GO)
 	$(DOC2GO) -h &> $@

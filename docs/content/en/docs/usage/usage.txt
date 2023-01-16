@@ -22,6 +22,15 @@ OPTIONS
   -frontmatter FILE
 	generate front matter in HTML files via template in FILE.
 	See -help=frontmatter for more information.
+  -highlight [MODE:][THEME]
+	use THEME to highlight code blocks.
+	MODE, if any, is one of 'auto', 'inline', and 'classes'
+	and specifies the method of highlighting.
+	See -help=highlight for more information.
+  -highlight-list-themes
+	print a list of available themes.
+  -highlight-print-css
+	print the CSS for the THEME specified in -highlight.
   -pkg-doc PATH=TEMPLATE
 	generate links for PATH and its children via TEMPLATE.
 	See -help=pkg-doc for more information.

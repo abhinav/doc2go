@@ -1,10 +1,11 @@
-pre span.comment {
-  color: #666;
-}
+@import 'chroma';
 
 /* Don't show "create child page" or "create doc issue" links. */
 .td-page-meta--child { display: none !important; }
 .td-page-meta--issue { display: none !important; }
+
+/* Link color takes precedence over highlighting. */
+.chroma a > span { color: #3176d9 !important; }
 
 /*
   Don't show "edit this page" links on API reference pages.

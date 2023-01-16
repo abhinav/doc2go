@@ -108,6 +108,24 @@ func TestCLIParser(t *testing.T) {
 				OutputDir: "_site",
 			},
 		},
+		{
+			desc: "list themes",
+			give: []string{"-highlight-list-themes"},
+			want: params{
+				HighlightListThemes: true,
+				Patterns:            []string{},
+				OutputDir:           "_site",
+			},
+		},
+		{
+			desc: "print css",
+			give: []string{"-highlight-print-css"},
+			want: params{
+				HighlightPrintCSS: true,
+				Patterns:          []string{},
+				OutputDir:         "_site",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -146,6 +164,11 @@ func TestCLIParser_Errors(t *testing.T) {
 			give: []string{"-pkg-doc", "foo"},
 			want: "expected form 'path=template'",
 		},
+		{
+			desc: "bad highlight mode",
+			give: []string{"-highlight", "foo:bar"},
+			want: `unrecognized highlight mode "foo"`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -157,6 +180,71 @@ func TestCLIParser_Errors(t *testing.T) {
 			_, err := (&cliParser{Stderr: &stderr}).Parse(tt.give)
 			require.Error(t, err)
 			assert.Contains(t, stderr.String(), tt.want)
+		})
+	}
+}
+
+func TestHighlightParams_Parse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc       string
+		give       []string
+		want       highlightParams
+		wantString string
+	}{
+		{
+			desc:       "default",
+			give:       []string{"-x", ""},
+			want:       highlightParams{Mode: highlightModeAuto},
+			wantString: "auto:",
+		},
+		{
+			desc:       "explicit auto",
+			give:       []string{"-x", "auto:"},
+			want:       highlightParams{Mode: highlightModeAuto},
+			wantString: "auto:",
+		},
+		{
+			desc:       "theme only",
+			give:       []string{"-x", "foo"},
+			want:       highlightParams{Theme: "foo", Mode: highlightModeAuto},
+			wantString: "auto:foo",
+		},
+		{
+			desc:       "mode only",
+			give:       []string{"-x", "classes:"},
+			want:       highlightParams{Mode: highlightModeClasses},
+			wantString: "classes:",
+		},
+		{
+			desc:       "mode and theme",
+			give:       []string{"-x", "inline:foo"},
+			want:       highlightParams{Theme: "foo", Mode: highlightModeInline},
+			wantString: "inline:foo",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+			fset.SetOutput(iotest.Writer(t))
+
+			var got highlightParams
+			fset.Var(&got, "x", "")
+			require.NoError(t, fset.Parse(tt.give))
+			assert.Equal(t, tt.want, got)
+
+			assert.NotPanics(t, func() {
+				_ = got.Get()
+			})
+
+			t.Run("String", func(t *testing.T) {
+				assert.Equal(t, tt.wantString, got.String())
+			})
 		})
 	}
 }

@@ -8,7 +8,7 @@
 <h2 id="pkg-overview">
   {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}
 </h2>
-<pre><code>import "{{ .ImportPath }}"</code></pre>
+{{ .Import | code }}
 {{ .Doc | doc 3 }}
 {{- /* TODO: package examples */ -}}
 
@@ -54,7 +54,7 @@
   <h3 id="pkg-functions">Functions</h3>
   {{ range . -}}
     <h3 id="{{ .Name }}">func {{ .Name }}</h3>
-    <pre><code>{{ .Decl | code }}</code></pre>
+    {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
     {{- /* TODO: function examples */ -}}
   {{ end -}}
@@ -64,7 +64,7 @@
   <h3 id="pkg-types">Types</h3>
   {{ range . -}}
   <h3 id="{{ .Name }}">type {{ .Name }}</h3>
-    <pre><code>{{ .Decl | code }}</code></pre>
+    {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
     {{- /* TODO: type examples */ -}}
 
@@ -92,7 +92,7 @@
 {{ end -}}
 
 {{- define "constOrVar" -}}
-  <pre><code>{{ .Decl | code }}</code></pre>
+  {{ .Decl | code }}
   {{ .Doc | doc 4 -}}
 {{- end -}}
 
@@ -100,7 +100,7 @@
   {{ $id := .Name -}}
   {{ with .RecvType }}{{ $id = printf "%s.%s" . $id }}{{ end -}}
   <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}</h4>
-  <pre><code>{{ .Decl | code }}</code></pre>
+  {{ .Decl | code }}
   {{ .Doc | doc 5 -}}
   {{- /* TODO: function examples */ -}}
 {{- end -}}
