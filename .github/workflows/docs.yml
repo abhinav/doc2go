@@ -2,7 +2,7 @@ name: GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [release]
   workflow_dispatch:
 concurrency:
   group: "pages"
