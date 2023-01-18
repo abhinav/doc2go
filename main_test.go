@@ -67,6 +67,42 @@ func TestMainCmd_version(t *testing.T) {
 	assert.Contains(t, buff.String(), _version)
 }
 
+func TestMainCmd_listThemes(t *testing.T) {
+	t.Parallel()
+
+	var buff bytes.Buffer
+	exitCode := (&mainCmd{
+		Stdout: &buff,
+		Stderr: iotest.Writer(t),
+	}).Run([]string{"-highlight-list-themes"})
+	assert.Zero(t, exitCode)
+	assert.NotEmpty(t, buff.String())
+}
+
+func TestMainCmd_writeCSS(t *testing.T) {
+	t.Parallel()
+
+	var buff bytes.Buffer
+	exitCode := (&mainCmd{
+		Stdout: &buff,
+		Stderr: iotest.Writer(t),
+	}).Run([]string{"-highlight-print-css", "-highlight=plain"})
+	assert.Zero(t, exitCode)
+	assert.NotEmpty(t, buff.String())
+}
+
+func TestMainCmd_writeCSS_unknown(t *testing.T) {
+	t.Parallel()
+
+	var buff bytes.Buffer
+	exitCode := (&mainCmd{
+		Stdout: iotest.Writer(t),
+		Stderr: &buff,
+	}).Run([]string{"-highlight-print-css", "-highlight=this-theme-does-not-exist"})
+	assert.NotZero(t, exitCode)
+	assert.Contains(t, buff.String(), `unknown theme "this-theme-does-not-exist"`)
+}
+
 func TestMainCmd_unknownFlag(t *testing.T) {
 	t.Parallel()
 

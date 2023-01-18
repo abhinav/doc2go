@@ -2,6 +2,7 @@ package godoc
 
 import (
 	"bytes"
+	"errors"
 	"go/ast"
 	"go/doc/comment"
 	"go/format"
@@ -10,9 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/gosrc"
+	"go.abhg.dev/doc2go/internal/highlight"
 )
 
 func TestAssembler(t *testing.T) {
@@ -37,6 +40,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "foo",
 				ImportPath: "example.com/foo",
+				Import:     plainCode(`import "example.com/foo"`),
 				Doc: commentDoc(
 					"Package foo does stuff.",
 					"This is another line.",
@@ -58,6 +62,7 @@ func TestAssembler(t *testing.T) {
 				Name:       "main",
 				BinName:    "foo",
 				ImportPath: "example.com/cmd/foo",
+				Import:     plainCode(`import "example.com/cmd/foo"`),
 				Doc:        commentDoc("foo is a CLI."),
 				Synopsis:   "foo is a CLI.",
 			},
@@ -77,6 +82,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "foo",
 				ImportPath: "example.com/foo",
+				Import:     plainCode(`import "example.com/foo"`),
 				Constants: []*Value{
 					{
 						Names: []string{"Foo"},
@@ -101,6 +107,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "foo",
 				ImportPath: "example.com/foo",
+				Import:     plainCode(`import "example.com/foo"`),
 				Variables: []*Value{
 					{
 						Names: []string{"Err"},
@@ -124,6 +131,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "bar",
 				ImportPath: "example.com/bar",
+				Import:     plainCode(`import "example.com/bar"`),
 				Types: []*Type{
 					{
 						Name: "Foo",
@@ -147,6 +155,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "bar",
 				ImportPath: "example.com/bar",
+				Import:     plainCode(`import "example.com/bar"`),
 				Functions: []*Function{
 					{
 						Name:      "Foo",
@@ -179,6 +188,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "bar",
 				ImportPath: "example.com/bar",
+				Import:     plainCode(`import "example.com/bar"`),
 				Types: []*Type{
 					{
 						Name: "Role",
@@ -219,6 +229,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "flag",
 				ImportPath: "example.com/flag",
+				Import:     plainCode(`import "example.com/flag"`),
 				Types: []*Type{
 					{
 						Name: "FlagSet",
@@ -258,6 +269,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "flag",
 				ImportPath: "example.com/flag",
+				Import:     plainCode(`import "example.com/flag"`),
 				Types: []*Type{
 					{
 						Name: "FlagSet",
@@ -293,6 +305,7 @@ func TestAssembler(t *testing.T) {
 			want: Package{
 				Name:       "flag",
 				ImportPath: "example.com/flag",
+				Import:     plainCode(`import "example.com/flag"`),
 				Types: []*Type{
 					{
 						Name: "FlagSet",
@@ -311,6 +324,21 @@ func TestAssembler(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "basename mismatch",
+			give: srcPackage{
+				Name:       "foo",
+				ImportPath: "example.com/foo/v2",
+				Lines: []string{
+					"package foo",
+				},
+			},
+			want: Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo/v2",
+				Import:     plainCode(`import foo "example.com/foo/v2"`),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -319,11 +347,93 @@ func TestAssembler(t *testing.T) {
 			t.Parallel()
 
 			got, err := (&Assembler{
-				Linker:           &exampleLinker{},
+				Linker: &exampleLinker{},
+				Lexer: &stubLexer{
+					Err: errors.New("great sadness"),
+				},
 				newDeclFormatter: newPlainDeclFormatter,
 			}).Assemble(tt.give.Build(t))
 			require.NoError(t, err)
 			assert.Equal(t, &tt.want, got)
+		})
+	}
+}
+
+func TestAssembler_ImportFor(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc       string
+		name       string
+		importPath string
+		want       []highlight.Span
+	}{
+		{
+			desc:       "default",
+			name:       "foo",
+			importPath: "example.com/foo",
+			want: []highlight.Span{
+				&highlight.TokenSpan{
+					Tokens: []chroma.Token{
+						{Type: chroma.KeywordNamespace, Value: "import"},
+						{Type: chroma.Text, Value: " "},
+						{Type: chroma.LiteralString, Value: `"example.com/foo"`},
+					},
+				},
+			},
+		},
+		{
+			desc:       "binary",
+			name:       "main",
+			importPath: "example.com/foo",
+			want: []highlight.Span{
+				&highlight.TokenSpan{
+					Tokens: []chroma.Token{
+						{Type: chroma.KeywordNamespace, Value: "import"},
+						{Type: chroma.Text, Value: " "},
+						{Type: chroma.LiteralString, Value: `"example.com/foo"`},
+					},
+				},
+			},
+		},
+		{
+			desc:       "v2",
+			name:       "foo",
+			importPath: "example.com/foo/v2",
+			want: []highlight.Span{
+				&highlight.TokenSpan{
+					Tokens: []chroma.Token{
+						{Type: chroma.KeywordNamespace, Value: "import"},
+						{Type: chroma.Text, Value: " "},
+						{Type: chroma.NameOther, Value: "foo"},
+						{Type: chroma.Text, Value: " "},
+						{Type: chroma.LiteralString, Value: `"example.com/foo/v2"`},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			pkg := srcPackage{
+				Name:       tt.name,
+				ImportPath: tt.importPath,
+				Lines: []string{
+					"package " + tt.name,
+				},
+			}.Build(t)
+
+			got, err := (&Assembler{
+				Linker:           &exampleLinker{},
+				Lexer:            highlight.GoLexer,
+				newDeclFormatter: newPlainDeclFormatter,
+			}).Assemble(pkg)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Import.Spans)
 		})
 	}
 }
@@ -351,6 +461,17 @@ func (f *plainDeclFormatter) FormatDecl(decl ast.Decl) ([]byte, []gosrc.Region, 
 	return buff.Bytes(), nil, err
 }
 
+type stubLexer struct {
+	Result []chroma.Token
+	Err    error
+}
+
+var _ highlight.Lexer = (*stubLexer)(nil)
+
+func (l *stubLexer) Lex([]byte) ([]chroma.Token, error) {
+	return l.Result, l.Err
+}
+
 type srcPackage struct {
 	Name       string
 	ImportPath string
@@ -376,7 +497,13 @@ func commentDoc(lines ...string) *comment.Doc {
 	return new(comment.Parser).Parse(txt)
 }
 
-func plainCode(lines ...string) *Code {
+func plainCode(lines ...string) *highlight.Code {
 	src := strings.Join(lines, "\n")
-	return &Code{Spans: []Span{&TextSpan{Text: []byte(src)}}}
+	return &highlight.Code{
+		Spans: []highlight.Span{
+			&highlight.TextSpan{
+				Text: []byte(src),
+			},
+		},
+	}
 }

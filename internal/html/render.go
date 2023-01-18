@@ -15,6 +15,7 @@ import (
 	ttemplate "text/template"
 
 	"go.abhg.dev/doc2go/internal/godoc"
+	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
@@ -46,6 +47,14 @@ var (
 	)
 )
 
+// Highlighter renders Go code into HTML.
+type Highlighter interface {
+	Highlight(*highlight.Code) string
+	WriteCSS(io.Writer) error
+}
+
+var _ Highlighter = (*highlight.Highlighter)(nil)
+
 // Renderer renders components into HTML.
 type Renderer struct {
 	// Path to the home page of the generated site.
@@ -62,6 +71,9 @@ type Renderer struct {
 
 	// FrontMatter to include at the top of each file, if any.
 	FrontMatter *ttemplate.Template
+
+	// Highlighter renders code blocks into HTML.
+	Highlighter Highlighter
 }
 
 func (r *Renderer) templateName() string {
@@ -97,6 +109,17 @@ func (r *Renderer) WriteStatic(dir string) error {
 		bs, err := fs.ReadFile(static, path)
 		if err != nil {
 			return err
+		}
+
+		// FIXME: This is a hack. That we need to append to main.css
+		// should be represented elsewhere.
+		if path == "css/main.css" {
+			buff := bytes.NewBuffer(bs)
+			buff.WriteString("\n")
+			if err := r.Highlighter.WriteCSS(buff); err != nil {
+				return err
+			}
+			bs = buff.Bytes()
 		}
 
 		return os.WriteFile(outPath, bs, 0o644)
@@ -179,10 +202,11 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		return err
 	}
 	render := render{
-		Home:       r.Home,
-		Path:       info.ImportPath,
-		DocPrinter: info.DocPrinter,
-		Internal:   r.Internal,
+		Home:        r.Home,
+		Path:        info.ImportPath,
+		DocPrinter:  info.DocPrinter,
+		Internal:    r.Internal,
+		Highlighter: r.Highlighter,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -234,9 +258,10 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		NumChildren: pidx.NumChildren,
 	})
 	render := render{
-		Home:     r.Home,
-		Path:     pidx.Path,
-		Internal: r.Internal,
+		Home:        r.Home,
+		Path:        pidx.Path,
+		Internal:    r.Internal,
+		Highlighter: r.Highlighter,
 	}
 	return template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -251,12 +276,14 @@ type render struct {
 
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
+
+	Highlighter Highlighter
 }
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
 		"doc":               r.doc,
-		"code":              renderCode,
+		"code":              r.code,
 		"static":            r.static,
 		"relativePath":      r.relativePath,
 		"filterSubpackages": r.filterSubpackages,
@@ -269,6 +296,10 @@ func (r *render) relativePath(p string) string {
 
 func (r *render) static(p string) string {
 	return r.relativePath(path.Join(r.Home, _staticDir, p))
+}
+
+func (r *render) code(code *highlight.Code) template.HTML {
+	return template.HTML(r.Highlighter.Highlight(code))
 }
 
 func (r *render) doc(lvl int, doc *comment.Doc) template.HTML {

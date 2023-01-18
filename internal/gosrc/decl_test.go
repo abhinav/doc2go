@@ -179,11 +179,6 @@ func TestDeclFormatter(t *testing.T) {
 				"}",
 			regions: []Region{
 				{
-					Label:  &CommentLabel{},
-					Offset: 19,
-					Length: 19,
-				},
-				{
 					Label: &DeclLabel{
 						Parent: "Foo",
 						Name:   "Bar",

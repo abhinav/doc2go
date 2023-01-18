@@ -19,6 +19,10 @@ import (
 )
 
 func TestIntegration_noBrokenLinks(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in -short mode.")
+	}
+
 	t.Parallel()
 
 	tests := []struct {

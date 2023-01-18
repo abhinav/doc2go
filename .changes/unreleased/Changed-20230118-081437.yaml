@@ -1,0 +1,5 @@
+kind: Changed
+body: Code blocks in generated HTML are now syntax highlighted server-side.
+  The default theme is richer than the prior default.
+  Use `-highlight=plain` for output similar to the old behavior.
+time: 2023-01-18T08:14:37.344895647-08:00
