@@ -14,7 +14,7 @@ import (
 type Help string
 
 var (
-	//go:embed help/usage.txt
+	//go:embed help/default.txt
 	_defaultHelp string
 
 	//go:embed help/frontmatter.txt
@@ -26,14 +26,18 @@ var (
 	//go:embed help/highlight.txt
 	_highlightHelp string
 
+	//go:embed help/config.txt
+	_configHelp string
+
 	_usageHelp = firstLineOf(_defaultHelp)
 
 	_helpTopics = map[Help]string{
-		"usage":       _usageHelp,
+		"config":      _configHelp,
 		"default":     _defaultHelp,
 		"frontmatter": _frontmatterHelp,
-		"pkg-doc":     _packageDocHelp,
 		"highlight":   _highlightHelp,
+		"pkg-doc":     _packageDocHelp,
+		"usage":       _usageHelp,
 	}
 )
 

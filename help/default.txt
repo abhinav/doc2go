@@ -34,6 +34,9 @@ OPTIONS
   -pkg-doc PATH=TEMPLATE
 	generate links for PATH and its children via TEMPLATE.
 	See -help=pkg-doc for more information.
+  -config RC
+	read configuration from the given file. Defaults to doc2go.rc.
+	See -help=config for more information.
   -tags TAG,...
 	list of comma-separated build tags.
   -debug[=FILE]

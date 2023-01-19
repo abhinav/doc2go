@@ -1,5 +1,5 @@
 ---
-title: Configuring external links
+title: External links
 description: >-
   Change how doc2go generates links to external repositories.
 ---

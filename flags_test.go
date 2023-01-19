@@ -2,8 +2,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
+	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,12 +17,44 @@ import (
 )
 
 func TestFlagHelp(t *testing.T) {
+	t.Parallel()
+
 	// Verifies that all registered flags are documented in _defaultHelp.
 
-	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet()
+	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet(nil)
 	fset.VisitAll(func(f *flag.Flag) {
 		assert.Contains(t, _defaultHelp, "-"+f.Name)
 	})
+}
+
+func TestFlagHelp_topics(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		topic    string
+		contains string
+	}{
+		{topic: "default", contains: "doc2go"},
+		{topic: "frontmatter", contains: "text/template"},
+		{topic: "pkg-doc", contains: "documentation"},
+		{topic: "highlight", contains: "chroma"},
+		{topic: "config", contains: "internal"},
+		{topic: "usage", contains: "USAGE"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.topic, func(t *testing.T) {
+			t.Parallel()
+
+			var buff bytes.Buffer
+			_, err := (&cliParser{
+				Stderr: &buff,
+			}).Parse([]string{"-h", tt.topic})
+			assert.ErrorIs(t, err, errHelp)
+			assert.Contains(t, buff.String(), tt.contains)
+		})
+	}
 }
 
 func TestCLIParser(t *testing.T) {
@@ -32,6 +69,7 @@ func TestCLIParser(t *testing.T) {
 			desc: "minimal",
 			give: []string{"./..."},
 			want: params{
+				Config:    "doc2go.rc",
 				OutputDir: "_site",
 				Patterns:  []string{"./..."},
 			},
@@ -51,6 +89,7 @@ func TestCLIParser(t *testing.T) {
 				Tags:      "foo,bar",
 				Debug:     "log.txt",
 				OutputDir: "build/site",
+				Config:    "doc2go.rc",
 				Internal:  true,
 				Embed:     true,
 				Patterns:  []string{"std", "example.com/..."},
@@ -60,6 +99,7 @@ func TestCLIParser(t *testing.T) {
 			desc: "basename",
 			give: []string{"-basename", "_index.html", "./..."},
 			want: params{
+				Config:    "doc2go.rc",
 				OutputDir: "_site",
 				Basename:  "_index.html",
 				Patterns:  []string{"./..."},
@@ -73,6 +113,7 @@ func TestCLIParser(t *testing.T) {
 				"./...",
 			},
 			want: params{
+				Config: "doc2go.rc",
 				PkgDocs: []pathTemplate{
 					{
 						Path:     "example.com/foo",
@@ -94,6 +135,7 @@ func TestCLIParser(t *testing.T) {
 				"./...",
 			},
 			want: params{
+				Config:      "doc2go.rc",
 				FrontMatter: "fm.txt",
 				Patterns:    []string{"./..."},
 				OutputDir:   "_site",
@@ -103,6 +145,7 @@ func TestCLIParser(t *testing.T) {
 			desc: "home",
 			give: []string{"-home", "go.abhg.dev/doc2go", "./..."},
 			want: params{
+				Config:    "doc2go.rc",
 				Home:      "go.abhg.dev/doc2go",
 				Patterns:  []string{"./..."},
 				OutputDir: "_site",
@@ -115,12 +158,14 @@ func TestCLIParser(t *testing.T) {
 				HighlightListThemes: true,
 				Patterns:            []string{},
 				OutputDir:           "_site",
+				Config:              "doc2go.rc",
 			},
 		},
 		{
 			desc: "print css",
 			give: []string{"-highlight-print-css"},
 			want: params{
+				Config:            "doc2go.rc",
 				HighlightPrintCSS: true,
 				Patterns:          []string{},
 				OutputDir:         "_site",
@@ -138,6 +183,92 @@ func TestCLIParser(t *testing.T) {
 			}).Parse(tt.give)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, *got)
+		})
+	}
+}
+
+func TestCLIParser_Config(t *testing.T) {
+	t.Parallel()
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	t.Run("default file", func(t *testing.T) {
+		// Can't run in parallel
+		// because of chdir.
+
+		defer os.Chdir(wd)
+		dir := t.TempDir()
+		require.NoError(t, os.Chdir(dir))
+
+		give := fmt.Sprintf("home example.com\nout %v", dir)
+		require.NoError(t,
+			os.WriteFile("doc2go.rc", []byte(give), 0o644))
+
+		got, err := (&cliParser{
+			Stderr: iotest.Writer(t),
+		}).Parse([]string{"./..."})
+		require.NoError(t, err)
+
+		assert.Equal(t, &params{
+			Home:      "example.com",
+			Config:    "doc2go.rc",
+			OutputDir: dir,
+			Patterns:  []string{"./..."},
+		}, got)
+	})
+
+	t.Run("custom file", func(t *testing.T) {
+		t.Parallel()
+
+		cfgFile := filepath.Join(t.TempDir(), "config")
+		give := "embed true\nfrontmatter foo.tmpl\nhighlight tango\n"
+		require.NoError(t,
+			os.WriteFile(cfgFile, []byte(give), 0o644))
+
+		got, err := (&cliParser{
+			Stderr: iotest.Writer(t),
+		}).Parse([]string{"-config=" + cfgFile, "./..."})
+		require.NoError(t, err)
+
+		assert.Equal(t, &params{
+			Embed:       true,
+			FrontMatter: "foo.tmpl",
+			Highlight:   highlightParams{Theme: "tango"},
+			Config:      cfgFile,
+			OutputDir:   "_site",
+			Patterns:    []string{"./..."},
+		}, got)
+	})
+}
+
+func TestCLIParser_Config_disallowed(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc string
+		give string
+	}{
+		{"highlight-print-css", "highlight tango\nhighlight-print-css\n"},
+		{"highlight-list-themes", "home example.com\nhighlight-list-themes\n"},
+		{"version", "internal\nversion\n"},
+		{"help", "frontmatter foo.tmpl\nhelp\n"},
+		{"h", "embed false\nh\n"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			cfgFile := filepath.Join(t.TempDir(), "config")
+			require.NoError(t,
+				os.WriteFile(cfgFile, []byte(tt.give), 0o644))
+
+			_, err := (&cliParser{
+				Stderr: iotest.Writer(t),
+			}).Parse([]string{"-config=" + cfgFile, "./..."})
+			assert.ErrorContains(t, err, "cannot be set from configuration")
 		})
 	}
 }
@@ -267,4 +398,62 @@ func TestPathTemplate(t *testing.T) {
 
 	assert.NotNil(t, pt.Get(), "Get")
 	assert.Equal(t, "foo=bar", pt.String())
+}
+
+func TestConfigFileParser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
+		var p *configFileParser
+		p.Reject("foo")
+		err := p.Parse(strings.NewReader("foo"), func(k, v string) error {
+			t.Errorf("unexpected set(%q, %q)", k, v)
+			return nil
+		})
+		require.NoError(t, err)
+	})
+
+	var p configFileParser
+	p.Reject("version", "list")
+	p.Reject("help")
+
+	t.Run("reject", func(t *testing.T) {
+		t.Parallel()
+
+		err := p.Parse(strings.NewReader("# foo\nhelp"),
+			func(k, v string) error {
+				t.Errorf("unexpected set(%q, %q)", k, v)
+				return nil
+			})
+		assert.ErrorContains(t, err, `"help" cannot be set from configuration`)
+	})
+
+	t.Run("allow", func(t *testing.T) {
+		t.Parallel()
+
+		got := make(map[string]string)
+		err := p.Parse(strings.NewReader("foo\nbar baz"),
+			func(k, v string) error {
+				got[k] = v
+				return nil
+			})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"foo": "true",
+			"bar": "baz",
+		}, got)
+	})
+
+	t.Run("set error", func(t *testing.T) {
+		t.Parallel()
+
+		giveErr := errors.New("great sadness")
+		err := p.Parse(strings.NewReader("foo"),
+			func(k, v string) error {
+				return giveErr
+			})
+		assert.ErrorIs(t, err, giveErr)
+	})
 }

@@ -59,8 +59,7 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 		if errors.Is(err, errHelp) {
 			return 0
 		}
-		// No need to print anything.
-		// cliParser.Parse prints messages.
+		fmt.Fprintln(cmd.Stderr, err)
 		return 1
 	}
 
