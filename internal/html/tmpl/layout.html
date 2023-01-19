@@ -4,6 +4,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="doc2go">
     <link href="{{ static "css/main.css" }}" rel="stylesheet" />
     {{ template "Head" $ -}}
   </head>
@@ -21,6 +22,12 @@
       </nav>
     {{- end -}}
     <main>{{ template "Body" $ -}}</main>
+    <hr>
+    <footer>
+      <small id="generated-by-footer">
+        Generated with <a href="https://abhinav.github.io/doc2go/">doc2go</a>
+      </small>
+    </footer>
     <script src="{{ static "js/permalink.js" }}"></script>
   </body>
 </html>
