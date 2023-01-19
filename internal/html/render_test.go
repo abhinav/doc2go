@@ -3,6 +3,7 @@ package html
 import (
 	"bytes"
 	"go/doc/comment"
+	"io"
 	"io/fs"
 	"os"
 	"sort"
@@ -15,14 +16,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/godoc"
+	"go.abhg.dev/doc2go/internal/highlight"
 	"golang.org/x/net/html"
 )
+
+var _fakeHighlighter = &fixedHighlighter{code: "foo"}
 
 func TestRenderer_WriteStatic(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	new(Renderer).WriteStatic(dir)
+	(&Renderer{
+		Highlighter: _fakeHighlighter,
+	}).WriteStatic(dir)
 
 	var want []string
 	err := fs.WalkDir(_staticFS, "static", func(path string, _ fs.DirEntry, err error) error {
@@ -53,7 +59,10 @@ func TestRenderer_WriteStatic_embedded(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	(&Renderer{Embedded: true}).WriteStatic(dir)
+	(&Renderer{
+		Highlighter: _fakeHighlighter,
+		Embedded:    true,
+	}).WriteStatic(dir)
 
 	ents, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -102,7 +111,9 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 
 			var buff bytes.Buffer
 			require.NoError(t,
-				new(Renderer).RenderPackage(&buff, &pinfo))
+				(&Renderer{
+					Highlighter: _fakeHighlighter,
+				}).RenderPackage(&buff, &pinfo))
 
 			doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
 			require.NoError(t, err, "invalid HTML:\n%v", buff.String())
@@ -252,13 +263,18 @@ func TestRenderPackage_index(t *testing.T) {
 			t.Run("Embedded", func(t *testing.T) {
 				t.Parallel()
 
-				runTest(t, &Renderer{Embedded: true}, tt)
+				runTest(t, &Renderer{
+					Highlighter: _fakeHighlighter,
+					Embedded:    true,
+				}, tt)
 			})
 
 			t.Run("Standalone", func(t *testing.T) {
 				t.Parallel()
 
-				runTest(t, new(Renderer), tt)
+				runTest(t, (&Renderer{
+					Highlighter: _fakeHighlighter,
+				}), tt)
 			})
 		})
 	}
@@ -339,7 +355,9 @@ func TestRenderPackage_headers(t *testing.T) {
 	}
 
 	var buff bytes.Buffer
-	require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+	require.NoError(t, (&Renderer{
+		Highlighter: _fakeHighlighter,
+	}).RenderPackage(&buff, &pinfo))
 
 	doc, err := html.Parse(bytes.NewReader(buff.Bytes()))
 	require.NoError(t, err, "invalid HTML:\n%v", buff.String())
@@ -470,7 +488,8 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Internal: tt.internal,
+					Highlighter: _fakeHighlighter,
+					Internal:    tt.internal,
 				}).RenderPackage(&buff, &pinfo))
 
 				assertLinks(t, tt.want, buff.Bytes())
@@ -484,7 +503,8 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Internal: tt.internal,
+					Highlighter: _fakeHighlighter,
+					Internal:    tt.internal,
 				}).RenderPackageIndex(&buff, &pidx))
 
 				assertLinks(t, tt.want, buff.Bytes())
@@ -523,7 +543,9 @@ func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
 		}
 
 		var buff bytes.Buffer
-		require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
 		assertNoSubpackages(t, buff.Bytes())
 	})
 
@@ -534,7 +556,9 @@ func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
 		}
 
 		var buff bytes.Buffer
-		require.NoError(t, new(Renderer).RenderPackageIndex(&buff, &pidx))
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
 		assertNoSubpackages(t, buff.Bytes())
 	})
 }
@@ -585,7 +609,9 @@ func TestRenderBreadcrumbs(t *testing.T) {
 		}
 
 		var buff bytes.Buffer
-		require.NoError(t, new(Renderer).RenderPackage(&buff, &pinfo))
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
 		assertCrumbs(t, buff.Bytes())
 	})
 
@@ -599,7 +625,9 @@ func TestRenderBreadcrumbs(t *testing.T) {
 			},
 		}
 		var buff bytes.Buffer
-		require.NoError(t, new(Renderer).RenderPackageIndex(&buff, &pidx))
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
 		assertCrumbs(t, buff.Bytes())
 	})
 }
@@ -653,6 +681,7 @@ func TestFrontmatter(t *testing.T) {
 
 			rnd := Renderer{
 				FrontMatter: tmpl,
+				Highlighter: _fakeHighlighter,
 			}
 
 			var buff bytes.Buffer
@@ -748,10 +777,10 @@ func text(n *html.Node) string {
 	return sb.String()
 }
 
-func textSpan(str string) *godoc.Code {
-	return &godoc.Code{
-		Spans: []godoc.Span{
-			&godoc.TextSpan{
+func textSpan(str string) *highlight.Code {
+	return &highlight.Code{
+		Spans: []highlight.Span{
+			&highlight.TextSpan{
 				Text: []byte(str),
 			},
 		},
@@ -769,4 +798,14 @@ func attr(n *html.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+type fixedHighlighter struct{ code string }
+
+func (*fixedHighlighter) WriteCSS(io.Writer) error {
+	return nil
+}
+
+func (h *fixedHighlighter) Highlight(*highlight.Code) string {
+	return h.code
 }

@@ -10,14 +10,22 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/alecthomas/chroma/v2/styles"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
+	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/html"
 	"go.abhg.dev/doc2go/internal/pathx"
 	"golang.org/x/tools/go/packages"
 )
 
-var _version = "0.2.0"
+var _version = "dev"
+
+func init() {
+	// Zero out the Chroma style fallback
+	// so that we know which theme we're using explicitly.
+	styles.Fallback = nil
+}
 
 func main() {
 	cmd := mainCmd{
@@ -74,6 +82,41 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 }
 
 func (cmd *mainCmd) run(opts *params) error {
+	if opts.HighlightListThemes {
+		for _, name := range styles.Names() {
+			fmt.Fprintln(cmd.Stdout, name)
+		}
+		return nil
+	}
+
+	highlighter := highlight.Highlighter{
+		Style: _defaultStyle,
+		// By default, we use classes in standalone mode
+		// and inline styles in embedded mode.
+		// Users can override this with
+		// --highlight=classes:$theme or --highlight=inline:$theme
+		UseClasses: !opts.Embed,
+	}
+	if theme := opts.Highlight.Theme; len(theme) > 0 {
+		style := styles.Get(theme)
+		if style == nil {
+			if opts.HighlightPrintCSS {
+				return fmt.Errorf("unknown theme %q", theme)
+			}
+
+			cmd.log.Printf("Unknown theme %q. Falling back to %q.", theme, _defaultStyle.Name)
+			style = _defaultStyle
+		}
+		highlighter.Style = style
+	}
+	if mode := opts.Highlight.Mode; mode != highlightModeAuto {
+		highlighter.UseClasses = mode == highlightModeClasses
+	}
+
+	if opts.HighlightPrintCSS {
+		return highlighter.WriteCSS(cmd.Stdout)
+	}
+
 	finder := gosrc.Finder{
 		Tags:           strings.Split(opts.Tags, ","),
 		Log:            cmd.log,
@@ -131,12 +174,14 @@ func (cmd *mainCmd) run(opts *params) error {
 		Parser:   new(gosrc.Parser),
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
+			Lexer:  highlight.GoLexer,
 		},
 		Renderer: &html.Renderer{
 			Home:        opts.Home,
 			Embedded:    opts.Embed,
 			Internal:    opts.Internal,
 			FrontMatter: frontmatter,
+			Highlighter: &highlighter,
 		},
 		OutDir:    opts.OutputDir,
 		Basename:  opts.Basename,

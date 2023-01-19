@@ -4,6 +4,7 @@
 package godoc
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/doc"
@@ -12,6 +13,7 @@ import (
 	"path"
 
 	"go.abhg.dev/doc2go/internal/gosrc"
+	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/slices"
 )
 
@@ -38,6 +40,9 @@ func newDefaultDeclFormatter(pkg *gosrc.Package) DeclFormatter {
 type Assembler struct {
 	Linker Linker
 
+	// Lexer used to highlight code blocks.
+	Lexer highlight.Lexer
+
 	// newDeclFormatter builds a DeclFormatter for the given package.
 	//
 	// This may be overriden from tests.
@@ -61,6 +66,7 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 		fset:       bpkg.Fset,
 		cparse:     dpkg.Parser(),
 		linker:     a.Linker,
+		lexer:      a.Lexer,
 		importPath: bpkg.ImportPath,
 	}).pkg(dpkg), nil
 }
@@ -71,6 +77,7 @@ type assembly struct {
 	cparse     *comment.Parser
 	linker     Linker
 	importPath string
+	lexer      highlight.Lexer
 }
 
 func (as *assembly) doc(doc string) *comment.Doc {
@@ -89,6 +96,7 @@ type Package struct {
 	BinName string
 
 	ImportPath string
+	Import     *highlight.Code // code form of import path
 	Synopsis   string
 
 	Constants []*Value
@@ -102,11 +110,13 @@ func (as *assembly) pkg(dpkg *doc.Package) *Package {
 	if dpkg.Name == "main" {
 		binName = path.Base(dpkg.ImportPath)
 	}
+
 	return &Package{
 		Name:       dpkg.Name,
 		Doc:        as.doc(dpkg.Doc),
 		BinName:    binName,
 		ImportPath: dpkg.ImportPath,
+		Import:     as.importFor(dpkg.Name, dpkg.ImportPath),
 		Synopsis:   dpkg.Synopsis(dpkg.Doc),
 		Constants:  slices.Transform(dpkg.Consts, as.val),
 		Variables:  slices.Transform(dpkg.Vars, as.val),
@@ -115,12 +125,37 @@ func (as *assembly) pkg(dpkg *doc.Package) *Package {
 	}
 }
 
+func (as *assembly) importFor(name, imp string) *highlight.Code {
+	var buff bytes.Buffer
+	if path.Base(imp) != name && name != "main" {
+		fmt.Fprintf(&buff, "import %v %q", name, imp)
+	} else {
+		fmt.Fprintf(&buff, "import %q", imp)
+	}
+
+	tokens, err := as.lexer.Lex(buff.Bytes())
+	// TODO: Log the error
+	if err == nil {
+		return &highlight.Code{
+			Spans: []highlight.Span{
+				&highlight.TokenSpan{Tokens: tokens},
+			},
+		}
+	}
+
+	return &highlight.Code{
+		Spans: []highlight.Span{
+			&highlight.TextSpan{Text: buff.Bytes()},
+		},
+	}
+}
+
 // Value is a top-level constant or variable or a group fo them
 // declared in a package.
 type Value struct {
 	Names []string
 	Doc   *comment.Doc
-	Decl  *Code
+	Decl  *highlight.Code
 }
 
 func (as *assembly) val(dval *doc.Value) *Value {
@@ -135,7 +170,7 @@ func (as *assembly) val(dval *doc.Value) *Value {
 type Type struct {
 	Name string
 	Doc  *comment.Doc
-	Decl *Code
+	Decl *highlight.Code
 
 	// Constants, variables, functions, and methods
 	// associated with this type.
@@ -163,7 +198,7 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 type Function struct {
 	Name      string
 	Doc       *comment.Doc
-	Decl      *Code
+	Decl      *highlight.Code
 	ShortDecl string
 	Recv      string // only set for methods
 	RecvType  string // name of the receiver type without '*'
@@ -179,12 +214,12 @@ func (as *assembly) fun(dfun *doc.Func) *Function {
 	}
 }
 
-func (as *assembly) decl(decl ast.Decl) *Code {
+func (as *assembly) decl(decl ast.Decl) *highlight.Code {
 	src, regions, err := as.fmt.FormatDecl(decl)
 	if err != nil {
-		return &Code{
-			Spans: []Span{
-				&ErrorSpan{
+		return &highlight.Code{
+			Spans: []highlight.Span{
+				&highlight.ErrorSpan{
 					Err: err,
 					Msg: "Could not format declaration",
 				},
@@ -193,6 +228,7 @@ func (as *assembly) decl(decl ast.Decl) *Code {
 	}
 
 	return (&CodeBuilder{
+		Lexer: as.lexer,
 		DocLinkURL: func(link *comment.DocLink) string {
 			return as.linker.DocLinkURL(as.importPath, link)
 		},

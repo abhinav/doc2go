@@ -7,12 +7,15 @@ import (
 	"io"
 	"strings"
 
+	"github.com/alecthomas/chroma/v2/styles"
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
 
 var (
 	errHelp             = flag.ErrHelp
 	errInvalidArguments = errors.New("invalid arguments")
+
+	_defaultStyle = styles.GitHub
 )
 
 // params holds all arguments for doc2go.
@@ -32,6 +35,13 @@ type params struct {
 	PkgDocs     []pathTemplate
 	FrontMatter string
 
+	Highlight           highlightParams
+	HighlightPrintCSS   bool
+	HighlightListThemes bool
+
+	// Empty only in alternative execution modes:
+	//	-highlight-print-css
+	//	-highlight-list-themes
 	Patterns []string
 }
 
@@ -60,6 +70,11 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag.BoolVar(&p.Embed, "embed", false, "")
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
+
+	// Highlighting:
+	flag.Var(&p.Highlight, "highlight", "")
+	flag.BoolVar(&p.HighlightPrintCSS, "highlight-print-css", false, "")
+	flag.BoolVar(&p.HighlightListThemes, "highlight-list-themes", false, "")
 
 	// Go build system:
 	flag.StringVar(&p.Tags, "tags", "", "")
@@ -107,13 +122,72 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	}
 
 	p.Patterns = args
-	if len(p.Patterns) == 0 {
+	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
 		UsageHelp.Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 
 	return p, nil
+}
+
+type highlightMode int
+
+const (
+	highlightModeAuto highlightMode = iota
+	highlightModeClasses
+	highlightModeInline
+)
+
+func (m highlightMode) String() string {
+	switch m {
+	case highlightModeAuto:
+		return "auto"
+	case highlightModeClasses:
+		return "classes"
+	case highlightModeInline:
+		return "inline"
+	default:
+		return fmt.Sprintf("highlightMode(%d)", int(m))
+	}
+}
+
+func (m *highlightMode) Set(s string) error {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "auto":
+		*m = highlightModeAuto
+	case "classes":
+		*m = highlightModeClasses
+	case "inline":
+		*m = highlightModeInline
+	default:
+		return fmt.Errorf("unrecognized highlight mode %q", s)
+	}
+	return nil
+}
+
+type highlightParams struct {
+	Mode  highlightMode
+	Theme string
+}
+
+var _ flag.Getter = (*highlightParams)(nil)
+
+func (p *highlightParams) Get() any { return p }
+
+func (p *highlightParams) String() string {
+	return fmt.Sprintf("%v:%v", p.Mode, p.Theme)
+}
+
+func (p *highlightParams) Set(s string) error {
+	if idx := strings.IndexRune(s, ':'); idx > 0 {
+		if err := p.Mode.Set(s[:idx]); err != nil {
+			return err
+		}
+		s = s[idx+1:]
+	}
+	p.Theme = s
+	return nil
 }
 
 type pathTemplate struct {

@@ -30,6 +30,9 @@ const (
 
 	// PackageDocHelp explains how to use the -pkg-doc flag.
 	PackageDocHelp Help = "pkg-doc"
+
+	// HighlightHelp explains how to use the -highlight flag.
+	HighlightHelp Help = "highlight"
 )
 
 const _usageHelp = `USAGE: doc2go [OPTIONS] PATTERN ...` + "\n"
@@ -59,6 +62,15 @@ OPTIONS
   -frontmatter FILE
 	generate front matter in HTML files via template in FILE.
 	See -help=frontmatter for more information.
+  -highlight [MODE:][THEME]
+	use THEME to highlight code blocks.
+	MODE, if any, is one of 'auto', 'inline', and 'classes'
+	and specifies the method of highlighting.
+	See -help=highlight for more information.
+  -highlight-list-themes
+	print a list of available themes.
+  -highlight-print-css
+	print the CSS for the THEME specified in -highlight.
   -pkg-doc PATH=TEMPLATE
 	generate links for PATH and its children via TEMPLATE.
 	See -help=pkg-doc for more information.
@@ -162,6 +174,53 @@ except golang.org/x/tools which will use https://pkg.go.dev.
 `
 
 func init() { _helpTopics[PackageDocHelp] = _packageDocHelp }
+
+var _highlightHelp = `-highlight [MODE:][THEME]
+
+MODE determines the method of highlighting used.
+Valid values of MODE are:
+
+  auto
+	Decide automatically based on other flags.
+	Uses 'inline' if -embed is set, and 'classes' otherwise.
+  classes
+	Highlighting is performed via CSS classes.
+  inline
+	Highlighting is performed via inline 'style' tags on elements.
+
+MODE may be omitted, in which case it defaults to 'auto'.
+
+THEME specifies the theme used for highlighting.
+THEME may be omitted, in which case it defaults to '` + _defaultStyle.Name + `'.
+Get a list of available themes with the following command:
+
+	doc2go -highlight-list-themes
+
+You can preview most themes at https://swapoff.org/chroma/playground/.
+doc2go additionally includes a minimal 'plain' theme
+if you prefer not to have significant syntax highlighting.
+
+In 'classes' mode, the theme's stylesheet must be included in the page for
+highlighting to work. This is done automatically if -embed is not set.
+If -embed is set, this must be done manually.
+Use the -highlight-print-css flag to access a theme's stylesheet.
+
+	# Print the stylesheet for the default theme.
+	doc2go -highlight-print-css
+
+	# Print the stylesheet for a specific theme.
+	doc2go -highlight-print-css -highlight=plain
+
+Both MODE and THEME are optional.
+If only one is specified, it's assumed to be the THEME.
+Add a trailing ':' to specify the MODE and use the default theme.
+
+	-highlight=plain    # == auto:plain
+	-highlight=classes: # == classes:` + _defaultStyle.Name + `
+	-highlight=inline:plain
+`
+
+func init() { _helpTopics[HighlightHelp] = _highlightHelp }
 
 // Write writes the help on this topic to the writer.
 // If this topic is not known, an error is returned.
