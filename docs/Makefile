@@ -7,7 +7,6 @@ STANDALONE_REF = content/en/example/index.html
 DEPS = \
 	standalone \
 	embedded \
-	content/en/docs/usage/usage.txt \
 	assets/scss/_chroma.scss
 
 .PHONY: build
@@ -46,9 +45,6 @@ $(EMBEDDED_REF): $(DOC2GO) frontmatter.tmpl
 
 assets/scss/_chroma.scss: $(DOC2GO)
 	$(DOC2GO) -highlight=tango -highlight-print-css > $@
-
-content/en/docs/usage/usage.txt: $(DOC2GO)
-	$(DOC2GO) -h &> $@
 
 $(DOC2GO): doc2go.force
 	make -C .. bin/doc2go

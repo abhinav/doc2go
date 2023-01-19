@@ -1,0 +1,47 @@
+-frontmatter FILE
+
+FILE specifies a text/template to generate front matter.
+doc2go will execute the template for each generated page,
+and put the result at the top of each file,
+separated from the rest of the content by an empty line.
+
+This flag is typically used with -embed
+to make doc2go's output compatible with static site generators.
+
+	-frontmatter=frontmatter.tmpl -embed
+
+The template is executed with the following context:
+
+	struct {
+		// Path to the package or directory relative
+		// to the module root.
+		// This is empty for the root index page.
+		Path string
+		// Last component of Path.
+		// This is empty for the root index page.
+		Basename string
+		// Number of packages or directories directly under Path.
+		NumChildren int
+
+		// The following fields are set only for packages.
+		Package struct {
+			// Name of the package. Empty for directories.
+			Name string
+			// First sentence of the package documentation,
+			// if any.
+			Synopsis string
+		}
+	}
+
+For example:
+
+	---
+	# Give example.com/foo/bar, use 'bar' as the page title.
+	# For the root page, use the title "API Reference."
+	title: "{{ with .Basename }}{{ . }}{{ else }}API Reference{{ end }}"
+	# If this package has documentation,
+	# use its first sentence as the page description.
+	{{ with .Package.Synopsis -}}
+	  description: {{ printf "%q" . }}
+	{{ end -}}
+	---

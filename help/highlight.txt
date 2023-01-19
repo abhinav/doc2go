@@ -1,0 +1,43 @@
+-highlight [MODE:][THEME]
+
+MODE determines the method of highlighting used.
+Valid values of MODE are:
+
+  auto
+	Decide automatically based on other flags.
+	Uses 'inline' if -embed is set, and 'classes' otherwise.
+  classes
+	Highlighting is performed via CSS classes.
+  inline
+	Highlighting is performed via inline 'style' tags on elements.
+
+MODE may be omitted, in which case it defaults to 'auto'.
+
+THEME specifies the theme used for highlighting.
+THEME may be omitted, in which case it defaults to '` + _defaultStyle.Name + `'.
+Get a list of available themes with the following command:
+
+	doc2go -highlight-list-themes
+
+You can preview most themes at https://swapoff.org/chroma/playground/.
+doc2go additionally includes a minimal 'plain' theme
+if you prefer not to have significant syntax highlighting.
+
+In 'classes' mode, the theme's stylesheet must be included in the page for
+highlighting to work. This is done automatically if -embed is not set.
+If -embed is set, this must be done manually.
+Use the -highlight-print-css flag to access a theme's stylesheet.
+
+	# Print the stylesheet for the default theme.
+	doc2go -highlight-print-css
+
+	# Print the stylesheet for a specific theme.
+	doc2go -highlight-print-css -highlight=plain
+
+Both MODE and THEME are optional.
+If only one is specified, it's assumed to be the THEME.
+Add a trailing ':' to specify the MODE and use the default theme.
+
+	-highlight=plain    # == auto:plain
+	-highlight=classes: # == classes:` + _defaultStyle.Name + `
+	-highlight=inline:plain

@@ -14,10 +14,10 @@ func TestHelp_Write(t *testing.T) {
 		give    Help
 		wantErr string
 	}{
-		{give: UsageHelp},
-		{give: DefaultHelp},
-		{give: FrontMatterHelp},
-		{give: PackageDocHelp},
+		{give: "usage"},
+		{give: "default"},
+		{give: "frontmatter"},
+		{give: "pkg-doc"},
 		{
 			give:    "not-a-topic",
 			wantErr: `unknown help topic "not-a-topic": valid values`,
