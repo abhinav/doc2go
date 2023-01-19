@@ -1,0 +1,34 @@
+-pkg-doc PATH=TEMPLATE
+
+Use the -pkg-doc flag to teach doc2go where to find documentation
+for dependencies.
+PATH is an import path, and TEMPLATE is a text/template.
+Packages with the import path PATH, and any package under it
+will use TEMPLATE to generate links to themselves.
+
+TEMPLATE is executed with the following context:
+
+	struct {
+		// Import path of the target package.
+		ImportPath string
+	}
+
+For example:
+
+	-pkg-doc example.com=https://go.example.com/{{.ImportPath}}
+
+This will use go.example.com for all packages under example.com.
+
+	example.com/foo     => https://go.example.com/example.com/foo
+	example.com/bar/baz => https://go.example.com/example.com/bar/baz
+
+Pass this flag multiple times to set different templates
+for different package scopes.
+If two PATHs overlap, the more specific of the two will be used.
+For example, given:
+
+	-pkg-doc golang.org/x=https://godocs.io/{{.ImportPath}}
+	-pkg-doc golang.org/x/tools=https://pkg.go.dev/{{.ImportPath}}
+
+All packages under golang.org/x/ will use https://godocs.io,
+except golang.org/x/tools which will use https://pkg.go.dev.

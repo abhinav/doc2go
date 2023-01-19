@@ -55,7 +55,7 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		DefaultHelp.Write(cmd.Stderr)
+		Help("default").Write(cmd.Stderr)
 	}
 
 	var p params
@@ -100,7 +100,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		return nil, errHelp
 	}
 
-	if p.help == DefaultHelp && len(args) > 0 {
+	if p.help == "default" && len(args) > 0 {
 		// The user might have done "-h foo"
 		// instead of "-h=foo".
 		// If the argument is a known help topic,
@@ -111,10 +111,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		}
 	}
 
-	switch p.help {
-	case NoHelp:
-		// proceed as usual
-	default:
+	if len(p.help) != 0 {
 		if err := p.help.Write(cmd.Stderr); err != nil {
 			fmt.Fprintln(cmd.Stderr, err)
 		}
@@ -124,7 +121,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	p.Patterns = args
 	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
-		UsageHelp.Write(cmd.Stderr)
+		Help("usage").Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 
