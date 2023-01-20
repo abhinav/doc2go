@@ -1,1 +1,1 @@
-../../../../../help/usage.txt
+../../../../../help/default.txt
