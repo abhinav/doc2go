@@ -1,0 +1,4 @@
+kind: Added
+body: Add support for reading configuration from a file. Defaults to reading from
+  doc2go.rc; can be changed with the '-config' flag.
+time: 2023-01-19T19:30:54.907351983-08:00

@@ -1,0 +1,27 @@
+-config RC
+
+RC is a configuration file.
+By default, doc2go will try to read it from doc2go.rc, if present.
+
+Configuration files have the format:
+
+	option1 value1
+	option2 value2
+	# ...
+
+* each line is an option name, a space, and then the value
+* the option name must be a single word
+* the option value is the rest of the line
+* the '#' character starts a line comment
+
+Nearly every doc2go flag may be supplied as an option.
+
+For example:
+
+	# start at module root
+	home go.abhg.dev/doc2go
+
+	# include internal packages in listings
+	internal
+
+	highlight inline:tango
