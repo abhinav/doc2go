@@ -28,7 +28,7 @@ pre = '<i class="pl-1 fa-brands fa-github" aria-hidden="true"></i>'
 [params]
 github_repo = "https://github.com/abhinav/doc2go"
 github_subdir = "docs"
-github_branch= "release"
+github_branch = "release"
 offlineSearch = true
 description = "Your Go documentation, to-go."
 
