@@ -30,6 +30,7 @@ to the docs directory:
 
 ```bash
 cat > docs/frontmatter.tmpl << EOF
+---
 title: "
   {{- with .Package.Name -}}
     {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
@@ -38,6 +39,8 @@ title: "
   {{- end -}}
 "
 layout: default
+render_with_liquid: false
+---
 EOF
 ```
 
@@ -53,6 +56,11 @@ on your website.
 The front matter template above specifies that your website
 should use the package or binary name as the page title,
 or the directory name if it's not a Go package.
+Additionally, it instructs Jekyll's templating system
+([Liquid](https://shopify.github.io/liquid/))
+to ignore these pages---this prevents Liquid
+from interpreting occurences of `{{`, `}}`, `{%`, and `%}`
+in your documentation as Liquid filters or tags.
 
 See [Adding front matter]({{< relref "/docs/usage/frontmatter" >}})
 to write your own templates.
