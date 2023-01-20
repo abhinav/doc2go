@@ -1,7 +1,8 @@
 ---
-title: Adding front matter
+title: Front matter
 description: >-
   Add front matter to generated pages.
+weight: 2
 ---
 
 ## Background

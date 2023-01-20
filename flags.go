@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/styles"
+	ff "github.com/peterbourgon/ff/v3"
 	"go.abhg.dev/doc2go/internal/flagvalue"
 )
 
@@ -23,8 +24,9 @@ type params struct {
 	version bool
 	help    Help
 
-	Tags  string
-	Debug flagvalue.FileSwitch
+	Tags   string
+	Debug  flagvalue.FileSwitch
+	Config string
 
 	Basename  string
 	OutputDir string
@@ -51,11 +53,11 @@ type cliParser struct {
 	Stderr io.Writer
 }
 
-func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
+func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet) {
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		DefaultHelp.Write(cmd.Stderr)
+		Help("default").Write(cmd.Stderr)
 	}
 
 	var p params
@@ -75,32 +77,41 @@ func (cmd *cliParser) newFlagSet() (*params, *flag.FlagSet) {
 	flag.Var(&p.Highlight, "highlight", "")
 	flag.BoolVar(&p.HighlightPrintCSS, "highlight-print-css", false, "")
 	flag.BoolVar(&p.HighlightListThemes, "highlight-list-themes", false, "")
+	cfg.Reject("highlight-print-css", "highlight-list-themes")
 
 	// Go build system:
 	flag.StringVar(&p.Tags, "tags", "", "")
 
 	// Program-level:
 	flag.Var(&p.Debug, "debug", "")
+	flag.StringVar(&p.Config, "config", "doc2go.rc", "")
 	flag.BoolVar(&p.version, "version", false, "")
 	flag.Var(&p.help, "help", "")
 	flag.Var(&p.help, "h", "")
+	cfg.Reject("version", "help", "h")
 
 	return &p, flag
 }
 
 func (cmd *cliParser) Parse(args []string) (*params, error) {
-	p, flag := cmd.newFlagSet()
-	if err := flag.Parse(args); err != nil {
+	var cfgParser configFileParser
+	p, fset := cmd.newFlagSet(&cfgParser)
+	err := ff.Parse(fset, args,
+		ff.WithAllowMissingConfigFile(true),
+		ff.WithConfigFileVia(&p.Config),
+		ff.WithConfigFileParser(cfgParser.Parse),
+	)
+	if err != nil {
 		return nil, err
 	}
-	args = flag.Args()
+	args = fset.Args()
 
 	if p.version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
 		return nil, errHelp
 	}
 
-	if p.help == DefaultHelp && len(args) > 0 {
+	if p.help == "default" && len(args) > 0 {
 		// The user might have done "-h foo"
 		// instead of "-h=foo".
 		// If the argument is a known help topic,
@@ -111,20 +122,29 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		}
 	}
 
-	switch p.help {
-	case NoHelp:
-		// proceed as usual
-	default:
+	if len(p.help) != 0 {
 		if err := p.help.Write(cmd.Stderr); err != nil {
 			fmt.Fprintln(cmd.Stderr, err)
 		}
+
+		// For configuration,
+		// also print a list of available parameters.
+		if p.help == "config" {
+			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be speciifed via configuration:")
+			fset.VisitAll(func(f *flag.Flag) {
+				if cfgParser.Allowed(f.Name) {
+					fmt.Fprintf(cmd.Stderr, "  %v\n", f.Name)
+				}
+			})
+		}
+
 		return nil, errHelp
 	}
 
 	p.Patterns = args
 	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
-		UsageHelp.Write(cmd.Stderr)
+		Help("usage").Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 
@@ -212,4 +232,39 @@ func (pt *pathTemplate) Set(s string) error {
 	pt.Path = s[:idx]
 	pt.Template = s[idx+1:]
 	return nil
+}
+
+type configFileParser struct {
+	disallowed map[string]struct{}
+}
+
+func (f *configFileParser) Reject(names ...string) {
+	if f == nil {
+		return
+	}
+	if f.disallowed == nil {
+		f.disallowed = make(map[string]struct{})
+	}
+
+	for _, name := range names {
+		f.disallowed[name] = struct{}{}
+	}
+}
+
+func (f *configFileParser) Allowed(name string) bool {
+	_, disallow := f.disallowed[name]
+	return !disallow
+}
+
+func (f *configFileParser) Parse(r io.Reader, set func(string, string) error) error {
+	if f == nil {
+		return nil
+	}
+
+	return ff.PlainParser(r, func(name, value string) error {
+		if !f.Allowed(name) {
+			return fmt.Errorf("flag %q cannot be set from configuration", name)
+		}
+		return set(name, value)
+	})
 }

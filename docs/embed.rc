@@ -1,0 +1,11 @@
+embed
+internal
+home go.abhg.dev/doc2go
+
+highlight classes:tango
+
+# Hugo-needs
+basename _index.html
+frontmatter docs/frontmatter.tmpl
+
+out docs/content/en/api

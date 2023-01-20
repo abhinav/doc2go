@@ -2,6 +2,7 @@
 title: Syntax Highlighting
 description: >-
   Customize doc2go's syntax highlighting of code blocks.
+weight: 3
 ---
 
 doc2go highlights code inside API reference declarations
