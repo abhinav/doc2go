@@ -7,7 +7,6 @@
 The following must be installed for a new release:
 
 - [GitHub CLI (gh)](https://cli.github.com/)
-- [changie](https://changie.dev/)
 
 ## Steps
 
@@ -32,44 +31,36 @@ To release a new version of doc2go, take the following steps:
 3. Prepare the release notes for the new version.
 
     ```bash
-    changie batch $VERSION
+    vim CHANGELOG.md
     ```
 
-    Edit the generated file manually if desired.
-
-4. Merge the release notes into the CHANGELOG.md.
-
-    ```bash
-    changie merge
-    ```
-
-5. Stage and commit everything.
+4. Stage and commit everything.
 
     ```bash
     git add .changes CHANGELOG.md
     git commit -m "Prepare release $VERSION"
     ```
 
-6. Create a pull request against the release branch.
+5. Create a pull request against the release branch.
 
     ```bash
     gh pr create -B release -t "Release $VERSION" -b ""
     ```
 
-7. Once the build is green, merge the branch.
+6. Once the build is green, merge the branch.
 
     ```bash
     gh pr merge -m -d
     ```
 
-8. Tag and push the release.
+7. Tag and push the release.
 
     ```bash
     git tag -a "$VERSION" -m "$VERSION"
     git push origin $VERSION
     ```
 
-9. Update main.
+8. Update main.
 
     ```bash
     git checkout main
