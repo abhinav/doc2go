@@ -9,7 +9,13 @@ on:
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "windows-latest"]
+        include:
+          - os: ubuntu-latest
+            lint: true
 
     steps:
     - uses: actions/checkout@v3
@@ -22,14 +28,17 @@ jobs:
 
     - name: Lint
       run: make lint
+      if: matrix.lint
 
     - name: Build
       run: make build
+      shell: bash
 
     - name: Test
       run: make cover
       env:
         TEST_FLAGS: '-v -race'
+      shell: bash
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
