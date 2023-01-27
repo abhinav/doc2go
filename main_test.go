@@ -186,28 +186,29 @@ func testMainCmdGenerate(t *testing.T, exporter packagestest.Exporter) {
 				if err != nil {
 					return err
 				}
-				gotFiles[path] = string(got)
+				gotFiles[filepath.ToSlash(path)] = string(got)
 				t.Logf("Found file %v", path)
 				return nil
 			})
 			require.NoError(t, err)
 
 			getFile := func(p string) (string, bool) {
-				body, ok := gotFiles[filepath.Join(filepath.FromSlash(p), tt.basename)]
+				body, ok := gotFiles[p+"/"+tt.basename]
+				assert.True(t, ok, "file %v not found", p)
 				return body, ok
 			}
 
-			if body, ok := getFile("example.com/foo/bar"); assert.True(t, ok) {
+			if body, ok := getFile("example.com/foo/bar"); ok {
 				assert.Contains(t, body, "Package bar does things")
 				assert.Contains(t, body, "Bar implements the core logic")
 			}
 
-			if body, ok := getFile("example.com/foo"); assert.True(t, ok) {
+			if body, ok := getFile("example.com/foo"); ok {
 				assert.Contains(t, body, `href="bar"`)
 				assert.Contains(t, body, "Package bar does things")
 			}
 
-			if body, ok := getFile("example.com"); assert.True(t, ok) {
+			if body, ok := getFile("example.com"); ok {
 				assert.Contains(t, body, ">foo/bar<")
 				assert.Contains(t, body, "Package bar does things")
 			}
@@ -276,7 +277,12 @@ func TestMainCmd_frontmatter_errors(t *testing.T) {
 			Stderr: &buff,
 		}).Run([]string{"-frontmatter", "does-not-exist.txt", "./..."})
 		require.NotZero(t, exitCode, "expected success")
-		assert.Contains(t, buff.String(), "no such file or directory")
+		switch out := buff.String(); {
+		case strings.Contains(out, "no such file or directory"),
+			strings.Contains(out, "The system cannot find the file"):
+		default:
+			t.Errorf("Output must contain an informative message:\n%s", out)
+		}
 	})
 }
 
