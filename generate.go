@@ -233,7 +233,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 func htmlSubpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
 	return slices.Transform(rpkgs, func(rpkg *renderedPackage) html.Subpackage {
 		// TODO: track this on packageTree?
-		relPath := relative.Filepath(from, rpkg.ImportPath)
+		relPath := relative.Path(from, rpkg.ImportPath)
 
 		return html.Subpackage{
 			RelativePath: relPath,

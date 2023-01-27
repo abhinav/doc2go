@@ -114,7 +114,7 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 					},
 				}
 			},
-			wantMsgs: []string{"[example.com/foo/bar]", "bar/b.go:1"},
+			wantMsgs: []string{"[example.com/foo/bar]", "b.go:1"},
 		},
 		{
 			desc: "skip only test files",

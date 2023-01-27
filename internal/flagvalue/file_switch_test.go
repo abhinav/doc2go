@@ -116,5 +116,5 @@ func TestFileSwitch_Create_error(t *testing.T) {
 	require.NoError(t, fset.Parse([]string{"-x=" + path}))
 
 	_, _, err := fs.Create(new(bytes.Buffer))
-	assert.ErrorContains(t, err, "no such file or directory")
+	assert.ErrorIs(t, err, os.ErrNotExist)
 }
