@@ -5,7 +5,7 @@ SHELL = /bin/bash
 #   only affect the current directory.
 # - All installed tools are available on PATH
 #   for commands like go generate.
-export GOBIN ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+export GOBIN ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/bin
 export PATH := $(GOBIN):$(PATH)
 
 MODULES ?= . ./tools
