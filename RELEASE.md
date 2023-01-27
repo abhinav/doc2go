@@ -21,8 +21,7 @@ To release a new version of doc2go, take the following steps:
     ```
 
 2. Create a branch to prepare the release off `main`.
-
-    ```bash
+```bash
     git checkout main
     git pull
     git checkout -b prepare-$VERSION
@@ -37,7 +36,7 @@ To release a new version of doc2go, take the following steps:
 4. Stage and commit everything.
 
     ```bash
-    git add .changes CHANGELOG.md
+    git add CHANGELOG.md
     git commit -m "Prepare release $VERSION"
     ```
 
