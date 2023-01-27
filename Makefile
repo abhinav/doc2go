@@ -1,9 +1,11 @@
+SHELL = /bin/bash
+
 # Setting GOBIN and PATH ensures two things:
 # - All 'go install' commands we run
 #   only affect the current directory.
 # - All installed tools are available on PATH
 #   for commands like go generate.
-export GOBIN ?= $(shell pwd)/bin
+export GOBIN ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 export PATH := $(GOBIN):$(PATH)
 
 MODULES ?= . ./tools
