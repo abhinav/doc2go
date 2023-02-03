@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	chroma "github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/styles"
 	ff "github.com/peterbourgon/ff/v3"
 	"go.abhg.dev/doc2go/internal/flagvalue"
@@ -16,8 +17,15 @@ var (
 	errHelp             = flag.ErrHelp
 	errInvalidArguments = errors.New("invalid arguments")
 
-	_defaultStyle = styles.GitHub
+	_defaultStyle *chroma.Style
 )
+
+func init() {
+	_defaultStyle = styles.Get("github")
+	if _defaultStyle == nil {
+		panic("could not find default style: github")
+	}
+}
 
 // params holds all arguments for doc2go.
 type params struct {
