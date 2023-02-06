@@ -3,7 +3,7 @@ module go.abhg.dev/doc2go
 go 1.19
 
 require (
-	github.com/alecthomas/chroma/v2 v2.4.0
+	github.com/alecthomas/chroma/v2 v2.5.0
 	github.com/andybalholm/cascadia v1.3.1
 	github.com/peterbourgon/ff/v3 v3.3.0
 	github.com/stretchr/testify v1.8.1
