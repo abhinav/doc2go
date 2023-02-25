@@ -35,7 +35,7 @@ jobs:
       run: |
         set -eou pipefail
         REF=${{ github.ref }}
-        echo "VERSION=${REF#refs/tags/v}" >> $GITHUB_ENV
+        echo "VERSION=${REF#refs/tags/v}" >> "$GITHUB_ENV"
 
     - name: Extract changelog
       run: |
@@ -49,7 +49,7 @@ jobs:
       with:
         distribution: goreleaser
         version: latest
-        args: release --rm-dist --release-notes ${{ github.workspace }}-CHANGELOG.txt
+        args: release --clean --release-notes ${{ github.workspace }}-CHANGELOG.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AUR_KEY: ${{ secrets.AUR_KEY }}
