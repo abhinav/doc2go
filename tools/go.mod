@@ -3,7 +3,7 @@ module go.abhg.dev/doc2go/tools
 go 1.19
 
 require (
-	github.com/mgechev/revive v1.3.0
+	github.com/mgechev/revive v1.3.1
 	honnef.co/go/tools v0.4.3
 )
 
