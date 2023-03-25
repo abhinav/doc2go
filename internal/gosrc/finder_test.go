@@ -136,6 +136,26 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 			},
 			wantMsgs: []string{"[example.com/bar/baz] No non-test Go files. Skipping."},
 		},
+		{
+			desc: "readme",
+			path: "example.com/foo",
+			files: map[string]any{
+				"foo.go":    "package foo",
+				"README.md": "# Foo\n\nFoo does things.",
+			},
+			want: func(exported *packagestest.Exported) []*PackageRef {
+				return []*PackageRef{
+					{
+						Name:       "foo",
+						ImportPath: "example.com/foo",
+						Files: []string{
+							exported.File("example.com/foo", "foo.go"),
+						},
+						ReadmeMD: exported.File("example.com/foo", "README.md"),
+					},
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -237,4 +257,30 @@ func testFinderImportedPackage(t *testing.T, exporter packagestest.Exporter) {
 				},
 			},
 		}, refs)
+}
+
+func TestIsMarkdownReadme(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		give string
+		want bool
+	}{
+		{"README.md", true},
+		{"README.markdown", true},
+		{"README", false},
+		{"README.txt", false},
+		{"README.mkdn", true},
+		{"README.mkd", true},
+		{"README.rst", false},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.give, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, isMarkdownReadme(tt.give))
+		})
+	}
 }

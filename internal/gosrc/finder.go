@@ -24,6 +24,10 @@ type PackageRef struct {
 	// Import path of the package.
 	ImportPath string
 
+	// ReadmeMD holds the path to the Markdown README file
+	// for the package, if one was found.
+	ReadmeMD string
+
 	// List of .go files in the package.
 	Files []string
 
@@ -112,7 +116,10 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		}
 
 		pkgDir := filepath.Dir(goFiles[0])
-		var testFiles []string
+		var (
+			testFiles []string
+			readme    string
+		)
 		if ents, err := os.ReadDir(pkgDir); err != nil {
 			f.Log.Printf("[%v] Skipping tests: unable to read directory: %v", pkg.PkgPath, err)
 		} else {
@@ -121,8 +128,14 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			// find and then,
 			// for each package, list files and test files.
 			for _, ent := range ents {
-				if !ent.IsDir() && strings.HasSuffix(ent.Name(), "_test.go") {
+				if ent.IsDir() {
+					continue
+				}
+
+				if strings.HasSuffix(ent.Name(), "_test.go") {
 					testFiles = append(testFiles, filepath.Join(pkgDir, ent.Name()))
+				} else if isMarkdownReadme(ent.Name()) {
+					readme = filepath.Join(pkgDir, ent.Name())
 				}
 			}
 		}
@@ -144,10 +157,35 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		infos = append(infos, &PackageRef{
 			Name:       pkg.Name,
 			ImportPath: pkg.PkgPath,
+			ReadmeMD:   readme,
 			Files:      goFiles,
 			TestFiles:  testFiles,
 			Imports:    imports,
 		})
 	}
 	return infos, nil
+}
+
+var (
+	_readme       = "README"
+	_markdownExts = map[string]struct{}{
+		".md":       {},
+		".markdown": {},
+		".mdown":    {},
+		".mkdn":     {},
+		".mkd":      {},
+		".mdwn":     {},
+		".mdtxt":    {},
+		".mdtext":   {},
+	}
+)
+
+func isMarkdownReadme(name string) bool {
+	name = filepath.Base(name)
+	if !strings.HasPrefix(name, _readme) {
+		return false
+	}
+	name = name[len(_readme):]
+	_, ok := _markdownExts[name]
+	return ok
 }
