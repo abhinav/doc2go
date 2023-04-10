@@ -7,6 +7,7 @@
 The following must be installed for a new release:
 
 - [GitHub CLI (gh)](https://cli.github.com/)
+- [Changie](https://changie.dev/)
 
 ## Steps
 
@@ -17,7 +18,7 @@ To release a new version of doc2go, take the following steps:
    Be aware that doc2go follows [semver](https://semver.org/).
 
     ```bash
-    VERSION=vX.Y.Z
+    VERSION=$(changie next auto)
     ```
 
 2. Create a branch to prepare the release off `main`.
@@ -30,13 +31,14 @@ To release a new version of doc2go, take the following steps:
 3. Prepare the release notes for the new version.
 
     ```bash
-    vim CHANGELOG.md
+    changie batch $VERSION
+    changie merge
     ```
 
 4. Stage and commit everything.
 
     ```bash
-    git add CHANGELOG.md
+    git add CHANGELOG.md .changes
     git commit -m "Prepare release $VERSION"
     ```
 
