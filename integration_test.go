@@ -14,6 +14,7 @@ import (
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/container/ring"
 	"go.abhg.dev/doc2go/internal/iotest"
 	"golang.org/x/net/html"
 )
@@ -105,7 +106,7 @@ type urlWalker struct {
 	t      *testing.T
 	host   string
 	seen   map[string]struct{}
-	queue  []*url.URL
+	queue  ring.Q[*url.URL]
 	client *http.Client
 }
 
@@ -122,11 +123,9 @@ func (w *urlWalker) Walk(startPage string) {
 	require.NoError(w.t, err)
 	w.host = u.Host
 
-	w.queue = append(w.queue, u)
-	for len(w.queue) > 0 {
-		var u *url.URL
-		u, w.queue = w.queue[0], w.queue[1:]
-		w.visit(u)
+	w.queue.Push(u)
+	for !w.queue.Empty() {
+		w.visit(w.queue.Pop())
 	}
 }
 
@@ -182,10 +181,10 @@ func (w *urlWalker) push(from *url.URL, href string) {
 
 	if len(u.Host) > 0 {
 		if u.Host == w.host {
-			w.queue = append(w.queue, u)
+			w.queue.Push(u)
 		}
 		return
 	}
 
-	w.queue = append(w.queue, from.JoinPath(u.Path))
+	w.queue.Push(from.JoinPath(u.Path))
 }
