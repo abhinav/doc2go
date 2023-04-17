@@ -7,7 +7,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.1
 	github.com/peterbourgon/ff/v3 v3.3.0
 	github.com/stretchr/testify v1.8.2
-	go.abhg.dev/container/ring v0.2.0
+	go.abhg.dev/container/ring v0.3.0
 	golang.org/x/net v0.9.0
 	golang.org/x/tools v0.8.0
 )
