@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/alecthomas/chroma/v2 v2.7.0
-	github.com/andybalholm/cascadia v1.3.1
+	github.com/andybalholm/cascadia v1.3.2
 	github.com/peterbourgon/ff/v3 v3.3.0
 	github.com/stretchr/testify v1.8.2
 	go.abhg.dev/container/ring v0.3.0
