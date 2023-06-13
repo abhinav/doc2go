@@ -1,3 +1,4 @@
+// Package pathx provides extensions to the [path] package.
 package pathx
 
 import "strings"

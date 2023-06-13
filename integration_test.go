@@ -48,6 +48,8 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 			name += fmt.Sprintf("/home=%v", tt.home)
 		}
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			testIntegrationNoBrokenLinks(t, tt.pattern, tt.home)
 		})
 	}
@@ -140,7 +142,9 @@ func (w *urlWalker) visit(dest *url.URL) {
 	if !assert.NoError(w.t, err, "error visiting %v", dest) {
 		return
 	}
-	defer res.Body.Close()
+	defer func() {
+		assert.NoError(w.t, res.Body.Close(), "error closing response body")
+	}()
 	if !assert.Equal(w.t, 200, res.StatusCode, "bad response from %v: %v", dest, res.Status) {
 		return
 	}

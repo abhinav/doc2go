@@ -1,3 +1,4 @@
+// Package ptr provides [Of], to turn literals into pointers.
 package ptr
 
 // Of returns a pointer to a value of the given type.

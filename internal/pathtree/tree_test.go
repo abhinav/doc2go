@@ -33,11 +33,15 @@ func TestSetAndGet(t *testing.T) {
 	assert.Equal(t, 42, ensure(r.Lookup("foo/bar/baz/qux/quux")), "descendant")
 
 	t.Run("sibling", func(t *testing.T) {
+		t.Parallel()
+
 		_, ok := r.Lookup("foobar")
 		require.False(t, ok)
 	})
 
 	t.Run("snapshot", func(t *testing.T) {
+		t.Parallel()
+
 		assert.Equal(t, []Snapshot[int]{
 			{
 				Path:  "foo",

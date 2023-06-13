@@ -277,8 +277,11 @@ func TestDeclFormatter(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, file.Decls)
 
-			// Connect idents to objects.
-			ast.NewPackage(fset, map[string]*ast.File{
+			// Besides building an ast.Package,
+			// NewPackage also connects identifiers to objects.
+			// That's really all we need here so ignore the package
+			// and the error.
+			_, _ = ast.NewPackage(fset, map[string]*ast.File{
 				"a.go": file,
 			}, func(imports map[string]*ast.Object, path string) (pkg *ast.Object, err error) {
 				if o, ok := imports[path]; ok {

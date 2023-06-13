@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"go.abhg.dev/doc2go/internal/errdefer"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
@@ -141,7 +142,7 @@ func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*rend
 	return []*renderedPackage{rpkg}, nil
 }
 
-func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) ([]*renderedPackage, error) {
+func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) (_ []*renderedPackage, err error) {
 	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
 		return nil, err
@@ -158,7 +159,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer errdefer.Close(&err, f)
 
 	idx := html.PackageIndex{
 		Path:        t.Path,
@@ -178,7 +179,7 @@ type renderedPackage struct {
 	Synopsis   string
 }
 
-func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*renderedPackage, error) {
+func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *renderedPackage, err error) {
 	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
 		return nil, err
@@ -205,7 +206,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (*ren
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer errdefer.Close(&err, f)
 
 	info := html.PackageInfo{
 		Package:     dpkg,
