@@ -214,6 +214,8 @@ func TestGenerator_hierarchy(t *testing.T) {
 }
 
 func TestGenerator_basename(t *testing.T) {
+	t.Parallel()
+
 	pkgs := map[string]*fakePackage{
 		"foo": {ImportPath: "foo"},
 	}

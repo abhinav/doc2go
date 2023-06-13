@@ -65,7 +65,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		Help("default").Write(cmd.Stderr)
+		_ = Help("default").Write(cmd.Stderr)
 	}
 
 	var p params
@@ -152,7 +152,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	p.Patterns = args
 	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
-		Help("usage").Write(cmd.Stderr)
+		_ = Help("usage").Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 

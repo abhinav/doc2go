@@ -252,11 +252,14 @@ type Subpackage struct {
 // RenderPackageIndex renders the list of descendants for a package
 // as HTML.
 func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
-	r.renderFrontmatter(w, frontmatterData{
+	fmdata := frontmatterData{
 		Path:        pidx.Path,
 		Basename:    pidx.Basename(),
 		NumChildren: pidx.NumChildren,
-	})
+	}
+	if err := r.renderFrontmatter(w, fmdata); err != nil {
+		return err
+	}
 	render := render{
 		Home:        r.Home,
 		Path:        pidx.Path,

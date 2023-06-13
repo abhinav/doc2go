@@ -17,6 +17,8 @@ import (
 	"go/format"
 	"go/token"
 	"strings"
+
+	"go.abhg.dev/doc2go/internal/must"
 )
 
 const (
@@ -166,7 +168,8 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 	default:
 		// As a fallback, use default formatter for all unknown node types.
 		buf := new(bytes.Buffer)
-		format.Node(buf, fset, node)
+		err := format.Node(buf, fset, node)
+		must.NotErrorf(err, "Error formatting node: %v", err)
 		s := buf.String()
 		if strings.Contains(s, "\n") {
 			return dotDotDot

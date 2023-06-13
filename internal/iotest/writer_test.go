@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeT struct {
@@ -25,7 +26,8 @@ func TestWriter(t *testing.T) {
 
 	fakeT := fakeT{T: t}
 	w := Writer(&fakeT)
-	io.WriteString(w, "foo")
+	_, err := io.WriteString(w, "foo")
+	require.NoError(t, err)
 	assert.Equal(t, "foo\n", fakeT.Buffer.String())
 	// If we wanted this to be more accurate, we would have it buffer
 	// the input on newlines simillar to the log-based io.Writer.

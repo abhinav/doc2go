@@ -187,6 +187,7 @@ func TestCLIParser(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // chdir
 func TestCLIParser_Config(t *testing.T) {
 	t.Parallel()
 
@@ -197,7 +198,9 @@ func TestCLIParser_Config(t *testing.T) {
 		// Can't run in parallel
 		// because of chdir.
 
-		defer os.Chdir(wd)
+		defer func() {
+			assert.NoError(t, os.Chdir(wd))
+		}()
 		dir := t.TempDir()
 		require.NoError(t, os.Chdir(dir))
 
