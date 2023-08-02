@@ -8,7 +8,7 @@ require (
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.8.4
 	go.abhg.dev/container/ring v0.3.0
-	golang.org/x/net v0.12.0
+	golang.org/x/net v0.13.0
 	golang.org/x/tools v0.11.1
 )
 
