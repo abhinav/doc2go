@@ -1,4 +1,0 @@
-kind: Added
-body: Add a `-rel-link-style` flag to change how relative links are rendered. Use
-  'directory' as an argument to add trailing slashes to relative links.
-time: 2023-08-03T12:29:12.245279475-07:00
