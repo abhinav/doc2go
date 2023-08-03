@@ -40,10 +40,11 @@ type params struct {
 	OutputDir string
 	Home      string
 
-	Embed       bool
-	Internal    bool
-	PkgDocs     []pathTemplate
-	FrontMatter string
+	Embed                bool
+	Internal             bool
+	PkgDocs              []pathTemplate
+	FrontMatter          string
+	TrailingSlashOnLinks bool
 
 	Highlight           highlightParams
 	HighlightPrintCSS   bool
@@ -80,6 +81,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.BoolVar(&p.Embed, "embed", false, "")
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
+	flag.BoolVar(&p.TrailingSlashOnLinks, "trailing-slash-on-links", false, "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")
@@ -138,7 +140,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		// For configuration,
 		// also print a list of available parameters.
 		if p.help == "config" {
-			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be speciifed via configuration:")
+			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be specified via configuration:")
 			fset.VisitAll(func(f *flag.Flag) {
 				if cfgParser.Allowed(f.Name) {
 					fmt.Fprintf(cmd.Stderr, "  %v\n", f.Name)

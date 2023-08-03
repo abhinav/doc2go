@@ -74,6 +74,9 @@ type Renderer struct {
 
 	// Highlighter renders code blocks into HTML.
 	Highlighter Highlighter
+
+	// TrailingSlashOnLinks will add trailing slashes to hrefs in anchors.
+	TrailingSlashOnLinks bool
 }
 
 func (r *Renderer) templateName() string {
@@ -202,11 +205,12 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		return err
 	}
 	render := render{
-		Home:        r.Home,
-		Path:        info.ImportPath,
-		DocPrinter:  info.DocPrinter,
-		Internal:    r.Internal,
-		Highlighter: r.Highlighter,
+		Home:                 r.Home,
+		Path:                 info.ImportPath,
+		DocPrinter:           info.DocPrinter,
+		Internal:             r.Internal,
+		Highlighter:          r.Highlighter,
+		TrailingSlashOnLinks: r.TrailingSlashOnLinks,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -261,10 +265,11 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		return err
 	}
 	render := render{
-		Home:        r.Home,
-		Path:        pidx.Path,
-		Internal:    r.Internal,
-		Highlighter: r.Highlighter,
+		Home:                 r.Home,
+		Path:                 pidx.Path,
+		Internal:             r.Internal,
+		Highlighter:          r.Highlighter,
+		TrailingSlashOnLinks: r.TrailingSlashOnLinks,
 	}
 	return template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -281,16 +286,26 @@ type render struct {
 	DocPrinter DocPrinter
 
 	Highlighter Highlighter
+
+	TrailingSlashOnLinks bool
 }
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
-		"doc":               r.doc,
-		"code":              r.code,
-		"static":            r.static,
-		"relativePath":      r.relativePath,
-		"filterSubpackages": r.filterSubpackages,
+		"doc":                 r.doc,
+		"code":                r.code,
+		"static":              r.static,
+		"relativePath":        r.relativePath,
+		"filterSubpackages":   r.filterSubpackages,
+		"trailingLinkSlashes": r.trailingLinkSlashes,
 	}
+}
+
+func (r *render) trailingLinkSlashes() string {
+	if r.TrailingSlashOnLinks {
+		return "/"
+	}
+	return ""
 }
 
 func (r *render) relativePath(p string) string {
