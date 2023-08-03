@@ -75,8 +75,9 @@ type Renderer struct {
 	// Highlighter renders code blocks into HTML.
 	Highlighter Highlighter
 
-	// TrailingSlashOnLinks will add trailing slashes to hrefs in anchors.
-	TrailingSlashOnLinks bool
+	// NormalizeRelativePath is an optional function that
+	// normalizes relative paths printed in the generated HTML.
+	NormalizeRelativePath func(string) string
 }
 
 func (r *Renderer) templateName() string {
@@ -205,12 +206,12 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		return err
 	}
 	render := render{
-		Home:                 r.Home,
-		Path:                 info.ImportPath,
-		DocPrinter:           info.DocPrinter,
-		Internal:             r.Internal,
-		Highlighter:          r.Highlighter,
-		TrailingSlashOnLinks: r.TrailingSlashOnLinks,
+		Home:                  r.Home,
+		Path:                  info.ImportPath,
+		DocPrinter:            info.DocPrinter,
+		Internal:              r.Internal,
+		Highlighter:           r.Highlighter,
+		NormalizeRelativePath: r.NormalizeRelativePath,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -265,11 +266,11 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		return err
 	}
 	render := render{
-		Home:                 r.Home,
-		Path:                 pidx.Path,
-		Internal:             r.Internal,
-		Highlighter:          r.Highlighter,
-		TrailingSlashOnLinks: r.TrailingSlashOnLinks,
+		Home:                  r.Home,
+		Path:                  pidx.Path,
+		Internal:              r.Internal,
+		Highlighter:           r.Highlighter,
+		NormalizeRelativePath: r.NormalizeRelativePath,
 	}
 	return template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -285,31 +286,32 @@ type render struct {
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
 
-	Highlighter Highlighter
-
-	TrailingSlashOnLinks bool
+	Highlighter           Highlighter
+	NormalizeRelativePath func(string) string
 }
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
-		"doc":                 r.doc,
-		"code":                r.code,
-		"static":              r.static,
-		"relativePath":        r.relativePath,
-		"filterSubpackages":   r.filterSubpackages,
-		"trailingLinkSlashes": r.trailingLinkSlashes,
+		"doc":               r.doc,
+		"code":              r.code,
+		"static":            r.static,
+		"relativePath":      r.relativePath,
+		"filterSubpackages": r.filterSubpackages,
+		"normalizeRelativePath": func(p string) string {
+			if f := r.NormalizeRelativePath; f != nil {
+				return f(p)
+			}
+			return p
+		},
 	}
-}
-
-func (r *render) trailingLinkSlashes() string {
-	if r.TrailingSlashOnLinks {
-		return "/"
-	}
-	return ""
 }
 
 func (r *render) relativePath(p string) string {
-	return relative.Path(r.Path, p)
+	p = relative.Path(r.Path, p)
+	if r.NormalizeRelativePath != nil {
+		p = r.NormalizeRelativePath(p)
+	}
+	return p
 }
 
 func (r *render) static(p string) string {

@@ -57,11 +57,16 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 
 func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
 	tests := []struct {
-		desc   string
-		subDir string
+		desc         string
+		subDir       string
+		relLinkStyle relLinkStyle
 	}{
 		{desc: "default"},
 		{desc: "subdir", subDir: "foo"},
+		{
+			desc:         "trailing slash links",
+			relLinkStyle: relLinkStyleDirectory,
+		},
 	}
 
 	for _, tt := range tests {
@@ -79,6 +84,10 @@ func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
 			if len(home) > 0 {
 				args = append(args, "-home", home)
 			}
+			if tt.relLinkStyle != relLinkStylePlain {
+				args = append(args, "-rel-link-style", tt.relLinkStyle.String())
+			}
+
 			args = append(args, pattern)
 
 			exitCode := (&mainCmd{

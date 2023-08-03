@@ -408,17 +408,22 @@ func TestRenderPackage_headers(t *testing.T) {
 func TestRenderSubpackages(t *testing.T) {
 	t.Parallel()
 
+	ensureTrailingSlash := func(s string) string {
+		return strings.TrimSuffix(s, "/") + "/"
+	}
+
 	type link struct {
 		href     string
 		synopsis string
 	}
 
 	tests := []struct {
-		desc            string
-		internal        bool
-		trailingSlashes bool
-		subpkgs         []Subpackage
-		want            []link
+		desc     string
+		internal bool
+		subpkgs  []Subpackage
+		want     []link
+
+		normalizeRelPath func(string) string // optional
 	}{
 		{
 			desc:     "internal",
@@ -456,9 +461,9 @@ func TestRenderSubpackages(t *testing.T) {
 			},
 		},
 		{
-			desc:            "trailing slashes, no internal",
-			internal:        false,
-			trailingSlashes: true,
+			desc:             "trailing slashes, no internal",
+			internal:         false,
+			normalizeRelPath: ensureTrailingSlash,
 			subpkgs: []Subpackage{
 				{
 					RelativePath: "internal/foo",
@@ -474,9 +479,9 @@ func TestRenderSubpackages(t *testing.T) {
 			},
 		},
 		{
-			desc:            "trailing slashes, internal",
-			internal:        true,
-			trailingSlashes: true,
+			desc:             "trailing slashes, internal",
+			internal:         true,
+			normalizeRelPath: ensureTrailingSlash,
 			subpkgs: []Subpackage{
 				{
 					RelativePath: "internal/foo",
@@ -533,9 +538,9 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter:          _fakeHighlighter,
-					Internal:             tt.internal,
-					TrailingSlashOnLinks: tt.trailingSlashes,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackage(&buff, &pinfo))
 
 				assertLinks(t, tt.want, buff.Bytes())
@@ -551,9 +556,9 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter:          _fakeHighlighter,
-					Internal:             tt.internal,
-					TrailingSlashOnLinks: tt.trailingSlashes,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackageIndex(&buff, &pidx))
 
 				assertLinks(t, tt.want, buff.Bytes())
