@@ -10,6 +10,8 @@ import (
 )
 
 func TestOneLineNode(t *testing.T) {
+	t.Parallel()
+
 	// This is adapted from
 	// https://github.com/golang/pkgsite/blob/096256eedb99538baa3cf13d10500bcaf9103a9e/internal/godoc/dochtml/internal/render/synopsis_test.go.
 	// and is made available under the same license.

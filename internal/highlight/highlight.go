@@ -82,7 +82,7 @@ func (r *codeRenderer) RenderSpans(spans []Span) {
 func (r *codeRenderer) RenderSpan(span Span) {
 	switch b := span.(type) {
 	case *TokenSpan:
-		r.fmt.Format(r, r.sty, chroma.Literator(b.Tokens...))
+		_ = r.fmt.Format(r, r.sty, chroma.Literator(b.Tokens...))
 	case *TextSpan:
 		template.HTMLEscape(r, b.Text)
 	case *AnchorSpan:

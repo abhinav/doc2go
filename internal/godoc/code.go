@@ -77,6 +77,8 @@ func (cb *CodeBuilder) Build(src []byte, regions []gosrc.Region) *highlight.Code
 }
 
 func (cb *CodeBuilder) lexSpanner(src []byte) func(start, end int) []highlight.Span {
+	// TODO: this could probably be in the highlight package.
+
 	tokens, err := cb.Lexer.Lex(src)
 	if err != nil || len(tokens) == 0 {
 		return nil // TODO: Log this

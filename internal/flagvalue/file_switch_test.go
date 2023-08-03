@@ -72,6 +72,8 @@ func TestFileSwitch_Create(t *testing.T) {
 	}
 
 	t.Run("no arguments", func(t *testing.T) {
+		t.Parallel()
+
 		fs := parse(t)
 
 		got, done, err := fs.Create(new(bytes.Buffer))
@@ -81,6 +83,8 @@ func TestFileSwitch_Create(t *testing.T) {
 	})
 
 	t.Run("fallback", func(t *testing.T) {
+		t.Parallel()
+
 		fs := parse(t, "-x")
 		buff := new(bytes.Buffer)
 
@@ -91,12 +95,15 @@ func TestFileSwitch_Create(t *testing.T) {
 	})
 
 	t.Run("explicit", func(t *testing.T) {
+		t.Parallel()
+
 		path := filepath.Join(t.TempDir(), "foo.txt")
 		fs := parse(t, "-x="+path)
 
 		got, done, err := fs.Create(new(bytes.Buffer))
 		require.NoError(t, err)
-		io.WriteString(got, "hello")
+		_, err = io.WriteString(got, "hello")
+		require.NoError(t, err)
 		require.NoError(t, done())
 
 		body, err := os.ReadFile(path)

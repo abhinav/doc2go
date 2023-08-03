@@ -30,7 +30,9 @@ aurs:
     private_key: '{{ .Env.AUR_KEY }}'
     package: |-
       install -Dm755 "./doc2go" "${pkgdir}/usr/bin/doc2go"
-      install -Dm755 "./LICENSE" "${pkgdir}/usr/share/licenses/doc2go/LICENSE"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/doc2go/LICENSE"
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/doc2go/README.md"
+      install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/doc2go/CHANGELOG.md"
     commit_author:
       name: Abhinav Gupta
       email: mail@abhinavg.net
@@ -56,7 +58,3 @@ checksum:
 
 snapshot:
   name_template: "{{ incminor .Tag }}-dev"
-
-changelog:
-  # A commit log is not a changelog.
-  skip: true

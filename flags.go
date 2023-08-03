@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	chroma "github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/styles"
 	ff "github.com/peterbourgon/ff/v3"
 	"go.abhg.dev/doc2go/internal/flagvalue"
@@ -16,8 +17,15 @@ var (
 	errHelp             = flag.ErrHelp
 	errInvalidArguments = errors.New("invalid arguments")
 
-	_defaultStyle = styles.GitHub
+	_defaultStyle *chroma.Style
 )
+
+func init() {
+	_defaultStyle = styles.Get("github")
+	if _defaultStyle == nil {
+		panic("could not find default style: github")
+	}
+}
 
 // params holds all arguments for doc2go.
 type params struct {
@@ -32,10 +40,11 @@ type params struct {
 	OutputDir string
 	Home      string
 
-	Embed       bool
-	Internal    bool
-	PkgDocs     []pathTemplate
-	FrontMatter string
+	Embed        bool
+	Internal     bool
+	PkgDocs      []pathTemplate
+	FrontMatter  string
+	RelLinkStyle relLinkStyle
 
 	Highlight           highlightParams
 	HighlightPrintCSS   bool
@@ -57,7 +66,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag := flag.NewFlagSet("doc2go", flag.ContinueOnError)
 	flag.SetOutput(cmd.Stderr)
 	flag.Usage = func() {
-		Help("default").Write(cmd.Stderr)
+		_ = Help("default").Write(cmd.Stderr)
 	}
 
 	var p params
@@ -72,6 +81,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.BoolVar(&p.Embed, "embed", false, "")
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
+	flag.Var(&p.RelLinkStyle, "rel-link-style", "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")
@@ -130,7 +140,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		// For configuration,
 		// also print a list of available parameters.
 		if p.help == "config" {
-			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be speciifed via configuration:")
+			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be specified via configuration:")
 			fset.VisitAll(func(f *flag.Flag) {
 				if cfgParser.Allowed(f.Name) {
 					fmt.Fprintf(cmd.Stderr, "  %v\n", f.Name)
@@ -144,7 +154,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	p.Patterns = args
 	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
-		Help("usage").Write(cmd.Stderr)
+		_ = Help("usage").Write(cmd.Stderr)
 		return nil, errInvalidArguments
 	}
 
@@ -267,4 +277,59 @@ func (f *configFileParser) Parse(r io.Reader, set func(string, string) error) er
 		}
 		return set(name, value)
 	})
+}
+
+// relLinkStyle specifies how we relative links to directories.
+type relLinkStyle int
+
+const (
+	// relLinkStylePlain renders links plainly,
+	// e.g., "foo/bar".
+	relLinkStylePlain relLinkStyle = iota
+
+	// relLinkStyleDirectory renders links as directories,
+	// with a trailing slash,
+	// e.g., "foo/bar/".
+	relLinkStyleDirectory
+)
+
+func (ls relLinkStyle) String() string {
+	switch ls {
+	case relLinkStylePlain:
+		return "plain"
+	case relLinkStyleDirectory:
+		return "directory"
+	default:
+		return fmt.Sprintf("relLinkStyle(%d)", int(ls))
+	}
+}
+
+func (ls *relLinkStyle) Get() any { return *ls }
+
+func (ls *relLinkStyle) Set(s string) error {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "plain":
+		*ls = relLinkStylePlain
+	case "directory":
+		*ls = relLinkStyleDirectory
+	default:
+		return fmt.Errorf("unrecognized link style %q", s)
+	}
+	return nil
+}
+
+func (ls relLinkStyle) Normalize(s string) string {
+	switch ls {
+	case relLinkStylePlain:
+		return strings.TrimSuffix(s, "/")
+	case relLinkStyleDirectory:
+		if strings.HasSuffix(s, "/") {
+			return s
+		}
+		return s + "/"
+	default:
+		// Should never happen.
+		// But if it does, we'll just return the input.
+		return s
+	}
 }

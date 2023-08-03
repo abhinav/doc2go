@@ -68,7 +68,11 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 		cmd.log.Printf("Unable to create debug log, using stderr: %v", err)
 		debugw = cmd.Stderr
 	} else {
-		defer closedebug()
+		defer func() {
+			if err := closedebug(); err != nil {
+				cmd.log.Printf("Error closing debug log: %v", err)
+			}
+		}()
 	}
 	cmd.debug = opts.Debug.Bool()
 	cmd.debugLog = log.New(debugw, "", 0)
@@ -176,11 +180,12 @@ func (cmd *mainCmd) run(opts *params) error {
 			Lexer:  highlight.GoLexer,
 		},
 		Renderer: &html.Renderer{
-			Home:        opts.Home,
-			Embedded:    opts.Embed,
-			Internal:    opts.Internal,
-			FrontMatter: frontmatter,
-			Highlighter: &highlighter,
+			Home:                  opts.Home,
+			Embedded:              opts.Embed,
+			Internal:              opts.Internal,
+			FrontMatter:           frontmatter,
+			Highlighter:           &highlighter,
+			NormalizeRelativePath: opts.RelLinkStyle.Normalize,
 		},
 		OutDir:    opts.OutputDir,
 		Basename:  opts.Basename,

@@ -187,6 +187,7 @@ func TestCLIParser(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // chdir
 func TestCLIParser_Config(t *testing.T) {
 	t.Parallel()
 
@@ -197,7 +198,9 @@ func TestCLIParser_Config(t *testing.T) {
 		// Can't run in parallel
 		// because of chdir.
 
-		defer os.Chdir(wd)
+		defer func() {
+			assert.NoError(t, os.Chdir(wd))
+		}()
 		dir := t.TempDir()
 		require.NoError(t, os.Chdir(dir))
 
@@ -456,4 +459,135 @@ func TestConfigFileParser(t *testing.T) {
 			})
 		assert.ErrorIs(t, err, giveErr)
 	})
+}
+
+func TestRelLinkStyle(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc       string
+		give       []string
+		want       relLinkStyle
+		wantString string
+	}{
+		{
+			desc:       "default",
+			want:       relLinkStylePlain,
+			wantString: "plain",
+		},
+		{
+			desc:       "plain",
+			give:       []string{"-x", "plain"},
+			want:       relLinkStylePlain,
+			wantString: "plain",
+		},
+		{
+			desc:       "directory",
+			give:       []string{"-x", "directory"},
+			want:       relLinkStyleDirectory,
+			wantString: "directory",
+		},
+		{
+			desc:       "plain/uppercase",
+			give:       []string{"-x", "PLAIN"},
+			want:       relLinkStylePlain,
+			wantString: "plain",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+			fset.SetOutput(iotest.Writer(t))
+
+			var got relLinkStyle
+			fset.Var(&got, "x", "")
+
+			require.NoError(t, fset.Parse(tt.give))
+			assert.Equal(t, tt.want, got)
+
+			assert.NotPanics(t, func() {
+				assert.Equal(t, tt.want, got.Get())
+			})
+
+			t.Run("String", func(t *testing.T) {
+				assert.Equal(t, tt.wantString, got.String())
+			})
+		})
+	}
+}
+
+func TestRelLinkStyle_unrecognized(t *testing.T) {
+	t.Parallel()
+
+	t.Run("parse", func(t *testing.T) {
+		t.Parallel()
+
+		fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+		fset.SetOutput(iotest.Writer(t))
+
+		var got relLinkStyle
+		fset.Var(&got, "x", "")
+
+		err := fset.Parse([]string{"-x", "not-a-style"})
+		assert.ErrorContains(t, err, "unrecognized link style")
+	})
+
+	t.Run("string", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, "relLinkStyle(42)", relLinkStyle(42).String())
+	})
+}
+
+func TestRelLinkStyle_Normalize(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		desc  string
+		style relLinkStyle
+		give  string
+		want  string
+	}{
+		{
+			desc: "plain/no slash",
+			give: "foo",
+			want: "foo",
+		},
+		{
+			desc: "plain/slash",
+			give: "foo/",
+			want: "foo",
+		},
+		{
+			desc:  "directory/no slash",
+			style: relLinkStyleDirectory,
+			give:  "foo",
+			want:  "foo/",
+		},
+		{
+			desc:  "directory/slash",
+			style: relLinkStyleDirectory,
+			give:  "foo/",
+			want:  "foo/",
+		},
+		{
+			desc:  "unknown",
+			style: relLinkStyle(42),
+			give:  "foo",
+			want:  "foo",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, tt.style.Normalize(tt.give))
+		})
+	}
 }

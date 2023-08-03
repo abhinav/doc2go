@@ -257,7 +257,11 @@ func TestMainCmd_frontmatter(t *testing.T) {
 }
 
 func TestMainCmd_frontmatter_errors(t *testing.T) {
+	t.Parallel()
+
 	t.Run("bad syntax", func(t *testing.T) {
+		t.Parallel()
+
 		fm := filepath.Join(t.TempDir(), "frontmatter.txt")
 		require.NoError(t, os.WriteFile(fm, []byte("{{"), 0o644))
 
@@ -271,6 +275,8 @@ func TestMainCmd_frontmatter_errors(t *testing.T) {
 	})
 
 	t.Run("file does not exist", func(t *testing.T) {
+		t.Parallel()
+
 		var buff bytes.Buffer
 		exitCode := (&mainCmd{
 			Stdout: iotest.Writer(t),

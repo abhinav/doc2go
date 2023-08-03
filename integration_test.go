@@ -14,6 +14,7 @@ import (
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/container/ring"
 	"go.abhg.dev/doc2go/internal/iotest"
 	"golang.org/x/net/html"
 )
@@ -47,6 +48,8 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 			name += fmt.Sprintf("/home=%v", tt.home)
 		}
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			testIntegrationNoBrokenLinks(t, tt.pattern, tt.home)
 		})
 	}
@@ -54,11 +57,16 @@ func TestIntegration_noBrokenLinks(t *testing.T) {
 
 func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
 	tests := []struct {
-		desc   string
-		subDir string
+		desc         string
+		subDir       string
+		relLinkStyle relLinkStyle
 	}{
 		{desc: "default"},
 		{desc: "subdir", subDir: "foo"},
+		{
+			desc:         "trailing slash links",
+			relLinkStyle: relLinkStyleDirectory,
+		},
 	}
 
 	for _, tt := range tests {
@@ -76,6 +84,10 @@ func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
 			if len(home) > 0 {
 				args = append(args, "-home", home)
 			}
+			if tt.relLinkStyle != relLinkStylePlain {
+				args = append(args, "-rel-link-style", tt.relLinkStyle.String())
+			}
+
 			args = append(args, pattern)
 
 			exitCode := (&mainCmd{
@@ -105,7 +117,7 @@ type urlWalker struct {
 	t      *testing.T
 	host   string
 	seen   map[string]struct{}
-	queue  []*url.URL
+	queue  ring.Q[*url.URL]
 	client *http.Client
 }
 
@@ -122,11 +134,9 @@ func (w *urlWalker) Walk(startPage string) {
 	require.NoError(w.t, err)
 	w.host = u.Host
 
-	w.queue = append(w.queue, u)
-	for len(w.queue) > 0 {
-		var u *url.URL
-		u, w.queue = w.queue[0], w.queue[1:]
-		w.visit(u)
+	w.queue.Push(u)
+	for !w.queue.Empty() {
+		w.visit(w.queue.Pop())
 	}
 }
 
@@ -141,7 +151,9 @@ func (w *urlWalker) visit(dest *url.URL) {
 	if !assert.NoError(w.t, err, "error visiting %v", dest) {
 		return
 	}
-	defer res.Body.Close()
+	defer func() {
+		assert.NoError(w.t, res.Body.Close(), "error closing response body")
+	}()
 	if !assert.Equal(w.t, 200, res.StatusCode, "bad response from %v: %v", dest, res.Status) {
 		return
 	}
@@ -182,10 +194,10 @@ func (w *urlWalker) push(from *url.URL, href string) {
 
 	if len(u.Host) > 0 {
 		if u.Host == w.host {
-			w.queue = append(w.queue, u)
+			w.queue.Push(u)
 		}
 		return
 	}
 
-	w.queue = append(w.queue, from.JoinPath(u.Path))
+	w.queue.Push(from.JoinPath(u.Path))
 }

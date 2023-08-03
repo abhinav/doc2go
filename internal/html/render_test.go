@@ -26,12 +26,13 @@ func TestRenderer_WriteStatic(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	(&Renderer{
+	err := (&Renderer{
 		Highlighter: _fakeHighlighter,
 	}).WriteStatic(dir)
+	require.NoError(t, err)
 
 	var want []string
-	err := fs.WalkDir(_staticFS, "static", func(path string, _ fs.DirEntry, err error) error {
+	err = fs.WalkDir(_staticFS, "static", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -59,10 +60,11 @@ func TestRenderer_WriteStatic_embedded(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	(&Renderer{
+	err := (&Renderer{
 		Highlighter: _fakeHighlighter,
 		Embedded:    true,
 	}).WriteStatic(dir)
+	require.NoError(t, err)
 
 	ents, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -406,6 +408,10 @@ func TestRenderPackage_headers(t *testing.T) {
 func TestRenderSubpackages(t *testing.T) {
 	t.Parallel()
 
+	ensureTrailingSlash := func(s string) string {
+		return strings.TrimSuffix(s, "/") + "/"
+	}
+
 	type link struct {
 		href     string
 		synopsis string
@@ -416,6 +422,8 @@ func TestRenderSubpackages(t *testing.T) {
 		internal bool
 		subpkgs  []Subpackage
 		want     []link
+
+		normalizeRelPath func(string) string // optional
 	}{
 		{
 			desc:     "internal",
@@ -452,6 +460,43 @@ func TestRenderSubpackages(t *testing.T) {
 				{"bar", "Public package bar"},
 			},
 		},
+		{
+			desc:             "trailing slashes, no internal",
+			internal:         false,
+			normalizeRelPath: ensureTrailingSlash,
+			subpkgs: []Subpackage{
+				{
+					RelativePath: "internal/foo",
+					Synopsis:     "Does things with foo",
+				},
+				{
+					RelativePath: "bar",
+					Synopsis:     "Public package bar",
+				},
+			},
+			want: []link{
+				{"bar/", "Public package bar"},
+			},
+		},
+		{
+			desc:             "trailing slashes, internal",
+			internal:         true,
+			normalizeRelPath: ensureTrailingSlash,
+			subpkgs: []Subpackage{
+				{
+					RelativePath: "internal/foo",
+					Synopsis:     "Does things with foo",
+				},
+				{
+					RelativePath: "bar",
+					Synopsis:     "Public package bar",
+				},
+			},
+			want: []link{
+				{"internal/foo/", "Does things with foo"},
+				{"bar/", "Public package bar"},
+			},
+		},
 	}
 
 	assertLinks := func(t *testing.T, want []link, output []byte) {
@@ -461,6 +506,7 @@ func TestRenderSubpackages(t *testing.T) {
 
 		table := querySelector(doc, "#pkg-directories + table")
 		require.NotNil(t, table, "pkg-directories not found:\n%s", output)
+		t.Log(string(output))
 
 		var got []link
 		for _, tr := range querySelectorAll(table, "tbody > tr") {
@@ -476,7 +522,11 @@ func TestRenderSubpackages(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
+			t.Parallel()
+
 			t.Run("package", func(t *testing.T) {
+				t.Parallel()
+
 				pinfo := PackageInfo{
 					Package: &godoc.Package{
 						Name:       "foo",
@@ -488,14 +538,17 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter: _fakeHighlighter,
-					Internal:    tt.internal,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackage(&buff, &pinfo))
 
 				assertLinks(t, tt.want, buff.Bytes())
 			})
 
 			t.Run("directory", func(t *testing.T) {
+				t.Parallel()
+
 				pidx := PackageIndex{
 					Path:        "example.com/foo/bar/baz",
 					Subpackages: tt.subpkgs,
@@ -503,8 +556,9 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter: _fakeHighlighter,
-					Internal:    tt.internal,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackageIndex(&buff, &pidx))
 
 				assertLinks(t, tt.want, buff.Bytes())
@@ -517,6 +571,8 @@ func TestRenderSubpackages(t *testing.T) {
 // and we're not rendering internal packages,
 // don't generate a subpackages section.
 func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
+	t.Parallel()
+
 	subpackages := []Subpackage{
 		{RelativePath: "internal/foo"},
 		{RelativePath: "internal/bar"},
@@ -533,6 +589,8 @@ func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
 	}
 
 	t.Run("package", func(t *testing.T) {
+		t.Parallel()
+
 		pinfo := PackageInfo{
 			Package: &godoc.Package{
 				Name:       "foo",
@@ -550,6 +608,8 @@ func TestRenderSubpackages_skipEmptyInternal(t *testing.T) {
 	})
 
 	t.Run("directory", func(t *testing.T) {
+		t.Parallel()
+
 		pidx := PackageIndex{
 			Path:        "example.com/foo",
 			Subpackages: subpackages,
@@ -599,6 +659,8 @@ func TestRenderBreadcrumbs(t *testing.T) {
 	}
 
 	t.Run("package", func(t *testing.T) {
+		t.Parallel()
+
 		pinfo := PackageInfo{
 			Package: &godoc.Package{
 				Name:       "foo",
@@ -616,6 +678,8 @@ func TestRenderBreadcrumbs(t *testing.T) {
 	})
 
 	t.Run("directory", func(t *testing.T) {
+		t.Parallel()
+
 		pidx := PackageIndex{
 			Path: "example.com/foo/bar/baz",
 			Breadcrumbs: []Breadcrumb{
