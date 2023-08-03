@@ -40,10 +40,11 @@ type params struct {
 	OutputDir string
 	Home      string
 
-	Embed       bool
-	Internal    bool
-	PkgDocs     []pathTemplate
-	FrontMatter string
+	Embed        bool
+	Internal     bool
+	PkgDocs      []pathTemplate
+	FrontMatter  string
+	RelLinkStyle relLinkStyle
 
 	Highlight           highlightParams
 	HighlightPrintCSS   bool
@@ -80,6 +81,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.BoolVar(&p.Embed, "embed", false, "")
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
+	flag.Var(&p.RelLinkStyle, "rel-link-style", "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")
@@ -138,7 +140,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		// For configuration,
 		// also print a list of available parameters.
 		if p.help == "config" {
-			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be speciifed via configuration:")
+			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be specified via configuration:")
 			fset.VisitAll(func(f *flag.Flag) {
 				if cfgParser.Allowed(f.Name) {
 					fmt.Fprintf(cmd.Stderr, "  %v\n", f.Name)
@@ -275,4 +277,59 @@ func (f *configFileParser) Parse(r io.Reader, set func(string, string) error) er
 		}
 		return set(name, value)
 	})
+}
+
+// relLinkStyle specifies how we relative links to directories.
+type relLinkStyle int
+
+const (
+	// relLinkStylePlain renders links plainly,
+	// e.g., "foo/bar".
+	relLinkStylePlain relLinkStyle = iota
+
+	// relLinkStyleDirectory renders links as directories,
+	// with a trailing slash,
+	// e.g., "foo/bar/".
+	relLinkStyleDirectory
+)
+
+func (ls relLinkStyle) String() string {
+	switch ls {
+	case relLinkStylePlain:
+		return "plain"
+	case relLinkStyleDirectory:
+		return "directory"
+	default:
+		return fmt.Sprintf("relLinkStyle(%d)", int(ls))
+	}
+}
+
+func (ls *relLinkStyle) Get() any { return *ls }
+
+func (ls *relLinkStyle) Set(s string) error {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "plain":
+		*ls = relLinkStylePlain
+	case "directory":
+		*ls = relLinkStyleDirectory
+	default:
+		return fmt.Errorf("unrecognized link style %q", s)
+	}
+	return nil
+}
+
+func (ls relLinkStyle) Normalize(s string) string {
+	switch ls {
+	case relLinkStylePlain:
+		return strings.TrimSuffix(s, "/")
+	case relLinkStyleDirectory:
+		if strings.HasSuffix(s, "/") {
+			return s
+		}
+		return s + "/"
+	default:
+		// Should never happen.
+		// But if it does, we'll just return the input.
+		return s
+	}
 }

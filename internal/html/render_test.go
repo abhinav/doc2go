@@ -408,6 +408,10 @@ func TestRenderPackage_headers(t *testing.T) {
 func TestRenderSubpackages(t *testing.T) {
 	t.Parallel()
 
+	ensureTrailingSlash := func(s string) string {
+		return strings.TrimSuffix(s, "/") + "/"
+	}
+
 	type link struct {
 		href     string
 		synopsis string
@@ -418,6 +422,8 @@ func TestRenderSubpackages(t *testing.T) {
 		internal bool
 		subpkgs  []Subpackage
 		want     []link
+
+		normalizeRelPath func(string) string // optional
 	}{
 		{
 			desc:     "internal",
@@ -454,6 +460,43 @@ func TestRenderSubpackages(t *testing.T) {
 				{"bar", "Public package bar"},
 			},
 		},
+		{
+			desc:             "trailing slashes, no internal",
+			internal:         false,
+			normalizeRelPath: ensureTrailingSlash,
+			subpkgs: []Subpackage{
+				{
+					RelativePath: "internal/foo",
+					Synopsis:     "Does things with foo",
+				},
+				{
+					RelativePath: "bar",
+					Synopsis:     "Public package bar",
+				},
+			},
+			want: []link{
+				{"bar/", "Public package bar"},
+			},
+		},
+		{
+			desc:             "trailing slashes, internal",
+			internal:         true,
+			normalizeRelPath: ensureTrailingSlash,
+			subpkgs: []Subpackage{
+				{
+					RelativePath: "internal/foo",
+					Synopsis:     "Does things with foo",
+				},
+				{
+					RelativePath: "bar",
+					Synopsis:     "Public package bar",
+				},
+			},
+			want: []link{
+				{"internal/foo/", "Does things with foo"},
+				{"bar/", "Public package bar"},
+			},
+		},
 	}
 
 	assertLinks := func(t *testing.T, want []link, output []byte) {
@@ -463,6 +506,7 @@ func TestRenderSubpackages(t *testing.T) {
 
 		table := querySelector(doc, "#pkg-directories + table")
 		require.NotNil(t, table, "pkg-directories not found:\n%s", output)
+		t.Log(string(output))
 
 		var got []link
 		for _, tr := range querySelectorAll(table, "tbody > tr") {
@@ -494,8 +538,9 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter: _fakeHighlighter,
-					Internal:    tt.internal,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackage(&buff, &pinfo))
 
 				assertLinks(t, tt.want, buff.Bytes())
@@ -511,8 +556,9 @@ func TestRenderSubpackages(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, (&Renderer{
-					Highlighter: _fakeHighlighter,
-					Internal:    tt.internal,
+					Highlighter:           _fakeHighlighter,
+					Internal:              tt.internal,
+					NormalizeRelativePath: tt.normalizeRelPath,
 				}).RenderPackageIndex(&buff, &pidx))
 
 				assertLinks(t, tt.want, buff.Bytes())

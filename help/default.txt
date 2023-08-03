@@ -22,6 +22,11 @@ OPTIONS
   -frontmatter FILE
 	generate front matter in HTML files via template in FILE.
 	See -help=frontmatter for more information.
+  -rel-link-style STYLE
+	use STYLE for relative links. One of:
+	  plain: render as-is (e.g. ../foo)
+	  directory: render as a directory (e.g. ../foo/)
+	Defaults to plain.
   -highlight [MODE:][THEME]
 	use THEME to highlight code blocks.
 	MODE, if any, is one of 'auto', 'inline', and 'classes'
