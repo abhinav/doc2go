@@ -1,6 +1,8 @@
 module go.abhg.dev/doc2go
 
-go 1.19
+go 1.21
+
+toolchain go1.21.0
 
 require (
 	github.com/alecthomas/chroma/v2 v2.8.0
@@ -14,7 +16,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
