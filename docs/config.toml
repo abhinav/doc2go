@@ -9,8 +9,6 @@ disableKinds = ['taxonomy', 'taxonomyTerm']
 enableRobotsTXT = true
 enableGitInfo = true
 
-googleAnalytics = "G-JS3R8KGQQQ"
-
 [[menu.main]]
 name = "GitHub"
 weight = 15
@@ -31,6 +29,8 @@ github_subdir = "docs"
 github_branch = "release"
 offlineSearch = true
 description = "Your Go documentation, to-go."
+
+cloudflareWebAnalytics = "085b42f4381f4b8999051fc40a656369"
 
 [params.ui]
 navbar_logo = false
