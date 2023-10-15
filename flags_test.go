@@ -187,10 +187,7 @@ func TestCLIParser(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // chdir
 func TestCLIParser_Config(t *testing.T) {
-	t.Parallel()
-
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -222,8 +219,6 @@ func TestCLIParser_Config(t *testing.T) {
 	})
 
 	t.Run("custom file", func(t *testing.T) {
-		t.Parallel()
-
 		cfgFile := filepath.Join(t.TempDir(), "config")
 		give := "embed true\nfrontmatter foo.tmpl\nhighlight tango\n"
 		require.NoError(t,
