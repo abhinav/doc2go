@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"go/doc/comment"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"go.abhg.dev/doc2go/internal/errdefer"
@@ -17,6 +19,7 @@ import (
 	"go.abhg.dev/doc2go/internal/pathx"
 	"go.abhg.dev/doc2go/internal/relative"
 	"go.abhg.dev/doc2go/internal/sliceutil"
+	"go.uber.org/cff/scheduler"
 )
 
 // Parser loads a package reference from disk
@@ -105,23 +108,99 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		trees = filterTrees(r.Home, trees)
 	}
 
-	_, err := r.renderTrees(nil, trees)
-	return err
+	sched := (&scheduler.Config{}).New()
+	_ = r.renderTrees(sched, nil, trees)
+	return sched.Wait(context.Background()) // TODO
 }
 
-func (r *Generator) renderTrees(crumbs []html.Breadcrumb, trees []packageTree) ([]*renderedPackage, error) {
-	var pkgs []*renderedPackage
-	for _, t := range trees {
-		rpkgs, err := r.renderTree(crumbs, t)
-		if err != nil {
-			return nil, err
-		}
-		pkgs = append(pkgs, rpkgs...)
+type future[T any] struct {
+	j *scheduler.ScheduledJob
+	v func() T
+}
+
+func enqueue[T any](
+	ctx context.Context,
+	sched *scheduler.Scheduler,
+	f func(context.Context) (T, error),
+) future[T] {
+	var v T
+	j := sched.Enqueue(ctx, scheduler.Job{
+		Run: func(ctx context.Context) (err error) {
+			v, err = f(ctx)
+			return err
+		},
+	})
+	return future[T]{
+		j: j,
+		v: func() T { return v },
 	}
-	return pkgs, nil
 }
 
-func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*renderedPackage, error) {
+func apply[A, B any](
+	ctx context.Context,
+	sched *scheduler.Scheduler,
+	f future[A],
+	g func(A) (B, error),
+) future[B] {
+	var v B
+	j := sched.Enqueue(ctx, scheduler.Job{
+		Run: func(ctx context.Context) (err error) {
+			v, err = g(f.v())
+			return err
+		},
+		Dependencies: []*scheduler.ScheduledJob{f.j},
+	})
+	return future[B]{
+		j: j,
+		v: func() B { return v },
+	}
+}
+
+func combine[T any](
+	ctx context.Context,
+	sched *scheduler.Scheduler,
+	fs ...future[T],
+) future[[]T] {
+	var vs []T
+	js := make([]*scheduler.ScheduledJob, len(fs))
+	for i, f := range fs {
+		js[i] = f.j
+	}
+
+	j := sched.Enqueue(ctx, scheduler.Job{
+		Run: func(ctx context.Context) (err error) {
+			res := make([]T, len(fs))
+			for i, f := range fs {
+				res[i] = f.v()
+			}
+			vs = res
+			return nil
+		},
+		Dependencies: js,
+	})
+	return future[[]T]{
+		j: j,
+		v: func() []T { return vs },
+	}
+}
+
+func (r *Generator) renderTrees(sched *scheduler.Scheduler, crumbs []html.Breadcrumb, trees []packageTree) future[[]*renderedPackage] {
+	var pkgs []future[[]*renderedPackage]
+	for _, t := range trees {
+		rpkgs := r.renderTree(sched, slices.Clone(crumbs), t)
+		pkgs = append(pkgs, rpkgs)
+	}
+
+	return apply(context.TODO(), sched, combine(context.TODO(), sched, pkgs...), func(rpkgs [][]*renderedPackage) ([]*renderedPackage, error) {
+		result := make([]*renderedPackage, 0, len(rpkgs))
+		for _, rpkg := range rpkgs {
+			result = append(result, rpkg...)
+		}
+		return result, nil
+	})
+}
+
+func (r *Generator) renderTree(sched *scheduler.Scheduler, crumbs []html.Breadcrumb, t packageTree) future[[]*renderedPackage] {
 	var crumbText string
 	if n := len(crumbs); n > 0 {
 		crumbText = relative.Path(crumbs[n-1].Path, t.Path)
@@ -133,45 +212,41 @@ func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*rend
 	}
 
 	if t.Value == nil {
-		return r.renderPackageIndex(crumbs, t)
+		return r.renderPackageIndex(sched, crumbs, t)
 	}
-	rpkg, err := r.renderPackage(crumbs, t)
-	if err != nil {
-		return nil, err
-	}
-	return []*renderedPackage{rpkg}, nil
+	return apply(context.TODO(), sched, r.renderPackage(sched, crumbs, t), func(pkg *renderedPackage) ([]*renderedPackage, error) {
+		return []*renderedPackage{pkg}, nil
+	})
 }
 
-func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) (_ []*renderedPackage, err error) {
-	subpkgs, err := r.renderTrees(crumbs, t.Children)
-	if err != nil {
-		return nil, err
-	}
+func (r *Generator) renderPackageIndex(sched *scheduler.Scheduler, crumbs []html.Breadcrumb, t packageTree) future[[]*renderedPackage] {
+	subpkgs := r.renderTrees(sched, crumbs, t.Children)
+	return apply(context.TODO(), sched, subpkgs, func(rpkgs []*renderedPackage) ([]*renderedPackage, error) {
+		r.DebugLog.Printf("Rendering directory %v", t.Path)
 
-	r.DebugLog.Printf("Rendering directory %v", t.Path)
+		dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+		if err := os.MkdirAll(dir, 0o1755); err != nil {
+			return nil, err
+		}
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
-	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return nil, err
-	}
+		f, err := os.Create(filepath.Join(dir, r.Basename))
+		if err != nil {
+			return nil, err
+		}
+		defer errdefer.Close(&err, f)
 
-	f, err := os.Create(filepath.Join(dir, r.Basename))
-	if err != nil {
-		return nil, err
-	}
-	defer errdefer.Close(&err, f)
+		idx := html.PackageIndex{
+			Path:        t.Path,
+			NumChildren: len(t.Children),
+			Subpackages: htmlSubpackages(t.Path, rpkgs),
+			Breadcrumbs: crumbs,
+		}
+		if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
+			return nil, err
+		}
 
-	idx := html.PackageIndex{
-		Path:        t.Path,
-		NumChildren: len(t.Children),
-		Subpackages: htmlSubpackages(t.Path, subpkgs),
-		Breadcrumbs: crumbs,
-	}
-	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
-		return nil, err
-	}
-
-	return subpkgs, nil
+		return rpkgs, nil
+	})
 }
 
 type renderedPackage struct {
@@ -179,56 +254,54 @@ type renderedPackage struct {
 	Synopsis   string
 }
 
-func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *renderedPackage, err error) {
-	subpkgs, err := r.renderTrees(crumbs, t.Children)
-	if err != nil {
-		return nil, err
-	}
+func (r *Generator) renderPackage(sched *scheduler.Scheduler, crumbs []html.Breadcrumb, t packageTree) future[*renderedPackage] {
+	subpkgs := r.renderTrees(sched, crumbs, t.Children)
+	return apply(context.TODO(), sched, subpkgs, func(rpkgs []*renderedPackage) (*renderedPackage, error) {
+		ref := *t.Value
+		r.DebugLog.Printf("Rendering package %v", t.Path)
+		bpkg, err := r.Parser.ParsePackage(ref)
+		if err != nil {
+			return nil, fmt.Errorf("parse: %w", err)
+		}
 
-	ref := *t.Value
-	r.DebugLog.Printf("Rendering package %v", t.Path)
-	bpkg, err := r.Parser.ParsePackage(ref)
-	if err != nil {
-		return nil, fmt.Errorf("parse: %w", err)
-	}
+		dpkg, err := r.Assembler.Assemble(bpkg)
+		if err != nil {
+			return nil, fmt.Errorf("assemble: %w", err)
+		}
 
-	dpkg, err := r.Assembler.Assemble(bpkg)
-	if err != nil {
-		return nil, fmt.Errorf("assemble: %w", err)
-	}
+		dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+		if err := os.MkdirAll(dir, 0o1755); err != nil {
+			return nil, err
+		}
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
-	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return nil, err
-	}
+		f, err := os.Create(filepath.Join(dir, r.Basename))
+		if err != nil {
+			return nil, err
+		}
+		defer errdefer.Close(&err, f)
 
-	f, err := os.Create(filepath.Join(dir, r.Basename))
-	if err != nil {
-		return nil, err
-	}
-	defer errdefer.Close(&err, f)
-
-	info := html.PackageInfo{
-		Package:     dpkg,
-		NumChildren: len(t.Children),
-		Breadcrumbs: crumbs,
-		Subpackages: htmlSubpackages(dpkg.ImportPath, subpkgs),
-		DocPrinter: &html.CommentDocPrinter{
-			Printer: comment.Printer{
-				DocLinkURL: func(link *comment.DocLink) string {
-					return r.DocLinker.DocLinkURL(dpkg.ImportPath, link)
+		info := html.PackageInfo{
+			Package:     dpkg,
+			NumChildren: len(t.Children),
+			Breadcrumbs: crumbs,
+			Subpackages: htmlSubpackages(dpkg.ImportPath, rpkgs),
+			DocPrinter: &html.CommentDocPrinter{
+				Printer: comment.Printer{
+					DocLinkURL: func(link *comment.DocLink) string {
+						return r.DocLinker.DocLinkURL(dpkg.ImportPath, link)
+					},
 				},
 			},
-		},
-	}
-	if err := r.Renderer.RenderPackage(f, &info); err != nil {
-		return nil, fmt.Errorf("render: %w", err)
-	}
+		}
+		if err := r.Renderer.RenderPackage(f, &info); err != nil {
+			return nil, fmt.Errorf("render: %w", err)
+		}
 
-	return &renderedPackage{
-		ImportPath: ref.ImportPath,
-		Synopsis:   dpkg.Synopsis,
-	}, nil
+		return &renderedPackage{
+			ImportPath: ref.ImportPath,
+			Synopsis:   dpkg.Synopsis,
+		}, nil
+	})
 }
 
 func htmlSubpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
