@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.abhg.dev/doc2go/internal/slices"
+	"go.abhg.dev/doc2go/internal/sliceutil"
 )
 
 const (
@@ -52,7 +52,7 @@ func rel(delim, src, dst string) string {
 		dstParts = strings.Split(dst, delim)
 	}
 
-	srcParts, dstParts = slices.RemoveCommonPrefix(srcParts, dstParts)
+	srcParts, dstParts = sliceutil.RemoveCommonPrefix(srcParts, dstParts)
 
 	var sb strings.Builder
 	for range srcParts {

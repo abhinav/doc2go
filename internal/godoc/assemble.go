@@ -14,7 +14,7 @@ import (
 
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/highlight"
-	"go.abhg.dev/doc2go/internal/slices"
+	"go.abhg.dev/doc2go/internal/sliceutil"
 )
 
 // Linker generates links to the documentation for a specific package or
@@ -118,10 +118,10 @@ func (as *assembly) pkg(dpkg *doc.Package) *Package {
 		ImportPath: dpkg.ImportPath,
 		Import:     as.importFor(dpkg.Name, dpkg.ImportPath),
 		Synopsis:   dpkg.Synopsis(dpkg.Doc),
-		Constants:  slices.Transform(dpkg.Consts, as.val),
-		Variables:  slices.Transform(dpkg.Vars, as.val),
-		Types:      slices.Transform(dpkg.Types, as.typ),
-		Functions:  slices.Transform(dpkg.Funcs, as.fun),
+		Constants:  sliceutil.Transform(dpkg.Consts, as.val),
+		Variables:  sliceutil.Transform(dpkg.Vars, as.val),
+		Types:      sliceutil.Transform(dpkg.Types, as.typ),
+		Functions:  sliceutil.Transform(dpkg.Funcs, as.fun),
 	}
 }
 
@@ -183,10 +183,10 @@ func (as *assembly) typ(dtyp *doc.Type) *Type {
 		Name:      dtyp.Name,
 		Doc:       as.doc(dtyp.Doc),
 		Decl:      as.decl(dtyp.Decl),
-		Constants: slices.Transform(dtyp.Consts, as.val),
-		Variables: slices.Transform(dtyp.Vars, as.val),
-		Functions: slices.Transform(dtyp.Funcs, as.fun),
-		Methods: slices.Transform(dtyp.Methods, func(f *doc.Func) *Function {
+		Constants: sliceutil.Transform(dtyp.Consts, as.val),
+		Variables: sliceutil.Transform(dtyp.Vars, as.val),
+		Functions: sliceutil.Transform(dtyp.Funcs, as.fun),
+		Methods: sliceutil.Transform(dtyp.Methods, func(f *doc.Func) *Function {
 			fn := as.fun(f)
 			fn.RecvType = dtyp.Name
 			return fn

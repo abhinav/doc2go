@@ -1,4 +1,4 @@
-package slices
+package sliceutil
 
 // RemoveCommonPrefix removes the shared prefix from the two provided slices,
 // returning what remains for each slice as the result.

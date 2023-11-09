@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.abhg.dev/doc2go/internal/slices"
+	"go.abhg.dev/doc2go/internal/sliceutil"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -100,7 +100,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			continue
 		}
 
-		goFiles := slices.RemoveFunc(pkg.GoFiles,
+		goFiles := sliceutil.RemoveFunc(pkg.GoFiles,
 			func(path string) bool {
 				return !strings.HasSuffix(path, ".go")
 			})
