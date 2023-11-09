@@ -36,7 +36,7 @@ nav {
 }
 
 /* Remove first level of nesting for a package's index section. */
-#pkg-index + ul {
+#pkg-index + ul, #pkg-examples + ul  {
   list-style-type: none;
   padding: 0;
 }
@@ -53,6 +53,11 @@ pre {
   background-color: #eee;
   padding: 0.75em;
   font-size: 0.9em;
+}
+
+details.example > summary {
+  color: #0366a5;
+  cursor: pointer;
 }
 
 #generated-by-footer { font-size: x-small; }

@@ -9,8 +9,8 @@
   {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}
 </h2>
 {{ .Import | code }}
-{{ .Doc | doc 3 }}
-{{- /* TODO: package examples */ -}}
+{{ .Doc | doc 3 -}}
+{{ template "examples" (dict "Level" 3 "Examples" .Examples) -}}
 
 <h3 id="pkg-index">Index</h3>
 {{ if or .Constants .Variables .Functions .Types -}}
@@ -38,7 +38,18 @@
 </ul>
 {{- end }}
 
-{{- /* TODO: all examples */ -}}
+{{- with .AllExamples -}}
+<h4 id="pkg-examples">Examples</h4>
+<ul>
+  {{ range . -}}
+    {{- $id := printf "example-%s" .Parent.String -}}
+    {{- if .Suffix }}{{ $id = printf "%s-%s" $id .Suffix }}{{ end -}}
+    <li><a href="#{{ $id }}">
+      {{- .Parent }}{{ with .Suffix }} ({{ . }}){{ end -}}
+    </a></li>
+  {{ end -}}
+</ul>
+{{- end -}}
 
 {{ with .Constants -}}
   <h3 id="pkg-constants">Constants</h3>
@@ -56,7 +67,7 @@
     <h3 id="{{ .Name }}">func {{ .Name }}</h3>
     {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
-    {{- /* TODO: function examples */ -}}
+    {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
   {{ end -}}
 {{ end -}}
 
@@ -66,7 +77,7 @@
   <h3 id="{{ .Name }}">type {{ .Name }}</h3>
     {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
-    {{- /* TODO: type examples */ -}}
+    {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
 
     {{ range .Constants -}}
       {{ template "constOrVar" . -}}
@@ -102,5 +113,24 @@
   <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}</h4>
   {{ .Decl | code }}
   {{ .Doc | doc 5 -}}
-  {{- /* TODO: function examples */ -}}
+  {{ template "examples" (dict "Level" 5 "Examples" .Examples) -}}
+{{- end -}}
+
+{{- define "examples" -}}
+  {{- $level := .Level -}}
+  {{ range .Examples -}}
+    {{- $id := printf "example-%s" .Parent.String -}}
+    {{- if .Suffix }}{{ $id = printf "%s-%s" $id .Suffix }}{{ end -}}
+    <details id="{{ $id }}" class="example">
+      <summary>Example {{- with .Suffix }} ({{ . }}) {{- end }}</summary>
+      {{ .Doc | doc $level -}}
+      {{ .Code | code }}
+      {{ with .Output -}}
+        <div>
+          <p>Output:</p>
+          <pre>{{ . }}</pre>
+        </div>
+      {{- end -}}
+    </details>
+  {{ end -}}
 {{- end -}}
