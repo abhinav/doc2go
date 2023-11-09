@@ -16,7 +16,7 @@ import (
 	"go.abhg.dev/doc2go/internal/pathtree"
 	"go.abhg.dev/doc2go/internal/pathx"
 	"go.abhg.dev/doc2go/internal/relative"
-	"go.abhg.dev/doc2go/internal/slices"
+	"go.abhg.dev/doc2go/internal/sliceutil"
 )
 
 // Parser loads a package reference from disk
@@ -232,7 +232,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 }
 
 func htmlSubpackages(from string, rpkgs []*renderedPackage) []html.Subpackage {
-	return slices.Transform(rpkgs, func(rpkg *renderedPackage) html.Subpackage {
+	return sliceutil.Transform(rpkgs, func(rpkg *renderedPackage) html.Subpackage {
 		// TODO: track this on packageTree?
 		relPath := relative.Path(from, rpkg.ImportPath)
 
