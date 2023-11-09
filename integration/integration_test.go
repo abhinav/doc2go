@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/container/ring"
+	"go.abhg.dev/doc2go/internal/iotest"
 	"golang.org/x/net/html"
 )
 
@@ -77,9 +78,10 @@ func testIntegration(t *testing.T, args []string) {
 
 	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
 
+	output := iotest.Writer(t)
 	cmd := exec.Command(*_doc2go, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = output
+	cmd.Stderr = output
 	cmd.Dir = *_rundir
 	require.NoError(t, cmd.Run())
 

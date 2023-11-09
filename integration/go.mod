@@ -8,6 +8,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/stretchr/testify v1.8.4
 	go.abhg.dev/container/ring v0.3.0
+	go.abhg.dev/doc2go v0.5.0
 	golang.org/x/net v0.18.0
 )
 
