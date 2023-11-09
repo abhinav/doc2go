@@ -29,9 +29,6 @@ func init() {
 
 // params holds all arguments for doc2go.
 type params struct {
-	version bool
-	help    Help
-
 	Tags   string
 	Debug  flagvalue.FileSwitch
 	Config string
@@ -95,18 +92,28 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	// Program-level:
 	flag.Var(&p.Debug, "debug", "")
 	flag.StringVar(&p.Config, "config", "doc2go.rc", "")
-	flag.BoolVar(&p.version, "version", false, "")
-	flag.Var(&p.help, "help", "")
-	flag.Var(&p.help, "h", "")
-	cfg.Reject("version", "help", "h")
 
 	return &p, flag
 }
 
 func (cmd *cliParser) Parse(args []string) (*params, error) {
-	var cfgParser configFileParser
-	p, fset := cmd.newFlagSet(&cfgParser)
-	err := ff.Parse(fset, args,
+	var (
+		cfgParser configFileParser
+
+		// Flags that don't ever get passed to the program
+		// and are handled entirely while CLI parsing.
+		printConfigKeys bool
+		version         bool
+		help            Help
+	)
+	p, flag := cmd.newFlagSet(&cfgParser)
+	flag.BoolVar(&printConfigKeys, "print-config-keys", false, "")
+	flag.BoolVar(&version, "version", false, "")
+	flag.Var(&help, "help", "")
+	flag.Var(&help, "h", "")
+	cfgParser.Reject("version", "print-config-keys", "help", "h")
+
+	err := ff.Parse(flag, args,
 		ff.WithAllowMissingConfigFile(true),
 		ff.WithConfigFileVia(&p.Config),
 		ff.WithConfigFileParser(cfgParser.Parse),
@@ -114,40 +121,41 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	if err != nil {
 		return nil, err
 	}
-	args = fset.Args()
+	args = flag.Args()
 
-	if p.version {
+	if version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
 		return nil, errHelp
 	}
 
-	if p.help == "default" && len(args) > 0 {
+	if help == "default" && len(args) > 0 {
 		// The user might have done "-h foo"
 		// instead of "-h=foo".
 		// If the argument is a known help topic,
 		// take it.
 		var h Help
 		if err := h.Set(args[0]); err == nil {
-			p.help = h
+			help = h
 		}
 	}
 
-	if len(p.help) != 0 {
-		if err := p.help.Write(cmd.Stderr); err != nil {
+	if len(help) != 0 {
+		if err := help.Write(cmd.Stderr); err != nil {
 			fmt.Fprintln(cmd.Stderr, err)
 		}
 
 		// For configuration,
 		// also print a list of available parameters.
-		if p.help == "config" {
+		if help == "config" {
 			fmt.Fprintln(cmd.Stderr, "\nThe following flags may be specified via configuration:")
-			fset.VisitAll(func(f *flag.Flag) {
-				if cfgParser.Allowed(f.Name) {
-					fmt.Fprintf(cmd.Stderr, "  %v\n", f.Name)
-				}
-			})
+			listConfigKeys(cmd.Stderr, flag, &cfgParser, 2)
 		}
 
+		return nil, errHelp
+	}
+
+	if printConfigKeys {
+		listConfigKeys(cmd.Stdout, flag, &cfgParser, 0)
 		return nil, errHelp
 	}
 
@@ -159,6 +167,21 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	}
 
 	return p, nil
+}
+
+func listConfigKeys(w io.Writer, fset *flag.FlagSet, cfgParser *configFileParser, indent int) {
+	var format string
+	if indent == 0 {
+		format = "%v\n"
+	} else {
+		format = strings.Repeat(" ", indent) + "%v\n"
+	}
+
+	fset.VisitAll(func(f *flag.Flag) {
+		if cfgParser.Allowed(f.Name) {
+			fmt.Fprintf(w, format, f.Name)
+		}
+	})
 }
 
 type highlightMode int

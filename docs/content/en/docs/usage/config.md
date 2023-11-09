@@ -70,3 +70,12 @@ your embedded versus standalone sites, for example.
 doc2go -config embedded.rc ./...
 doc2go -config standalone.rc ./...
 ```
+
+## Supported configuration parameters
+
+The following may be specified via configuration:
+
+{{< readfile file="config-keys.txt" code="true" lang="plain" >}}
+
+See the [CLI Reference]({{< relref "/docs/usage#cli-reference" >}})
+for usage details for each of them.
