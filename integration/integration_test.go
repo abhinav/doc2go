@@ -1,114 +1,96 @@
-package main
+package integration
 
 import (
-	"fmt"
+	"encoding/json"
+	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/container/ring"
-	"go.abhg.dev/doc2go/internal/iotest"
 	"golang.org/x/net/html"
 )
 
-func TestIntegration_noBrokenLinks(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in -short mode.")
-	}
+var (
+	_doc2go = flag.String("doc2go", "", "path to doc2go binary")
+	_rundir = flag.String("rundir", "", "path to directory to run doc2go in")
+)
 
+func Test(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		pattern string
-		home    string
-	}{
-		{pattern: "./..."},
-		{pattern: "./...", home: "go.abhg.dev"},
-		{pattern: "./...", home: "go.abhg.dev/doc2go"},
-		{pattern: "github.com/stretchr/testify/..."},
-		{pattern: "github.com/stretchr/testify/...", home: "github.com/stretchr/testify/assert"},
-		{pattern: "golang.org/x/net/..."},
-		{pattern: "golang.org/x/net/...", home: "golang.org/x/net"},
-		{pattern: "golang.org/x/tools/..."},
-		{pattern: "golang.org/x/tools/...", home: "golang.org/x/tools/go/packages"},
+	testdatas, err := filepath.Glob("testdata/self.json")
+	require.NoError(t, err, "error globbing testdata")
+	require.NotEmpty(t, testdatas, "no testdata found")
+
+	if *_doc2go == "" {
+		var err error
+		*_doc2go, err = exec.LookPath("doc2go")
+		require.NoError(t, err, "could not find doc2go binary and -doc2go flag was not set")
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		name := tt.pattern
-		if len(tt.home) > 0 {
-			name += fmt.Sprintf("/home=%v", tt.home)
-		}
+	for _, testdata := range testdatas {
+		testdata := testdata
+		name := strings.TrimSuffix(filepath.Base(testdata), filepath.Ext(testdata))
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			testIntegrationNoBrokenLinks(t, tt.pattern, tt.home)
+			f, err := os.Open(testdata)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, f.Close())
+			}()
+
+			var argSets [][]string
+			dec := json.NewDecoder(f)
+			for dec.More() {
+				var args []string
+				require.NoError(t, dec.Decode(&args))
+				argSets = append(argSets, args)
+			}
+
+			for _, args := range argSets {
+				args := args
+				t.Run(strings.Join(args, " "), func(t *testing.T) {
+					t.Parallel()
+
+					testIntegration(t, args)
+				})
+			}
 		})
 	}
 }
 
-func testIntegrationNoBrokenLinks(t *testing.T, pattern, home string) {
-	tests := []struct {
-		desc         string
-		subDir       string
-		relLinkStyle relLinkStyle
-	}{
-		{desc: "default"},
-		{desc: "subdir", subDir: "foo"},
-		{
-			desc:         "trailing slash links",
-			relLinkStyle: relLinkStyleDirectory,
-		},
-	}
+func testIntegration(t *testing.T, args []string) {
+	root := t.TempDir()
+	outDir := root
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.desc, func(t *testing.T) {
-			t.Parallel()
+	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
 
-			root := t.TempDir()
-			outDir := root
-			if len(tt.subDir) > 0 {
-				outDir = filepath.Join(outDir, tt.subDir)
-			}
+	cmd := exec.Command(*_doc2go, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = *_rundir
+	require.NoError(t, cmd.Run())
 
-			args := []string{"-out=" + outDir, "-debug", "-internal"}
-			if len(home) > 0 {
-				args = append(args, "-home", home)
-			}
-			if tt.relLinkStyle != relLinkStylePlain {
-				args = append(args, "-rel-link-style", tt.relLinkStyle.String())
-			}
+	srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
+	t.Cleanup(srv.Close)
 
-			args = append(args, pattern)
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
 
-			exitCode := (&mainCmd{
-				Stdout: iotest.Writer(t),
-				Stderr: iotest.Writer(t),
-			}).Run(args)
-			require.Zero(t, exitCode)
-
-			srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
-			t.Cleanup(srv.Close)
-
-			u, err := url.Parse(srv.URL)
-			require.NoError(t, err)
-			if len(tt.subDir) > 0 {
-				u = u.JoinPath(tt.subDir)
-			}
-
-			w := newURLWalker(t)
-			w.Walk(u.String())
-		})
-	}
+	w := newURLWalker(t)
+	w.Walk(u.String())
 }
 
 // urlWalker visits all local pages for the generated website
