@@ -1,0 +1,12 @@
+basename
+config
+debug
+embed
+frontmatter
+highlight
+home
+internal
+out
+pkg-doc
+rel-link-style
+tags

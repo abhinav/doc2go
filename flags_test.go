@@ -19,11 +19,20 @@ import (
 func TestFlagHelp(t *testing.T) {
 	t.Parallel()
 
-	// Verifies that all registered flags are documented in _defaultHelp.
+	// Verifies that all registered flags are documented in _defaultHelp
+	// except those that we specifically exclude.
+
+	absent := map[string]struct{}{
+		"print-config-keys": {},
+	}
 
 	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet(nil)
 	fset.VisitAll(func(f *flag.Flag) {
-		assert.Contains(t, _defaultHelp, "-"+f.Name)
+		if _, ok := absent[f.Name]; ok {
+			assert.NotContains(t, _defaultHelp, "-"+f.Name)
+		} else {
+			assert.Contains(t, _defaultHelp, "-"+f.Name)
+		}
 	})
 }
 
@@ -185,6 +194,18 @@ func TestCLIParser(t *testing.T) {
 			assert.Equal(t, tt.want, *got)
 		})
 	}
+}
+
+func TestCLIParser_printConfigKeys(t *testing.T) {
+	var stdout bytes.Buffer
+	_, err := (&cliParser{
+		Stdout: &stdout,
+		Stderr: iotest.Writer(t),
+	}).Parse([]string{"-print-config-keys"})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errHelp)
+
+	assert.Contains(t, stdout.String(), "highlight")
 }
 
 func TestCLIParser_Config(t *testing.T) {
