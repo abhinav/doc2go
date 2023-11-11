@@ -146,7 +146,9 @@ func (cmd *mainCmd) run(opts *params) error {
 		pkgRefs = refs
 	}
 
-	var linker docLinker
+	linker := docLinker{
+		RelLinkStyle: opts.RelLinkStyle,
+	}
 	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
 		if err != nil {

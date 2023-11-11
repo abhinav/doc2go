@@ -1,3 +1,0 @@
-["./..."]
-["-home=go.abhg.dev", "./..."]
-["-home", "go.abhg.dev/doc2go", "./..."]

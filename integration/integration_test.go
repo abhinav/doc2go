@@ -1,16 +1,15 @@
 package integration
 
 import (
-	"encoding/json"
 	"flag"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,55 +26,80 @@ var (
 	_rundir = flag.String("rundir", "", "path to directory to run doc2go in")
 )
 
-func Test(t *testing.T) {
-	t.Parallel()
-
-	testdatas, err := filepath.Glob("testdata/self.json")
-	require.NoError(t, err, "error globbing testdata")
-	require.NotEmpty(t, testdatas, "no testdata found")
+func TestMain(m *testing.M) {
+	flag.Parse()
 
 	if *_doc2go == "" {
 		var err error
 		*_doc2go, err = exec.LookPath("doc2go")
-		require.NoError(t, err, "could not find doc2go binary and -doc2go flag was not set")
+		if err != nil {
+			log.Fatal("doc2go not found in PATH: ", err)
+		}
 	}
 
-	for _, testdata := range testdatas {
-		testdata := testdata
-		name := strings.TrimSuffix(filepath.Base(testdata), filepath.Ext(testdata))
-		t.Run(name, func(t *testing.T) {
+	os.Exit(m.Run())
+}
+
+func TestLinksAreValid(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "self", args: []string{"./..."}},
+		{name: "exact home", args: []string{"-home=go.abhg.dev/doc2go", "./..."}},
+		{name: "parent home", args: []string{"-home=go.abhg.dev", "./..."}},
+		{
+			name: "child home",
+			args: []string{
+				"-home", "github.com/stretchr/testify/assert",
+				"github.com/stretchr/testify/...",
+			},
+		},
+		{
+			name: "rel-link-style=directory",
+			args: []string{"-rel-link-style=directory", "./..."},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			f, err := os.Open(testdata)
-			require.NoError(t, err)
-			defer func() {
-				assert.NoError(t, f.Close())
-			}()
-
-			var argSets [][]string
-			dec := json.NewDecoder(f)
-			for dec.More() {
-				var args []string
-				require.NoError(t, dec.Decode(&args))
-				argSets = append(argSets, args)
-			}
-
-			for _, args := range argSets {
-				args := args
-				t.Run(strings.Join(args, " "), func(t *testing.T) {
-					t.Parallel()
-
-					testIntegration(t, args)
-				})
-			}
+			visitLocalURLs(t, generate(t, tt.args...), nil)
 		})
 	}
 }
 
-func testIntegration(t *testing.T, args []string) {
-	root := t.TempDir()
-	outDir := root
+// Verifies that with -rel-link-style=directory,
+// all relative links in generated HTML
+// have a '/' suffix.
+func TestDirectoryRelativeLinks(t *testing.T) {
+	t.Parallel()
 
+	root := generate(t, "-rel-link-style=directory", "./...")
+	visitLocalURLs(t, root, func(local localURL) bool {
+		if local.Kind != localPage {
+			return false
+		}
+
+		href := local.Href
+		u, err := url.Parse(href)
+		require.NoError(t, err, "%v: bad URL: %v", local.From, href)
+		if u.IsAbs() || len(u.Host) > 0 || len(u.Path) == 0 {
+			return true
+		}
+
+		return assert.True(t,
+			strings.HasSuffix(u.Path, "/"),
+			"%v: path for relative link does not end with '/': %v", local.From, href)
+	})
+}
+
+func generate(t *testing.T, args ...string) (outDir string) {
+	outDir = t.TempDir()
 	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
 
 	output := iotest.Writer(t)
@@ -85,14 +109,54 @@ func testIntegration(t *testing.T, args []string) {
 	cmd.Dir = *_rundir
 	require.NoError(t, cmd.Run())
 
+	return outDir
+}
+
+type localURLKind int
+
+const (
+	localPage  localURLKind = iota
+	localAsset              // CSS or script
+)
+
+type localURL struct {
+	// Kind is the kind of this URL.
+	Kind localURLKind
+
+	// URL of the page that linked to this URL.
+	// If any.
+	From *url.URL
+
+	// Href is the value of the href or src attribute
+	// that led to this link.
+	Href string
+
+	URL *url.URL
+}
+
+// visitLocalURLs visits all local URLs in the given directory.
+// It does so by spinning up a local HTTP server
+// and visiting every page.
+//
+// 'visit' is called before each URL is visited.
+// If it returns false, the URL and its children are skipped.
+func visitLocalURLs(t *testing.T, root string, visit func(localURL) bool) {
+	if visit == nil {
+		visit = func(localURL) bool { return true }
+	}
+
 	srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
 	t.Cleanup(srv.Close)
 
 	u, err := url.Parse(srv.URL)
 	require.NoError(t, err)
 
-	w := newURLWalker(t)
-	w.Walk(u.String())
+	(&urlWalker{
+		t:           t,
+		seen:        make(map[string]struct{}),
+		client:      http.DefaultClient,
+		shouldVisit: visit,
+	}).Walk(u.String())
 }
 
 // urlWalker visits all local pages for the generated website
@@ -101,16 +165,10 @@ type urlWalker struct {
 	t      *testing.T
 	host   string
 	seen   map[string]struct{}
-	queue  ring.Q[*url.URL]
+	queue  ring.Q[localURL]
 	client *http.Client
-}
 
-func newURLWalker(t *testing.T) *urlWalker {
-	return &urlWalker{
-		t:      t,
-		seen:   make(map[string]struct{}),
-		client: http.DefaultClient,
-	}
+	shouldVisit func(localURL) bool
 }
 
 func (w *urlWalker) Walk(startPage string) {
@@ -118,20 +176,29 @@ func (w *urlWalker) Walk(startPage string) {
 	require.NoError(w.t, err)
 	w.host = u.Host
 
-	w.queue.Push(u)
+	w.queue.Push(localURL{
+		Kind: localPage,
+		Href: "/",
+		URL:  u,
+	})
 	for !w.queue.Empty() {
 		w.visit(w.queue.Pop())
 	}
 }
 
-func (w *urlWalker) visit(dest *url.URL) {
-	if _, ok := w.seen[dest.String()]; ok {
+func (w *urlWalker) visit(dest localURL) {
+	urlString := dest.URL.String()
+	if _, ok := w.seen[urlString]; ok {
 		return
 	}
-	w.seen[dest.String()] = struct{}{}
+	w.seen[urlString] = struct{}{}
 
-	w.t.Log("Visiting", dest)
-	res, err := w.client.Get(dest.String())
+	if !w.shouldVisit(dest) {
+		return
+	}
+
+	w.t.Log("Visiting", urlString)
+	res, err := w.client.Get(urlString)
 	if !assert.NoError(w.t, err, "error visiting %v", dest) {
 		return
 	}
@@ -142,7 +209,7 @@ func (w *urlWalker) visit(dest *url.URL) {
 		return
 	}
 
-	if path.Ext(dest.Path) == ".css" {
+	if path.Ext(dest.Href) == ".css" {
 		_, err := io.ReadAll(res.Body)
 		assert.NoError(w.t, err, "error reading %v", dest)
 		return
@@ -152,8 +219,12 @@ func (w *urlWalker) visit(dest *url.URL) {
 	require.NoError(w.t, err)
 
 	for _, tag := range cascadia.QueryAll(doc, cascadia.MustCompile("script, link, a")) {
-		dstAttr := "href"
-		if tag.Data == "script" {
+		kind, dstAttr := localPage, "href"
+		switch tag.Data {
+		case "link":
+			kind = localAsset
+		case "script":
+			kind = localAsset
 			dstAttr = "src"
 		}
 
@@ -165,23 +236,33 @@ func (w *urlWalker) visit(dest *url.URL) {
 			}
 		}
 		if len(href) != 0 {
-			w.push(dest, href)
+			w.push(dest, kind, href)
 		}
 	}
 }
 
-func (w *urlWalker) push(from *url.URL, href string) {
+func (w *urlWalker) push(from localURL, kind localURLKind, href string) {
 	u, err := url.Parse(href)
-	if !assert.NoError(w.t, err, "bad href %q on page %v", href, from) {
+	if !assert.NoError(w.t, err, "bad href %q on page %v", href, from.URL) {
 		return
 	}
 
 	if len(u.Host) > 0 {
 		if u.Host == w.host {
-			w.queue.Push(u)
+			w.queue.Push(localURL{
+				Kind: kind,
+				Href: href,
+				URL:  u,
+				From: from.URL,
+			})
 		}
 		return
 	}
 
-	w.queue.Push(from.JoinPath(u.Path))
+	w.queue.Push(localURL{
+		Kind: kind,
+		Href: href,
+		URL:  from.URL.JoinPath(u.Path),
+		From: from.URL,
+	})
 }
