@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix -rel-link-style being ignored for links inside source code blocks.
-time: 2023-11-10T20:24:29.528072159-08:00
