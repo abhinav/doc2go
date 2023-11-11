@@ -1,4 +1,4 @@
-package slices
+package sliceutil
 
 // Transform builds a slice by applying the provided function
 // to all elements in the given slice.

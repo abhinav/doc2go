@@ -19,11 +19,20 @@ import (
 func TestFlagHelp(t *testing.T) {
 	t.Parallel()
 
-	// Verifies that all registered flags are documented in _defaultHelp.
+	// Verifies that all registered flags are documented in _defaultHelp
+	// except those that we specifically exclude.
+
+	absent := map[string]struct{}{
+		"print-config-keys": {},
+	}
 
 	_, fset := (&cliParser{Stderr: io.Discard}).newFlagSet(nil)
 	fset.VisitAll(func(f *flag.Flag) {
-		assert.Contains(t, _defaultHelp, "-"+f.Name)
+		if _, ok := absent[f.Name]; ok {
+			assert.NotContains(t, _defaultHelp, "-"+f.Name)
+		} else {
+			assert.Contains(t, _defaultHelp, "-"+f.Name)
+		}
 	})
 }
 
@@ -187,10 +196,19 @@ func TestCLIParser(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // chdir
-func TestCLIParser_Config(t *testing.T) {
-	t.Parallel()
+func TestCLIParser_printConfigKeys(t *testing.T) {
+	var stdout bytes.Buffer
+	_, err := (&cliParser{
+		Stdout: &stdout,
+		Stderr: iotest.Writer(t),
+	}).Parse([]string{"-print-config-keys"})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, errHelp)
 
+	assert.Contains(t, stdout.String(), "highlight")
+}
+
+func TestCLIParser_Config(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -222,8 +240,6 @@ func TestCLIParser_Config(t *testing.T) {
 	})
 
 	t.Run("custom file", func(t *testing.T) {
-		t.Parallel()
-
 		cfgFile := filepath.Join(t.TempDir(), "config")
 		give := "embed true\nfrontmatter foo.tmpl\nhighlight tango\n"
 		require.NoError(t,

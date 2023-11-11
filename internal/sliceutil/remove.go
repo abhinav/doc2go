@@ -1,4 +1,4 @@
-package slices
+package sliceutil
 
 // RemoveFunc removes items matching the given function
 // from the provided slice.

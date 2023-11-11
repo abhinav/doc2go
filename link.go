@@ -13,6 +13,8 @@ import (
 type docLinker struct {
 	knownImports map[string]struct{}
 	templates    pathtree.Root[*template.Template]
+
+	RelLinkStyle relLinkStyle
 }
 
 // LocalPackage marks an import path as a "local" package.
@@ -34,7 +36,7 @@ func (rl *docLinker) Template(path string, tmpl *template.Template) {
 
 func (rl *docLinker) packageDocURL(fromPkg, pkg string) string {
 	if _, ok := rl.knownImports[pkg]; ok {
-		return relative.Path(fromPkg, pkg)
+		return rl.RelLinkStyle.Normalize(relative.Path(fromPkg, pkg))
 	}
 
 	if tmpl, ok := rl.templates.Lookup(pkg); ok {

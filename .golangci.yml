@@ -15,10 +15,9 @@ linters:
   enable:
     - gofumpt
     - nolintlint
-    - paralleltest
     - revive
 
-linter-settings:
+linters-settings:
   govet:
     enable:
       - niliness

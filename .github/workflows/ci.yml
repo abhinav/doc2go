@@ -7,7 +7,7 @@ on:
     branches: [ '*' ]
 
 env:
-  GO_VERSION: 1.20.x
+  GO_VERSION: 1.21.x
 
 jobs:
 
@@ -15,7 +15,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Check out repository
     - uses: actions/setup-go@v4
       name: Set up Go
@@ -30,7 +30,6 @@ jobs:
     - run: make lint
       name: Lint
 
-
   test:
     runs-on: ${{ matrix.os }}
     name: Test (${{ matrix.os}})
@@ -38,22 +37,38 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: true
 
-    - name: Build
-      run: make build
-      shell: bash
-
     - name: Test
       run: make cover
-      env:
-        TEST_FLAGS: '-v -race'
       shell: bash
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
+      with:
+        files: ./cover.out
+
+  test-integration:
+    runs-on: ubuntu-latest
+    name: Integration test
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Test
+      run: make cover-integration
+      shell: bash
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./cover.integration.out

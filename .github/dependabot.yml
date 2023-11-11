@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "daily"
 
+  - package-ecosystem: "gomod"
+    directory: "/integration"
+    schedule:
+      interval: "weekly"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
