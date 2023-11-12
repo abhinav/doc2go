@@ -4,7 +4,7 @@ PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 GO_MODULES ?= $(shell find . \
 	-path '*/.*' -prune -o \
-	-type f -a -name 'go.mod' -printf '%h\n')
+	-type f -a -name 'go.mod' -exec dirname '{}' ';')
 
 # ./docs doesn't have any meaningful Go code.
 GO_MODULES := $(filter-out ./docs, $(GO_MODULES))
