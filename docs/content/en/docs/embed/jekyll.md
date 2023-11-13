@@ -31,13 +31,7 @@ to the docs directory:
 ```bash
 cat > docs/frontmatter.tmpl << EOF
 ---
-title: "
-  {{- with .Package.Name -}}
-    {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
-  {{- else -}}
-    {{ with .Basename }}{{ . }}{{ else }}Reference{{ end }}
-  {{- end -}}
-"
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 layout: default
 render_with_liquid: false
 ---

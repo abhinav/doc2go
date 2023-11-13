@@ -806,6 +806,48 @@ func TestBasename(t *testing.T) {
 	}
 }
 
+func TestFrontmatterDataName(t *testing.T) {
+	tests := []struct {
+		desc string
+		data frontmatterData
+		want string
+	}{
+		{desc: "empty"},
+		{
+			desc: "package",
+			data: frontmatterData{
+				Package: frontmatterPackageData{
+					Name: "foo",
+				},
+			},
+			want: "foo",
+		},
+		{
+			desc: "main package",
+			data: frontmatterData{
+				Package: frontmatterPackageData{
+					Name: "main",
+				},
+				Basename: "bar",
+			},
+			want: "bar",
+		},
+		{
+			desc: "dir",
+			data: frontmatterData{
+				Basename: "baz",
+			},
+			want: "baz",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.data.Name())
+		})
+	}
+}
+
 func TestDict(t *testing.T) {
 	tests := []struct {
 		name string
