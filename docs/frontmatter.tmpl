@@ -1,11 +1,5 @@
 ---
-title: "
-  {{- with .Package.Name -}}
-    {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
-  {{- else -}}
-    {{ with .Basename }}{{ . }}{{ else }}Reference{{ end }}
-  {{- end -}}
-"
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 no_list: true
 type: docs
 github_repo: "https://github.com/abhinav/doc2go"

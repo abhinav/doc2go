@@ -73,13 +73,7 @@ Be sure to add  the `---` delimiters at the start and end of the template.
 #### Page title
 
 ```
-title: "
-  {{- with .Package.Name -}}
-    {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
-  {{- else -}}
-    {{ with .Basename }}{{ . }}{{ else }}Reference{{ end }}
-  {{- end -}}
-"
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 ```
 
 This gives us a title based on the package or binary name,

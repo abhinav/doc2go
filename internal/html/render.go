@@ -143,6 +143,16 @@ type frontmatterData struct {
 	Package     frontmatterPackageData
 }
 
+func (d frontmatterData) Name() string {
+	if n := d.Package.Name; n != "" && n != "main" {
+		return n
+	}
+	if d.Basename != "" {
+		return d.Basename
+	}
+	return ""
+}
+
 func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
 	if r.FrontMatter == nil {
 		return nil
