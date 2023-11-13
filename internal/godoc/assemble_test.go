@@ -8,6 +8,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"log"
 	"strings"
 	"testing"
 
@@ -339,6 +340,172 @@ func TestAssembler(t *testing.T) {
 				Import:     plainCode(`import foo "example.com/foo/v2"`),
 			},
 		},
+		{
+			desc: "example/full-file",
+			give: srcPackage{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Lines:      []string{"package foo"},
+				TestLines: []string{
+					"package foo_test",
+					"",
+					`import "example.com/foo"`,
+					"",
+					"func Example() {",
+					"	foo.Foo(callback)",
+					"	// Output:",
+					"	// Hello, world!",
+					"}",
+					"",
+					"func callback() {",
+					"	// do something",
+					"}",
+				},
+			},
+			want: Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Import:     plainCode(`import "example.com/foo"`),
+				Examples: []*Example{
+					{
+						Code: plainCode(
+							"package main",
+							"",
+							`import "example.com/foo"`,
+							"",
+							"func main() {",
+							"	foo.Foo(callback)",
+							"}",
+							"",
+							"func callback() {",
+							"	// do something",
+							"}",
+						),
+						Output: "Hello, world!\n",
+					},
+				},
+			},
+		},
+		{
+			desc: "example blocks",
+			give: srcPackage{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Lines: []string{
+					"package foo",
+					"",
+					"func Bar() {",
+					"	// do something",
+					"}",
+					"",
+					"type Baz struct{}",
+					"",
+					"func (b *Baz) Quux() {",
+					"	// do something",
+					"}",
+				},
+				TestLines: []string{
+					"package foo",
+					"",
+					"// Package-level example demonstrates how to use the package.",
+					"func Example() {",
+					"	Foo()",
+					"",
+					"	// Output:",
+					"	// Hello, world!",
+					"}",
+					"",
+					"func Example_withSuffix() {", // with suffix
+					"	Foo(2)",
+					"}",
+					"",
+					"// This example has unordered output.",
+					"func ExampleBar_unorderedOutput() {", // function-level
+					"	Bar()",
+					"	// Unordered output:",
+					"	// Hello",
+					"	// World",
+					"}",
+					"",
+					"func ExampleBaz() {", // type-level
+					"	fmt.Println(Baz{})",
+					"	// Output:",
+					"	// {}",
+					"}",
+					"",
+					"func ExampleBaz_Quux_callback() {", // method-level
+					"	new(Baz).Quux(func() {",
+					"		// do stuff here",
+					"	})",
+					"}",
+				},
+			},
+			want: Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Import:     plainCode(`import "example.com/foo"`),
+				Examples: []*Example{
+					{
+						Code:   plainCode("Foo()"),
+						Output: "Hello, world!\n",
+						Doc:    commentDoc("Package-level example demonstrates how to use the package."),
+					},
+					{
+						Suffix: "WithSuffix",
+						Code:   plainCode("Foo(2)"),
+					},
+				},
+				Functions: []*Function{
+					{
+						Name:      "Bar",
+						ShortDecl: "func Bar()",
+						Decl:      plainCode("func Bar()"),
+						Examples: []*Example{
+							{
+								Parent: ExampleParent{Name: "Bar"},
+								Code:   plainCode("Bar()"),
+								Output: "Hello\nWorld\n",
+								Suffix: "UnorderedOutput",
+								Doc:    commentDoc("This example has unordered output."),
+							},
+						},
+					},
+				},
+				Types: []*Type{
+					{
+						Name: "Baz",
+						Decl: plainCode("type Baz struct{}"),
+						Examples: []*Example{
+							{
+								Parent: ExampleParent{Name: "Baz"},
+								Code:   plainCode("fmt.Println(Baz{})"),
+								Output: "{}\n",
+							},
+						},
+						Methods: []*Function{
+							{
+								Recv:      "*Baz",
+								RecvType:  "Baz",
+								Name:      "Quux",
+								ShortDecl: "func (b *Baz) Quux()",
+								Decl:      plainCode("func (b *Baz) Quux()"),
+								Examples: []*Example{
+									{
+										Parent: ExampleParent{Name: "Quux", Recv: "Baz"},
+										Code: plainCode(
+											"new(Baz).Quux(func() {",
+											"	// do stuff here",
+											"})",
+										),
+										Suffix: "Callback",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -347,13 +514,13 @@ func TestAssembler(t *testing.T) {
 			t.Parallel()
 
 			got, err := (&Assembler{
-				Linker: &exampleLinker{},
-				Lexer: &stubLexer{
-					Err: errors.New("great sadness"),
-				},
+				Linker:           &exampleLinker{},
+				Lexer:            &nopLexer{},
 				newDeclFormatter: newPlainDeclFormatter,
 			}).Assemble(tt.give.Build(t))
 			require.NoError(t, err)
+
+			got.AllExamples = nil // easier test assertions
 			assert.Equal(t, &tt.want, got)
 		})
 	}
@@ -438,6 +605,53 @@ func TestAssembler_ImportFor(t *testing.T) {
 	}
 }
 
+// Verify that lexing errors are handled gracefully.
+func TestAssembler_lexErrors(t *testing.T) {
+	pkg := srcPackage{
+		Name:       "foo",
+		ImportPath: "example.com/foo",
+		Lines: []string{
+			"package foo",
+			"",
+			"// Foo does things.",
+			"func Foo() {}",
+			"",
+			"type Bar struct{}",
+			"",
+			"// Bar does things.",
+			"func (b *Bar) Bar() {}",
+		},
+		TestLines: []string{
+			"package foo_test",
+			"",
+			`import "example.com/foo"`,
+			"",
+			"func Example() {}",
+			"",
+			"func ExampleFoo() {}",
+			"",
+			"func ExampleBar() {}",
+			"",
+			"func ExampleBar_Bar() {}",
+		},
+	}
+
+	var buff bytes.Buffer
+	_, err := (&Assembler{
+		Linker: &exampleLinker{},
+		Lexer: &stubLexer{
+			Err: errors.New("great sadness"),
+		},
+		Logger:           log.New(&buff, "", 0),
+		newDeclFormatter: newPlainDeclFormatter,
+	}).Assemble(pkg.Build(t))
+	require.NoError(t, err)
+
+	logs := buff.String()
+	assert.Contains(t, logs, "Could not format example")
+	assert.Contains(t, logs, "great sadness")
+}
+
 type exampleLinker struct{}
 
 var _ Linker = (*exampleLinker)(nil)
@@ -461,6 +675,19 @@ func (f *plainDeclFormatter) FormatDecl(decl ast.Decl) ([]byte, []gosrc.Region, 
 	return buff.Bytes(), nil, err
 }
 
+type nopLexer struct{}
+
+var _ highlight.Lexer = (*nopLexer)(nil)
+
+func (l *nopLexer) Lex(bs []byte) ([]chroma.Token, error) {
+	return []chroma.Token{
+		{
+			Type:  chroma.None,
+			Value: string(bs),
+		},
+	}, nil
+}
+
 type stubLexer struct {
 	Result []chroma.Token
 	Err    error
@@ -476,6 +703,7 @@ type srcPackage struct {
 	Name       string
 	ImportPath string
 	Lines      []string
+	TestLines  []string
 }
 
 func (b srcPackage) Build(t *testing.T) *gosrc.Package {
@@ -484,10 +712,19 @@ func (b srcPackage) Build(t *testing.T) *gosrc.Package {
 	f, err := parser.ParseFile(fset, "file.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
+	var testSyntax []*ast.File
+	if len(b.TestLines) > 0 {
+		testSrc := strings.Join(b.TestLines, "\n") + "\n"
+		f, err := parser.ParseFile(fset, "file_test.go", testSrc, parser.ParseComments)
+		require.NoError(t, err)
+		testSyntax = []*ast.File{f}
+	}
+
 	return &gosrc.Package{
 		Name:       b.Name,
 		ImportPath: b.ImportPath,
 		Syntax:     []*ast.File{f},
+		TestSyntax: testSyntax,
 		Fset:       fset,
 	}
 }
@@ -501,8 +738,13 @@ func plainCode(lines ...string) *highlight.Code {
 	src := strings.Join(lines, "\n")
 	return &highlight.Code{
 		Spans: []highlight.Span{
-			&highlight.TextSpan{
-				Text: []byte(src),
+			&highlight.TokenSpan{
+				Tokens: []chroma.Token{
+					{
+						Type:  chroma.None,
+						Value: src,
+					},
+				},
 			},
 		},
 	}

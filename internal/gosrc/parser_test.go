@@ -2,7 +2,9 @@ package gosrc
 
 import (
 	"go/ast"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,10 +29,9 @@ func TestParsePackage_simple(t *testing.T) {
 	if files := got.Syntax; assert.Len(t, files, 1) {
 		assert.Equal(t, srcFile, got.Fset.File(files[0].Pos()).Name())
 	}
-	// https://github.com/abhinav/doc2go/issues/15
-	// if files := got.TestSyntax; assert.Len(t, files, 1) {
-	// 	assert.Equal(t, testFile, got.Fset.File(files[0].Pos()).Name())
-	// }
+	if files := got.TestSyntax; assert.Len(t, files, 1) {
+		assert.Equal(t, testFile, got.Fset.File(files[0].Pos()).Name())
+	}
 	assert.Equal(t, []string{
 		"Constant",
 		"Function",
@@ -111,4 +112,55 @@ func TestPackageRefImporter_notFound(t *testing.T) {
 
 	_, err := importer(imports, "example.com/foo")
 	assert.ErrorContains(t, err, `package "example.com/foo" not found`)
+}
+
+func TestParsePackage_parseError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		files map[string]string
+	}{
+		{
+			name: "source",
+			files: map[string]string{
+				"foo.go": "package foo\nfunc main() {",
+			},
+		},
+		{
+			name: "test",
+			files: map[string]string{
+				"foo.go":      "package foo\nfunc main() {}",
+				"foo_test.go": "package foo\nfunc TestFoo(t *testing.T) {",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			var files, testFiles []string
+			for name, contents := range tt.files {
+				path := filepath.Join(dir, name)
+				require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+
+				if strings.HasSuffix(name, "_test.go") {
+					testFiles = append(testFiles, path)
+				} else {
+					files = append(files, path)
+				}
+			}
+
+			_, err := new(Parser).ParsePackage(&PackageRef{
+				Name:       "foo",
+				ImportPath: "example.com/foo",
+				Files:      files,
+				TestFiles:  testFiles,
+			})
+			assert.Error(t, err)
+		})
+	}
 }
