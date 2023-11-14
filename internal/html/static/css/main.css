@@ -60,4 +60,18 @@ details.example > summary {
   cursor: pointer;
 }
 
+details.deprecated > summary {
+  list-style: none;
+}
+
+span.deprecated-tag {
+  color: #eee;
+  background-color: #999;
+  padding: 0.125rem 0.3rem;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
 #generated-by-footer { font-size: x-small; }

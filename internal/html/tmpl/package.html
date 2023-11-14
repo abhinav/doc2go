@@ -18,18 +18,18 @@
   {{ if .Constants }}<li><a href="#pkg-constants">Constants</a></li>{{ end -}}
   {{ if .Variables }}<li><a href="#pkg-variables">Variables</a></li>{{ end -}}
   {{ range .Functions -}}
-    <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
+    <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a>{{ template "deprecatedTag" . }}</li>
   {{ end -}}
   {{ range $typ := .Types -}}
     <li>
-      <a href="#{{ .Name }}">type {{ .Name }}</a>
+      <a href="#{{ .Name }}">type {{ .Name }}</a>{{ template "deprecatedTag" . }}
       {{ if or .Functions .Methods -}}
         <ul>
           {{ range .Functions -}}
-            <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a></li>
+            <li><a href="#{{ .Name }}">{{ .ShortDecl }}</a>{{ template "deprecatedTag" . }}</li>
           {{ end -}}
           {{ range .Methods -}}
-            <li><a href="#{{ $typ.Name }}.{{ .Name }}">{{ .ShortDecl }}</a></li>
+            <li><a href="#{{ $typ.Name }}.{{ .Name }}">{{ .ShortDecl }}</a>{{ template "deprecatedTag" . }}</li>
           {{ end -}}
         </ul>
       {{ end -}}
@@ -64,17 +64,22 @@
 {{ with .Functions -}}
   <h3 id="pkg-functions">Functions</h3>
   {{ range . -}}
-    <h3 id="{{ .Name }}">func {{ .Name }}</h3>
+    {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
+      <h3 id="{{ .Name }}">func {{ .Name }} {{- template "deprecatedTag" . }}</h3>
+    {{- if .Deprecated }}</summary>{{ end }}
     {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
     {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
+    {{- if .Deprecated }}</details>{{ end -}}
   {{ end -}}
 {{ end -}}
 
 {{ with .Types -}}
   <h3 id="pkg-types">Types</h3>
   {{ range . -}}
-  <h3 id="{{ .Name }}">type {{ .Name }}</h3>
+    {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
+    <h3 id="{{ .Name }}">type {{ .Name }} {{- template "deprecatedTag" . }}</h3>
+    {{- if .Deprecated }}</summary>{{ end }}
     {{ .Decl | code }}
     {{ .Doc | doc 4 -}}
     {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
@@ -94,6 +99,7 @@
     {{ range .Methods -}}
       {{ template "funcOrMethod" . -}}
     {{ end -}}
+    {{- if .Deprecated }}</details>{{ end -}}
   {{ end -}}
 {{ end -}}
 
@@ -110,10 +116,13 @@
 {{- define "funcOrMethod" -}}
   {{ $id := .Name -}}
   {{ with .RecvType }}{{ $id = printf "%s.%s" . $id }}{{ end -}}
-  <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }}</h4>
+  {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
+    <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }} {{- template "deprecatedTag" . }}</h4>
+  {{- if .Deprecated }}</summary>{{ end }}
   {{ .Decl | code }}
   {{ .Doc | doc 5 -}}
   {{ template "examples" (dict "Level" 5 "Examples" .Examples) -}}
+  {{- if .Deprecated }}</details>{{ end -}}
 {{- end -}}
 
 {{- define "examples" -}}
@@ -134,3 +143,7 @@
     </details>
   {{ end -}}
 {{- end -}}
+
+{{- define "deprecatedTag" -}}
+{{ if .Deprecated }} <span class="deprecated-tag">deprecated</span>{{ end -}}
+{{ end -}}
