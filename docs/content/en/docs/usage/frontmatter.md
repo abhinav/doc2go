@@ -86,85 +86,21 @@ with a `title` attribute in the front matter.
 You can use the following template
 to set the page title accurately for most cases.
 
-
 {{< tabpane persistLang=false >}}
 {{< tab header="YAML" lang="plain" >}}
-title: "
-  {{- with .Package.Name -}}
-    {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
-  {{- else -}}
-    {{ with .Basename }}{{ . }}{{ else }}Reference{{ end }}
-  {{- end -}}
-"
+title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 {{< /tab >}}
 {{< tab header="TOML" lang="plain" >}}
-title = "
-  {{- with .Package.Name -}}
-    {{ if ne . "main" }}{{ . }}{{ else }}{{ $.Basename }}{{ end }}
-  {{- else -}}
-    {{ with .Basename }}{{ . }}{{ else }}Reference{{ end }}
-  {{- end -}}
-"
+title = "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 {{< /tab >}}
 {{< /tabpane >}}
 
-It handles a few different cases.
-Let's reformat it and walk through it:
+This handles a few different cases:
 
-```
-  {{- with .Package.Name -}}
-    {{ if ne . "main" -}}
-      {{ . }}
-    {{- else -}}
-      {{ $.Basename }}
-    {{- end }}
-  {{- else -}}
-    {{ with .Basename -}}
-      {{ . }}
-    {{- else -}}
-      Reference
-    {{- end }}
-  {{- end -}}
-```
-
-- If we're looking at a Go package,
-  and it's not a binary, use the name of the package.
-
-    ```
-    {{- with .Package.Name -}}
-      {{ if ne . "main" -}}
-        {{ . }}
-    ```
-
-- If the package is a binary,
-  use the name of the binary---determined by the base name.
-
-    ```
-      {{- else -}}
-        {{ $.Basename }}
-      {{- end }}
-    ```
-
-- If we're looking at a directory, not a Go package,
-  and it's not the top-level directory,
-  use the base name of the directory.
-
-    ```
-    {{- else -}}
-      {{ with .Basename -}}
-        {{ . }}
-    ```
-
-- If we're looking at the top-level directory,
-  use the title "API Reference"
-  since this is the entry point to the generated API reference.
-
-    ```
-      {{- else -}}
-        Reference
-      {{- end }}
-    {{- end -}}
-    ```
+- for non-main packages, use the name of the package
+- for main packages, use the name of the binary---determined by the base name
+- for directories that aren't Go packages, use the name of the directory
+- lastly, for the top-level directory, use the title "Reference"
 
 ## Page description
 
@@ -211,5 +147,8 @@ struct {
 		// if any.
 		Synopsis string
 	}
+
+	// Name of this package or directory.
+	Name string
 }
 ```

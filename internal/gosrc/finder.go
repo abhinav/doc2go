@@ -1,11 +1,12 @@
 package gosrc
 
 import (
+	"cmp"
 	"errors"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/doc2go/internal/sliceutil"
@@ -136,8 +137,8 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 				})
 			}
 		}
-		sort.Slice(imports, func(i, j int) bool {
-			return imports[i].ImportPath < imports[j].ImportPath
+		slices.SortFunc(imports, func(i, j ImportedPackage) int {
+			return cmp.Compare(i.ImportPath, j.ImportPath)
 		})
 
 		infos = append(infos, &PackageRef{

@@ -806,6 +806,91 @@ func TestBasename(t *testing.T) {
 	}
 }
 
+func TestFrontmatterDataName(t *testing.T) {
+	tests := []struct {
+		desc string
+		data frontmatterData
+		want string
+	}{
+		{desc: "empty"},
+		{
+			desc: "package",
+			data: frontmatterData{
+				Package: frontmatterPackageData{
+					Name: "foo",
+				},
+			},
+			want: "foo",
+		},
+		{
+			desc: "main package",
+			data: frontmatterData{
+				Package: frontmatterPackageData{
+					Name: "main",
+				},
+				Basename: "bar",
+			},
+			want: "bar",
+		},
+		{
+			desc: "dir",
+			data: frontmatterData{
+				Basename: "baz",
+			},
+			want: "baz",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.data.Name())
+		})
+	}
+}
+
+func TestDict(t *testing.T) {
+	tests := []struct {
+		name string
+		give []any
+		want map[string]any
+	}{
+		{
+			name: "empty",
+			want: map[string]any{},
+		},
+		{
+			name: "single",
+			give: []any{"foo", "bar"},
+			want: map[string]any{"foo": "bar"},
+		},
+		{
+			name: "multiple",
+			give: []any{"foo", "bar", "baz", "qux"},
+			want: map[string]any{"foo": "bar", "baz": "qux"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := dict(tt.give...)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDictErrors(t *testing.T) {
+	t.Run("odd", func(t *testing.T) {
+		_, err := dict("foo", "bar", "baz")
+		assert.ErrorContains(t, err, "odd number of arguments")
+	})
+
+	t.Run("bad key", func(t *testing.T) {
+		_, err := dict(42, "foo")
+		assert.ErrorContains(t, err, "[0] should be string")
+	})
+}
+
 func querySelector(n *html.Node, query string) *html.Node {
 	return cascadia.Query(n, cascadia.MustCompile(query))
 }

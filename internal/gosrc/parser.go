@@ -52,20 +52,16 @@ func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		sort.Strings(topLevel)
 	}
 
-	// TODO:
-	// Parse test files to extract example tests.
-	// https://github.com/abhinav/doc2go/issues/15
-	//
-	// testSyntax, err := parseFiles(fset, ref.TestFiles, nil)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	testSyntax, err := parseFiles(fset, ref.TestFiles, nil /* fmap */)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Package{
-		Name:       ref.Name,
-		ImportPath: ref.ImportPath,
-		Syntax:     syntax,
-		// TestSyntax:    testSyntax,
+		Name:          ref.Name,
+		ImportPath:    ref.ImportPath,
+		Syntax:        syntax,
+		TestSyntax:    testSyntax,
 		Fset:          fset,
 		TopLevelDecls: topLevel,
 	}, nil

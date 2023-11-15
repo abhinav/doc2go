@@ -180,6 +180,7 @@ func (cmd *mainCmd) run(opts *params) error {
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
 			Lexer:  highlight.GoLexer,
+			Logger: cmd.log,
 		},
 		Renderer: &html.Renderer{
 			Home:                  opts.Home,

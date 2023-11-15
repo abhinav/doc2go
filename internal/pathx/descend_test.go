@@ -30,3 +30,14 @@ func TestDescends(t *testing.T) {
 		})
 	}
 }
+
+func ExampleDescends() {
+	fmt.Println(Descends("a", "a"))
+	fmt.Println(Descends("a", "a/b/c"))
+	fmt.Println(Descends("a/d", "a/b"))
+
+	// Output:
+	// true
+	// true
+	// false
+}

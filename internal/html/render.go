@@ -4,6 +4,7 @@ package html
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"go/doc/comment"
 	"html/template"
 	"io"
@@ -140,6 +141,16 @@ type frontmatterData struct {
 	Basename    string
 	NumChildren int
 	Package     frontmatterPackageData
+}
+
+func (d frontmatterData) Name() string {
+	if n := d.Package.Name; n != "" && n != "main" {
+		return n
+	}
+	if d.Basename != "" {
+		return d.Basename
+	}
+	return ""
 }
 
 func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
@@ -297,6 +308,7 @@ func (r *render) FuncMap() template.FuncMap {
 		"static":            r.static,
 		"relativePath":      r.relativePath,
 		"filterSubpackages": r.filterSubpackages,
+		"dict":              dict,
 		"normalizeRelativePath": func(p string) string {
 			if f := r.NormalizeRelativePath; f != nil {
 				return f(p)
@@ -344,4 +356,21 @@ func (r *render) filterSubpackages(pkgs []Subpackage) []Subpackage {
 		filtered = append(filtered, pkg)
 	}
 	return filtered
+}
+
+// dict turns key-value pairs into a map.
+// Odd numbered arguments are keys, even numbered arguments are values.
+func dict(args ...any) (map[string]any, error) {
+	if len(args)%2 != 0 {
+		return nil, fmt.Errorf("dict: odd number of arguments")
+	}
+	dict := make(map[string]any, len(args)/2)
+	for i := 0; i < len(args); i += 2 {
+		key, ok := args[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("dict: [%d] should be string, got %T", i, args[i])
+		}
+		dict[key] = args[i+1]
+	}
+	return dict, nil
 }
