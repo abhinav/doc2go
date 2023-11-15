@@ -9,12 +9,20 @@ function openDetailsAnchor() {
 	if (!el) {
 		return
 	}
-	if (el.tagName == "DETAILS") {
-		el.open = true
+
+	let details = el.closest("details")
+	while (details) {
+		details.open = true
+		details = details.parentElement.closest("details")
 	}
+
+	// New elements may have appeared.
+	// Set hash again to scroll to the right place.
+	window.location.hash = hash;
+	return false;
 }
 
-window.addEventListener('hashchange', () => openDetailsAnchor())
+window.addEventListener('hashchange', openDetailsAnchor)
 
 window.addEventListener('load', () => {
 	document.querySelectorAll("h2, h3, h4, h5, h6").forEach((el) => {

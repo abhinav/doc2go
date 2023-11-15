@@ -506,6 +506,110 @@ func TestAssembler(t *testing.T) {
 				},
 			},
 		},
+		{
+			desc: "deprecated",
+			give: srcPackage{
+				Name:       "pkg",
+				ImportPath: "example.com/pkg",
+				Lines: []string{
+					"package pkg",
+					"",
+					"// V is a variable.",
+					"//",
+					"// Deprecated: use W instead.",
+					"var V = 42",
+					"",
+					"// C is a constant.",
+					"//",
+					"// Deprecated: use D instead.",
+					`const C = "hello"`,
+					"",
+					"// F is a function.",
+					"//",
+					"// Deprecated: use G instead.",
+					"func F() {}",
+					"",
+					"// T is a type.",
+					"//",
+					"// Deprecated: use U instead.",
+					"type T struct{}",
+					"",
+					"// M is a method.",
+					"//",
+					"// Deprecated: use N instead.",
+					"func (t *T) M() {}",
+				},
+			},
+			want: Package{
+				Name:       "pkg",
+				ImportPath: "example.com/pkg",
+				Import:     plainCode(`import "example.com/pkg"`),
+				Variables: []*Value{
+					{
+						Names: []string{"V"},
+						Doc: commentDoc(
+							"V is a variable.",
+							"",
+							"Deprecated: use W instead.",
+						),
+						Decl:       plainCode("var V = 42"),
+						Deprecated: true,
+					},
+				},
+				Constants: []*Value{
+					{
+						Names: []string{"C"},
+						Doc: commentDoc(
+							"C is a constant.",
+							"",
+							"Deprecated: use D instead.",
+						),
+						Decl:       plainCode(`const C = "hello"`),
+						Deprecated: true,
+					},
+				},
+				Functions: []*Function{
+					{
+						Name:      "F",
+						ShortDecl: "func F()",
+						Decl:      plainCode("func F()"),
+						Doc: commentDoc(
+							"F is a function.",
+							"",
+							"Deprecated: use G instead.",
+						),
+						Deprecated: true,
+					},
+				},
+				Types: []*Type{
+					{
+						Name: "T",
+						Decl: plainCode("type T struct{}"),
+						Doc: commentDoc(
+							"T is a type.",
+							"",
+							"Deprecated: use U instead.",
+						),
+						Deprecated: true,
+						Methods: []*Function{
+							{
+								Recv:      "*T",
+								RecvType:  "T",
+								Name:      "M",
+								ShortDecl: "func (t *T) M()",
+								Decl:      plainCode("func (t *T) M()"),
+								Doc: commentDoc(
+									"M is a method.",
+									"",
+									"Deprecated: use N instead.",
+								),
+								Deprecated: true,
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -650,6 +754,28 @@ func TestAssembler_lexErrors(t *testing.T) {
 	logs := buff.String()
 	assert.Contains(t, logs, "Could not format example")
 	assert.Contains(t, logs, "great sadness")
+}
+
+// From https://github.com/golang/pkgsite/blob/545ce2ad0d6748cdadb8350c13acc76447df90fd/internal/godoc/dochtml/deprecated_test.go#L9
+func TestIsDeprecated(t *testing.T) {
+	tests := []struct {
+		text string
+		want bool
+	}{
+		{"A comment", false},
+		{"Deprecated: foo", true},
+		{" A comment\n   Deprecated: foo", false},
+		{" A comment\n\n   Deprecated: foo", true},
+		{"This is\n Deprecated.", false},
+		{"line 1\nDeprecated:\nline 2\n", false},
+		{"line 1\n\nDeprecated:\nline 2\n", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.text, func(t *testing.T) {
+			assert.Equal(t, tt.want, isDeprecated(tt.text))
+		})
+	}
 }
 
 type exampleLinker struct{}

@@ -16,6 +16,7 @@ import (
 	"io"
 	"log"
 	"path"
+	"regexp"
 	"slices"
 
 	"go.abhg.dev/doc2go/internal/gosrc"
@@ -198,16 +199,18 @@ func (as *assembly) importFor(name, imp string) *highlight.Code {
 // Value is a top-level constant or variable or a group fo them
 // declared in a package.
 type Value struct {
-	Names []string
-	Doc   *comment.Doc
-	Decl  *highlight.Code
+	Names      []string
+	Doc        *comment.Doc
+	Decl       *highlight.Code
+	Deprecated bool
 }
 
 func (as *assembly) val(dval *doc.Value) *Value {
 	return &Value{
-		Names: dval.Names,
-		Doc:   as.doc(dval.Doc),
-		Decl:  as.decl(dval.Decl),
+		Names:      dval.Names,
+		Doc:        as.doc(dval.Doc),
+		Decl:       as.decl(dval.Decl),
+		Deprecated: isDeprecated(dval.Doc),
 	}
 }
 
@@ -222,32 +225,34 @@ type Type struct {
 	Constants, Variables []*Value
 	Functions, Methods   []*Function
 
-	Examples []*Example
+	Examples   []*Example
+	Deprecated bool
 }
 
 func (as *assembly) typ(dtyp *doc.Type) *Type {
 	return &Type{
-		Name:      dtyp.Name,
-		Doc:       as.doc(dtyp.Doc),
-		Decl:      as.decl(dtyp.Decl),
-		Constants: sliceutil.Transform(dtyp.Consts, as.val),
-		Variables: sliceutil.Transform(dtyp.Vars, as.val),
-		Functions: as.funs("" /* recv */, dtyp.Funcs),
-		Methods:   as.funs(dtyp.Name, dtyp.Methods),
-		Examples:  as.egs(ExampleParent{Name: dtyp.Name}, dtyp.Examples),
+		Name:       dtyp.Name,
+		Doc:        as.doc(dtyp.Doc),
+		Decl:       as.decl(dtyp.Decl),
+		Constants:  sliceutil.Transform(dtyp.Consts, as.val),
+		Variables:  sliceutil.Transform(dtyp.Vars, as.val),
+		Functions:  as.funs("" /* recv */, dtyp.Funcs),
+		Methods:    as.funs(dtyp.Name, dtyp.Methods),
+		Examples:   as.egs(ExampleParent{Name: dtyp.Name}, dtyp.Examples),
+		Deprecated: isDeprecated(dtyp.Doc),
 	}
 }
 
 // Function is a top-level function or method.
 type Function struct {
-	Name      string
-	Doc       *comment.Doc
-	Decl      *highlight.Code
-	ShortDecl string
-	Recv      string // only set for methods
-	RecvType  string // name of the receiver type without '*'
-
-	Examples []*Example
+	Name       string
+	Doc        *comment.Doc
+	Decl       *highlight.Code
+	ShortDecl  string
+	Recv       string // only set for methods
+	RecvType   string // name of the receiver type without '*'
+	Examples   []*Example
+	Deprecated bool
 }
 
 // parent is the name of the receiver for this function,
@@ -276,6 +281,7 @@ func (as *assembly) fun(parent string, dfun *doc.Func) *Function {
 			Recv: parent,
 			Name: dfun.Name,
 		}, dfun.Examples),
+		Deprecated: isDeprecated(dfun.Doc),
 	}
 }
 
@@ -420,4 +426,11 @@ func (as *assembly) egCode(dex *doc.Example) (*highlight.Code, error) {
 			&highlight.TokenSpan{Tokens: tokens},
 		},
 	}, nil
+}
+
+// From https://github.com/golang/pkgsite/blob/545ce2ad0d6748cdadb8350c13acc76447df90fd/internal/godoc/dochtml/deprecated.go#L13
+var _deprecatedRe = regexp.MustCompile(`(^|\n\s*\n)\s*Deprecated:`)
+
+func isDeprecated(s string) bool {
+	return _deprecatedRe.MatchString(s)
 }
