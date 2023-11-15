@@ -1,3 +1,0 @@
-kind: Added
-body: Frontmatter templates may now use `.Name` to handle the various title selection cases.
-time: 2023-11-12T22:05:06.672722-08:00
