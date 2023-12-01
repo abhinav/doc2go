@@ -5,6 +5,9 @@ description: "Your Go documentation, to-go."
 
 {{< blocks/cover height="min" title="Welcome to doc2go" color="dark" >}}
 <div class="mx-auto">
+  <p>
+    <img src="logo.png" alt="Gopher on a flying sheet of paper" />
+  </p>
   <a class="btn btn-lg btn-light mr-3 mb-4" href="{{< relref "docs/start" >}}">
     Get Started <i class="fas fa-play ml-2"></i>
   </a>
