@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.abhg.dev/doc2go/internal/errdefer"
@@ -69,6 +70,13 @@ type Generator struct {
 	// It will be created it if it doesn't exist.
 	OutDir string
 
+	// SubDir is an optional subdirectory inside OutDir.
+	// If speciifed, pages will be generated under OutDir/SubDir,
+	// and OutDir will get an index of siblings of SubDir.
+	//
+	// SubDir MUST NOT contain '/'.
+	SubDir string
+
 	// Basename of generated files.
 	//
 	// Defaults to index.html.
@@ -105,8 +113,59 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		trees = filterTrees(r.Home, trees)
 	}
 
-	_, err := r.renderTrees(nil, trees)
-	return err
+	if _, err := r.renderTrees(nil, trees); err != nil {
+		return err
+	}
+
+	if err := r.generateSiblingIndex(); err != nil {
+		return fmt.Errorf("generate version index: %w", err)
+	}
+
+	return nil
+}
+
+// If a -subdir is specified, generate a listing of siblings
+// under the output directory.
+// This is useful for generating documentation for multiple versions
+// of the same package.
+func (r *Generator) generateSiblingIndex() (err error) {
+	if r.SubDir == "" {
+		return nil
+	}
+
+	// "_site/v1.0.0" -> "_site"
+	//
+	// With the current restriction of SubDir not containing '/',
+	// this will always be OutDir,
+	// but we're defensively being explicit here for future-proofing.
+	siblingDir := filepath.Dir(filepath.Join(r.OutDir, r.SubDir))
+
+	entries, err := os.ReadDir(siblingDir)
+	if err != nil {
+		return err
+	}
+
+	idx := html.PackageIndex{Path: r.Home}
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == html.StaticDir {
+			continue
+		}
+
+		sub := html.Subpackage{RelativePath: entry.Name()}
+		idx.Subpackages = append(idx.Subpackages, sub)
+	}
+
+	f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
+	if err != nil {
+		return err
+	}
+	defer errdefer.Close(&err, f)
+
+	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *Generator) renderTrees(crumbs []html.Breadcrumb, trees []packageTree) ([]*renderedPackage, error) {
@@ -150,7 +209,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	r.DebugLog.Printf("Rendering directory %v", t.Path)
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+	dir := filepath.Join(r.OutDir, r.SubDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -161,8 +220,14 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 	}
 	defer errdefer.Close(&err, f)
 
+	var subdirDepth int
+	if r.SubDir != "" {
+		subdirDepth = 1 + strings.Count(r.SubDir, "/")
+	}
+
 	idx := html.PackageIndex{
 		Path:        t.Path,
+		SubDirDepth: subdirDepth,
 		NumChildren: len(t.Children),
 		Subpackages: htmlSubpackages(t.Path, subpkgs),
 		Breadcrumbs: crumbs,
@@ -197,7 +262,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 		return nil, fmt.Errorf("assemble: %w", err)
 	}
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+	dir := filepath.Join(r.OutDir, r.SubDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -207,6 +272,11 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 		return nil, err
 	}
 	defer errdefer.Close(&err, f)
+
+	var subdirDepth int
+	if r.SubDir != "" {
+		subdirDepth = 1 + strings.Count(r.SubDir, "/")
+	}
 
 	info := html.PackageInfo{
 		Package:     dpkg,
@@ -220,6 +290,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 				},
 			},
 		},
+		SubDirDepth: subdirDepth,
 	}
 	if err := r.Renderer.RenderPackage(f, &info); err != nil {
 		return nil, fmt.Errorf("render: %w", err)
