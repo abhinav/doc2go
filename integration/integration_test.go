@@ -98,13 +98,13 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 	})
 }
 
-// Verifies that multiple runs with different tags
+// Verifies that multiple runs with different -subdir
 // generate a shared root index page.
-func TestVersionIndex(t *testing.T) {
+func TestOutputSubdir(t *testing.T) {
 	t.Parallel()
 
-	outDir := generate(t, "-tag=v1.1.0", "./...")
-	generate(t, "-tag=v1.2.3", "-out="+outDir, "./...")
+	outDir := generate(t, "-subdir=v1.1.0", "./...")
+	generate(t, "-subdir=v1.2.3", "-out="+outDir, "./...")
 
 	// Verify that we hit /v1.1.0/ and /v1.2.3/
 	roots := make(map[string]struct{})

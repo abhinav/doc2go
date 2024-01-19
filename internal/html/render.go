@@ -194,9 +194,10 @@ type PackageInfo struct {
 	Subpackages []Subpackage
 	Breadcrumbs []Breadcrumb
 
+	SubDirDepth int
+
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter
-	Tag        bool
 }
 
 // Basename is the last component of this package's path.
@@ -226,7 +227,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
-		tag:                   info.Tag,
+		SubDirDepth:           info.SubDirDepth,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -237,7 +238,13 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 type PackageIndex struct {
 	// Path to this package index.
 	Path string
-	Tag  bool
+
+	// Number of levels under output directory
+	// that this package index is being generated for.
+	//
+	// 0 means it's being written to the output directory.
+	// 1 means it's being written to a subdirectory of the output directory.
+	SubDirDepth int
 
 	NumChildren int
 	Subpackages []Subpackage
@@ -284,7 +291,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 	render := render{
 		Home:                  r.Home,
 		Path:                  pidx.Path,
-		tag:                   pidx.Tag,
+		SubDirDepth:           pidx.SubDirDepth,
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
@@ -297,9 +304,9 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 type render struct {
 	Home string
 	Path string
-	tag  bool
 
-	Internal bool
+	SubDirDepth int
+	Internal    bool
 
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
@@ -335,7 +342,7 @@ func (r *render) relativePath(p string) string {
 
 func (r *render) static(p string) string {
 	elem := []string{r.Home}
-	if r.tag {
+	for i := 0; i < r.SubDirDepth; i++ {
 		elem = append(elem, "..")
 	}
 	elem = append(elem, StaticDir, p)

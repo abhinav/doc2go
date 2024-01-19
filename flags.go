@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	chroma "github.com/alecthomas/chroma/v2"
@@ -35,7 +36,7 @@ type params struct {
 
 	Basename  string
 	OutputDir string
-	TagDir    string
+	SubDir    string
 	Home      string
 
 	Embed        bool
@@ -71,7 +72,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
-	flag.StringVar(&p.TagDir, "tag", "", "")
+	flag.StringVar(&p.SubDir, "subdir", "", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
 	flag.StringVar(&p.Home, "home", "", "")
 
@@ -96,6 +97,15 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.StringVar(&p.Config, "config", "doc2go.rc", "")
 
 	return &p, flag
+}
+
+var _slashes = string(filepath.Separator)
+
+func init() {
+	if _slashes != "/" {
+		// On Windows, count both '/' and '\' as path separators.
+		_slashes += "/"
+	}
 }
 
 func (cmd *cliParser) Parse(args []string) (*params, error) {
@@ -159,6 +169,12 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	if printConfigKeys {
 		listConfigKeys(cmd.Stdout, flag, &cfgParser, 0)
 		return nil, errHelp
+	}
+
+	// If subdir is specified, it must not contain '/' or a path separator.
+	if p.SubDir != "" && strings.ContainsAny(p.SubDir, _slashes) {
+		fmt.Fprintf(cmd.Stderr, "subdir %q must not contain path separators\n", p.SubDir)
+		return nil, errInvalidArguments
 	}
 
 	p.Patterns = args
