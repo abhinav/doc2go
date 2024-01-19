@@ -109,29 +109,46 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 	if _, err := r.renderTrees(nil, trees); err != nil {
 		return err
 	}
-	if r.TagDir != "" {
-		entries, err := os.ReadDir(r.OutDir)
-		if err != nil {
-			return err
-		}
-		idx := html.PackageIndex{Path: r.Home}
-		for _, entry := range entries {
-			if entry.IsDir() {
-				if name := entry.Name(); name != html.StaticDir {
-					sub := html.Subpackage{RelativePath: name}
-					idx.Subpackages = append(idx.Subpackages, sub)
-				}
-			}
-		}
-		f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
-			return err
-		}
+
+	if err := r.generateVersionIndex(); err != nil {
+		return fmt.Errorf("generate version index: %w", err)
 	}
+
+	return nil
+}
+
+// If a -tag is specified, generate an index listing for other versions
+// listed in the output directory.
+func (r *Generator) generateVersionIndex() (err error) {
+	if r.TagDir == "" {
+		return nil
+	}
+
+	entries, err := os.ReadDir(r.OutDir)
+	if err != nil {
+		return err
+	}
+
+	idx := html.PackageIndex{Path: r.Home}
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == html.StaticDir {
+			continue
+		}
+
+		sub := html.Subpackage{RelativePath: entry.Name()}
+		idx.Subpackages = append(idx.Subpackages, sub)
+	}
+
+	f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
+	if err != nil {
+		return err
+	}
+	defer errdefer.Close(&err, f)
+
+	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
