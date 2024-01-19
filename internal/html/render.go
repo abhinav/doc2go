@@ -20,6 +20,8 @@ import (
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
+// StaticDir is the name of the directory in the output
+// where static files are stored.
 const StaticDir = "_"
 
 var (
