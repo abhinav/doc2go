@@ -1,0 +1,3 @@
+kind: Added
+body: Initial support for versioned documentation with -subdir. Thanks to @3052.
+time: 2024-01-19T15:57:52.811371-05:00
