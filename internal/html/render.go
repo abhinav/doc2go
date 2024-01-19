@@ -20,7 +20,7 @@ import (
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
-const _staticDir = "_"
+const StaticDir = "_"
 
 var (
 	//go:embed tmpl/*.html
@@ -96,7 +96,7 @@ func (r *Renderer) WriteStatic(dir string) error {
 		return nil
 	}
 
-	dir = filepath.Join(dir, _staticDir)
+	dir = filepath.Join(dir, StaticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {
 		return err
@@ -194,6 +194,7 @@ type PackageInfo struct {
 
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter
+	Tag        bool
 }
 
 // Basename is the last component of this package's path.
@@ -223,6 +224,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
+		tag:                   info.Tag,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -233,6 +235,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 type PackageIndex struct {
 	// Path to this package index.
 	Path string
+	Tag  bool
 
 	NumChildren int
 	Subpackages []Subpackage
@@ -279,6 +282,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 	render := render{
 		Home:                  r.Home,
 		Path:                  pidx.Path,
+		tag:                   pidx.Tag,
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
@@ -291,6 +295,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 type render struct {
 	Home string
 	Path string
+	tag  bool
 
 	Internal bool
 
@@ -327,7 +332,12 @@ func (r *render) relativePath(p string) string {
 }
 
 func (r *render) static(p string) string {
-	return r.relativePath(path.Join(r.Home, _staticDir, p))
+	elem := []string{r.Home}
+	if r.tag {
+		elem = append(elem, "..")
+	}
+	elem = append(elem, StaticDir, p)
+	return r.relativePath(path.Join(elem...))
 }
 
 func (r *render) code(code *highlight.Code) template.HTML {

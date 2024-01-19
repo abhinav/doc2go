@@ -35,6 +35,7 @@ type params struct {
 
 	Basename  string
 	OutputDir string
+	TagDir    string
 	Home      string
 
 	Embed        bool
@@ -70,6 +71,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
+	flag.StringVar(&p.TagDir, "tag", "", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
 	flag.StringVar(&p.Home, "home", "", "")
 

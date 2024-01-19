@@ -68,6 +68,7 @@ type Generator struct {
 	// OutDir is the destination directory.
 	// It will be created it if it doesn't exist.
 	OutDir string
+	TagDir string
 
 	// Basename of generated files.
 	//
@@ -105,8 +106,33 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		trees = filterTrees(r.Home, trees)
 	}
 
-	_, err := r.renderTrees(nil, trees)
-	return err
+	if _, err := r.renderTrees(nil, trees); err != nil {
+		return err
+	}
+	if r.TagDir != "" {
+		entries, err := os.ReadDir(r.OutDir)
+		if err != nil {
+			return err
+		}
+		idx := html.PackageIndex{Path: r.Home}
+		for _, entry := range entries {
+			switch name := entry.Name(); name {
+			case html.StaticDir, r.Basename:
+			default:
+				sub := html.Subpackage{RelativePath: name}
+				idx.Subpackages = append(idx.Subpackages, sub)
+			}
+		}
+		f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *Generator) renderTrees(crumbs []html.Breadcrumb, trees []packageTree) ([]*renderedPackage, error) {
@@ -150,7 +176,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	r.DebugLog.Printf("Rendering directory %v", t.Path)
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+	dir := filepath.Join(r.OutDir, r.TagDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -163,6 +189,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 
 	idx := html.PackageIndex{
 		Path:        t.Path,
+		Tag:         r.TagDir != "",
 		NumChildren: len(t.Children),
 		Subpackages: htmlSubpackages(t.Path, subpkgs),
 		Breadcrumbs: crumbs,
@@ -197,7 +224,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 		return nil, fmt.Errorf("assemble: %w", err)
 	}
 
-	dir := filepath.Join(r.OutDir, relative.Path(r.Home, t.Path))
+	dir := filepath.Join(r.OutDir, r.TagDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
 		return nil, err
 	}
@@ -220,6 +247,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 				},
 			},
 		},
+		Tag: r.TagDir != "",
 	}
 	if err := r.Renderer.RenderPackage(f, &info); err != nil {
 		return nil, fmt.Errorf("render: %w", err)

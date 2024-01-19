@@ -191,6 +191,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			NormalizeRelativePath: opts.RelLinkStyle.Normalize,
 		},
 		OutDir:    opts.OutputDir,
+		TagDir:    opts.TagDir,
 		Basename:  opts.Basename,
 		DocLinker: &linker,
 	}
