@@ -116,11 +116,11 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 		}
 		idx := html.PackageIndex{Path: r.Home}
 		for _, entry := range entries {
-			switch name := entry.Name(); name {
-			case html.StaticDir, r.Basename:
-			default:
-				sub := html.Subpackage{RelativePath: name}
-				idx.Subpackages = append(idx.Subpackages, sub)
+			if entry.IsDir() {
+				if name := entry.Name(); name != html.StaticDir {
+					sub := html.Subpackage{RelativePath: name}
+					idx.Subpackages = append(idx.Subpackages, sub)
+				}
 			}
 		}
 		f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
