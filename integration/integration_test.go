@@ -98,8 +98,51 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 	})
 }
 
+// Verifies that multiple runs with different tags
+// generate a shared root index page.
+func TestVersionIndex(t *testing.T) {
+	t.Parallel()
+
+	outDir := generate(t, "-tag=v1.1.0", "./...")
+	generate(t, "-tag=v1.2.3", "-out="+outDir, "./...")
+
+	// Verify that we hit /v1.1.0/ and /v1.2.3/
+	roots := make(map[string]struct{})
+	visitLocalURLs(t, outDir, func(local localURL) bool {
+		if local.Kind != localPage {
+			return false
+		}
+
+		path := strings.TrimPrefix(local.URL.Path, "/")
+		if root, _, ok := strings.Cut(path, "/"); ok {
+			roots[root] = struct{}{}
+		}
+		return true
+	})
+
+	assert.Equal(t, map[string]struct{}{
+		"v1.1.0": {},
+		"v1.2.3": {},
+	}, roots)
+}
+
 func generate(t *testing.T, args ...string) (outDir string) {
-	outDir = t.TempDir()
+	for i, arg := range args {
+		if v, ok := strings.CutPrefix(arg, "-out="); ok {
+			outDir = v
+			break
+		}
+
+		if arg == "-out" && i+1 < len(args) {
+			outDir = args[i+1]
+			break
+		}
+	}
+
+	if outDir == "" {
+		outDir = t.TempDir()
+	}
+
 	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
 
 	output := iotest.Writer(t)
