@@ -366,13 +366,22 @@ func (r *render) filterSubpackages(pkgs []Subpackage) []Subpackage {
 		return pkgs
 	}
 
+	internal := func(s string) bool {
+		switch {
+		case s == "internal":
+			return true
+		case strings.HasPrefix(s, "internal/"):
+			return true
+		case strings.Contains(s, "/internal/"):
+			return true
+		}
+		return false
+	}
 	filtered := make([]Subpackage, 0, len(pkgs))
 	for _, pkg := range pkgs {
-		relPath := pkg.RelativePath
-		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
-			continue
+		if !internal(pkg.RelativePath) {
+			filtered = append(filtered, pkg)
 		}
-		filtered = append(filtered, pkg)
 	}
 	return filtered
 }
