@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix some internal packages still being listed without -internal. Thanks to @3052.
-time: 2024-01-19T23:15:36.036143-05:00
