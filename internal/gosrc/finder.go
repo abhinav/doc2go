@@ -92,6 +92,11 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 
 	infos := make([]*PackageRef, 0, len(pkgs))
 	for _, pkg := range pkgs {
+		if strings.HasPrefix(pkg.PkgPath, "vendor/") {
+			f.Log.Printf("[%v] Skipping.", pkg.PkgPath)
+			continue
+		}
+
 		var pkgFailed bool
 		for _, err := range pkg.Errors {
 			pkgFailed = true
