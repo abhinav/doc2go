@@ -366,24 +366,20 @@ func (r *render) filterSubpackages(pkgs []Subpackage) []Subpackage {
 		return pkgs
 	}
 
-	internal := func(s string) bool {
-		switch {
-		case s == "internal":
-			return true
-		case strings.HasPrefix(s, "internal/"):
-			return true
-		case strings.Contains(s, "/internal/"):
-			return true
-		}
-		return false
-	}
 	filtered := make([]Subpackage, 0, len(pkgs))
 	for _, pkg := range pkgs {
-		if !internal(pkg.RelativePath) {
+		if !isInternal(pkg.RelativePath) {
 			filtered = append(filtered, pkg)
 		}
 	}
 	return filtered
+}
+
+func isInternal(relpath string) bool {
+	return relpath == "internal" ||
+		strings.HasPrefix(relpath, "internal/") ||
+		strings.HasSuffix(relpath, "/internal") ||
+		strings.Contains(relpath, "/internal/")
 }
 
 // dict turns key-value pairs into a map.
