@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -73,6 +74,19 @@ func TestLinksAreValid(t *testing.T) {
 	}
 }
 
+// https://github.com/abhinav/doc2go/issues/176
+func TestNoInternalPackagesListed(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t, "-internal=false", "go/...")
+	// index.html should not contain "go/internal/*".
+	index := filepath.Join(dir, "index.html")
+	b, err := os.ReadFile(index)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(b), "go/internal/")
+}
+
 // Verifies that with -rel-link-style=directory,
 // all relative links in generated HTML
 // have a '/' suffix.
@@ -127,15 +141,20 @@ func TestOutputSubdir(t *testing.T) {
 }
 
 func generate(t *testing.T, args ...string) (outDir string) {
+	// Unless -internal=false is specified, we'll always add -internal.
+	var noInternal bool
 	for i, arg := range args {
 		if v, ok := strings.CutPrefix(arg, "-out="); ok {
 			outDir = v
-			break
+			continue
 		}
-
 		if arg == "-out" && i+1 < len(args) {
 			outDir = args[i+1]
-			break
+			continue
+		}
+		if arg == "-internal=false" {
+			noInternal = true
+			continue
 		}
 	}
 
@@ -143,10 +162,13 @@ func generate(t *testing.T, args ...string) (outDir string) {
 		outDir = t.TempDir()
 	}
 
-	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
+	extraArgs := []string{"-out=" + outDir, "-debug"}
+	if !noInternal {
+		extraArgs = append(extraArgs, "-internal")
+	}
 
 	output := iotest.Writer(t)
-	cmd := exec.Command(*_doc2go, args...)
+	cmd := exec.Command(*_doc2go, append(extraArgs, args...)...)
 	cmd.Stdout = output
 	cmd.Stderr = output
 	cmd.Dir = *_rundir
