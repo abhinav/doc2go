@@ -50,6 +50,33 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 			},
 		},
 		{
+			desc: "skip vendor packages",
+			path: "example.com/foo",
+			files: map[string]any{
+				"foo.go":            "package foo",
+				"vendor/bar/baz.go": "package bar",
+				"bar/baz.go":        "package bar",
+			},
+			want: func(exported *packagestest.Exported) []*PackageRef {
+				return []*PackageRef{
+					{
+						Name:       "foo",
+						ImportPath: "example.com/foo",
+						Files: []string{
+							exported.File("example.com/foo", "foo.go"),
+						},
+					},
+					{
+						Name:       "bar",
+						ImportPath: "example.com/foo/bar",
+						Files: []string{
+							exported.File("example.com/foo", "bar/baz.go"),
+						},
+					},
+				}
+			},
+		},
+		{
 			desc: "build tagged file",
 			path: "example.com/bar",
 			tags: []string{"mytag"},
