@@ -1,5 +1,7 @@
 # doc2go
 
+![doc2go logo](docs/static/logo.png)
+
 [![CI](https://github.com/abhinav/doc2go/actions/workflows/ci.yml/badge.svg)](https://github.com/abhinav/doc2go/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/abhinav/doc2go/branch/main/graph/badge.svg?token=CD4YAVNVJF)](https://codecov.io/gh/abhinav/doc2go)
 

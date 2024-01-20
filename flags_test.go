@@ -161,6 +161,16 @@ func TestCLIParser(t *testing.T) {
 			},
 		},
 		{
+			desc: "subdir",
+			give: []string{"-subdir", "v1.0.0", "./..."},
+			want: params{
+				Config:    "doc2go.rc",
+				SubDir:    "v1.0.0",
+				Patterns:  []string{"./..."},
+				OutputDir: "_site",
+			},
+		},
+		{
 			desc: "list themes",
 			give: []string{"-highlight-list-themes"},
 			want: params{
@@ -318,6 +328,11 @@ func TestCLIParser_Errors(t *testing.T) {
 			desc: "bad highlight mode",
 			give: []string{"-highlight", "foo:bar"},
 			want: `unrecognized highlight mode "foo"`,
+		},
+		{
+			desc: "subdir with /",
+			give: []string{"-subdir", "foo/bar", "./..."},
+			want: "must not contain path separators",
 		},
 	}
 

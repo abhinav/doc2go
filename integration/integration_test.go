@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -73,6 +74,19 @@ func TestLinksAreValid(t *testing.T) {
 	}
 }
 
+// https://github.com/abhinav/doc2go/issues/176
+func TestNoInternalPackagesListed(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t, "-internal=false", "go/...")
+	// index.html should not contain "go/internal/*".
+	index := filepath.Join(dir, "index.html")
+	b, err := os.ReadFile(index)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(b), "go/internal/")
+}
+
 // Verifies that with -rel-link-style=directory,
 // all relative links in generated HTML
 // have a '/' suffix.
@@ -98,12 +112,63 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 	})
 }
 
+// Verifies that multiple runs with different -subdir
+// generate a shared root index page.
+func TestOutputSubdir(t *testing.T) {
+	t.Parallel()
+
+	outDir := generate(t, "-subdir=v1.1.0", "./...")
+	generate(t, "-subdir=v1.2.3", "-out="+outDir, "./...")
+
+	// Verify that we hit /v1.1.0/ and /v1.2.3/
+	roots := make(map[string]struct{})
+	visitLocalURLs(t, outDir, func(local localURL) bool {
+		if local.Kind != localPage {
+			return false
+		}
+
+		path := strings.TrimPrefix(local.URL.Path, "/")
+		if root, _, ok := strings.Cut(path, "/"); ok {
+			roots[root] = struct{}{}
+		}
+		return true
+	})
+
+	assert.Equal(t, map[string]struct{}{
+		"v1.1.0": {},
+		"v1.2.3": {},
+	}, roots)
+}
+
 func generate(t *testing.T, args ...string) (outDir string) {
-	outDir = t.TempDir()
-	args = append([]string{"-out=" + outDir, "-internal", "-debug"}, args...)
+	// Unless -internal=false is specified, we'll always add -internal.
+	var noInternal bool
+	for i, arg := range args {
+		if v, ok := strings.CutPrefix(arg, "-out="); ok {
+			outDir = v
+			continue
+		}
+		if arg == "-out" && i+1 < len(args) {
+			outDir = args[i+1]
+			continue
+		}
+		if arg == "-internal=false" {
+			noInternal = true
+			continue
+		}
+	}
+
+	if outDir == "" {
+		outDir = t.TempDir()
+	}
+
+	extraArgs := []string{"-out=" + outDir, "-debug"}
+	if !noInternal {
+		extraArgs = append(extraArgs, "-internal")
+	}
 
 	output := iotest.Writer(t)
-	cmd := exec.Command(*_doc2go, args...)
+	cmd := exec.Command(*_doc2go, append(extraArgs, args...)...)
 	cmd.Stdout = output
 	cmd.Stderr = output
 	cmd.Dir = *_rundir

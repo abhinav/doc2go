@@ -12,6 +12,10 @@ OPTIONS
 	base name of generated files. Defaults to index.html.
   -out DIR
 	write files to DIR. Defaults to _site.
+  -subdir NAME
+	generate output to DIR/NAME instead of DIR.
+	An index of siblings of NAME will be generated in DIR.
+	Use for generating versioned documentation.
   -home PATH
 	import path for the home page of the documentation.
 	Packages that aren't descendants of this path will be omitted.

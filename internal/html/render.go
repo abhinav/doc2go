@@ -20,7 +20,9 @@ import (
 	"go.abhg.dev/doc2go/internal/relative"
 )
 
-const _staticDir = "_"
+// StaticDir is the name of the directory in the output
+// where static files are stored.
+const StaticDir = "_"
 
 var (
 	//go:embed tmpl/*.html
@@ -96,7 +98,7 @@ func (r *Renderer) WriteStatic(dir string) error {
 		return nil
 	}
 
-	dir = filepath.Join(dir, _staticDir)
+	dir = filepath.Join(dir, StaticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {
 		return err
@@ -192,6 +194,8 @@ type PackageInfo struct {
 	Subpackages []Subpackage
 	Breadcrumbs []Breadcrumb
 
+	SubDirDepth int
+
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter
 }
@@ -223,6 +227,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
+		SubDirDepth:           info.SubDirDepth,
 	}
 	return template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
@@ -233,6 +238,13 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 type PackageIndex struct {
 	// Path to this package index.
 	Path string
+
+	// Number of levels under output directory
+	// that this package index is being generated for.
+	//
+	// 0 means it's being written to the output directory.
+	// 1 means it's being written to a subdirectory of the output directory.
+	SubDirDepth int
 
 	NumChildren int
 	Subpackages []Subpackage
@@ -279,6 +291,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 	render := render{
 		Home:                  r.Home,
 		Path:                  pidx.Path,
+		SubDirDepth:           pidx.SubDirDepth,
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
@@ -292,7 +305,8 @@ type render struct {
 	Home string
 	Path string
 
-	Internal bool
+	SubDirDepth int
+	Internal    bool
 
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
@@ -327,7 +341,12 @@ func (r *render) relativePath(p string) string {
 }
 
 func (r *render) static(p string) string {
-	return r.relativePath(path.Join(r.Home, _staticDir, p))
+	elem := []string{r.Home}
+	for i := 0; i < r.SubDirDepth; i++ {
+		elem = append(elem, "..")
+	}
+	elem = append(elem, StaticDir, p)
+	return r.relativePath(path.Join(elem...))
 }
 
 func (r *render) code(code *highlight.Code) template.HTML {
@@ -349,13 +368,18 @@ func (r *render) filterSubpackages(pkgs []Subpackage) []Subpackage {
 
 	filtered := make([]Subpackage, 0, len(pkgs))
 	for _, pkg := range pkgs {
-		relPath := pkg.RelativePath
-		if relPath == "internal" || strings.HasPrefix(relPath, "internal/") {
-			continue
+		if !isInternal(pkg.RelativePath) {
+			filtered = append(filtered, pkg)
 		}
-		filtered = append(filtered, pkg)
 	}
 	return filtered
+}
+
+func isInternal(relpath string) bool {
+	return relpath == "internal" ||
+		strings.HasPrefix(relpath, "internal/") ||
+		strings.HasSuffix(relpath, "/internal") ||
+		strings.Contains(relpath, "/internal/")
 }
 
 // dict turns key-value pairs into a map.

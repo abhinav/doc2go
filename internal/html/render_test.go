@@ -891,6 +891,27 @@ func TestDictErrors(t *testing.T) {
 	})
 }
 
+func TestIsInternal(t *testing.T) {
+	tests := []struct {
+		give string
+		want bool
+	}{
+		{"internal", true},
+		{"internal/foo", true},
+		{"foo/internal", true},
+		{"foo/internal/bar", true},
+		{"internalfoo", false},
+		{"foo/internalfoo", false},
+		{"internalfoo/bar", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			assert.Equal(t, tt.want, isInternal(tt.give))
+		})
+	}
+}
+
 func querySelector(n *html.Node, query string) *html.Node {
 	return cascadia.Query(n, cascadia.MustCompile(query))
 }
