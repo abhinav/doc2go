@@ -745,6 +745,29 @@ func TestNavbarRightLinks(t *testing.T) {
 		)
 	})
 
+	t.Run("package with home", func(t *testing.T) {
+		t.Parallel()
+
+		pinfo := PackageInfo{
+			Package: &godoc.Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo/bar/baz",
+			},
+			DocPrinter:  new(CommentDocPrinter),
+			Breadcrumbs: crumbs,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Home:        "example.com/foo/bar",
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
+		assertLinks(t, buff.Bytes(),
+			link{"..", "Root"},
+			link{"#pkg-index", "Index"},
+		)
+	})
+
 	t.Run("directory", func(t *testing.T) {
 		t.Parallel()
 
@@ -774,7 +797,25 @@ func TestNavbarRightLinks(t *testing.T) {
 			Highlighter: _fakeHighlighter,
 		}).RenderPackageIndex(&buff, &pidx))
 		assertLinks(t, buff.Bytes(),
-			link{"../../../../../../", "Root"},
+			link{"../../../../../..", "Root"},
+		)
+	})
+
+	t.Run("subdir with home", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+			SubDirDepth: 2,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Home:        "example.com/foo/bar",
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../..", "Root"},
 		)
 	})
 }
