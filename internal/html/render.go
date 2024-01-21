@@ -323,9 +323,9 @@ func (r *render) FuncMap() template.FuncMap {
 		"relativePath": r.relativePath,
 		"relativeRootPath": func() string {
 			// "" is root unless we're in a subdirectory
-			var root string
+			root := r.Home
 			if r.SubDirDepth > 0 {
-				root = strings.Repeat("../", r.SubDirDepth)
+				root = path.Join(root, strings.Repeat("../", r.SubDirDepth))
 			}
 			return r.relativePath(root)
 		},

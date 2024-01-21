@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/container/ring"
 	"go.abhg.dev/doc2go/internal/iotest"
+	"go.abhg.dev/doc2go/internal/pathx"
 	"golang.org/x/net/html"
 )
 
@@ -62,6 +63,14 @@ func TestLinksAreValid(t *testing.T) {
 			name: "rel-link-style=directory",
 			args: []string{"-rel-link-style=directory", "./..."},
 		},
+		{
+			name: "home with subdir",
+			args: []string{
+				"-home", "go.abhg.dev/doc2go",
+				"-subdir", "v1.2.3",
+				"./...",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -69,7 +78,57 @@ func TestLinksAreValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			visitLocalURLs(t, generate(t, tt.args...), nil)
+			dir := generate(t, tt.args...)
+			visitLocalURLs(t, dir, nil)
+		})
+	}
+}
+
+func TestDocumentationIsRelocatable(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "self", args: []string{"./..."}},
+		{name: "parent home", args: []string{"-home=go.abhg.dev", "./..."}},
+		{
+			name: "home with subdir",
+			args: []string{
+				"-home", "go.abhg.dev/doc2go",
+				"-subdir", "v1.2.3",
+				"./...",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Put the documentation in a subdirectory of an HTTP server.
+			// None of the links should hit the server root.
+			root := t.TempDir()
+
+			dir := filepath.Join(root, "api")
+			args := append([]string{"-out=" + dir}, tt.args...)
+			generate(t, args...)
+
+			visitLocalURLs(t, root, &visitOptions{
+				StartPage: "/api/",
+				ShouldVisit: func(local localURL) bool {
+					if local.Kind != localPage {
+						return false
+					}
+
+					// All pages must have a "/api/" prefix.
+					return assert.True(t,
+						pathx.Descends("/api/", local.URL.Path),
+						"link %v breaks out of /api/", local.URL)
+				},
+			})
 		})
 	}
 }
@@ -94,7 +153,7 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 	t.Parallel()
 
 	root := generate(t, "-rel-link-style=directory", "./...")
-	visitLocalURLs(t, root, func(local localURL) bool {
+	visitLocalURLs(t, root, &visitOptions{ShouldVisit: func(local localURL) bool {
 		if local.Kind != localPage {
 			return false
 		}
@@ -109,7 +168,7 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 		return assert.True(t,
 			strings.HasSuffix(u.Path, "/"),
 			"%v: path for relative link does not end with '/': %v", local.From, href)
-	})
+	}})
 }
 
 // Verifies that multiple runs with different -subdir
@@ -122,7 +181,7 @@ func TestOutputSubdir(t *testing.T) {
 
 	// Verify that we hit /v1.1.0/ and /v1.2.3/
 	roots := make(map[string]struct{})
-	visitLocalURLs(t, outDir, func(local localURL) bool {
+	visitLocalURLs(t, outDir, &visitOptions{ShouldVisit: func(local localURL) bool {
 		if local.Kind != localPage {
 			return false
 		}
@@ -132,7 +191,7 @@ func TestOutputSubdir(t *testing.T) {
 			roots[root] = struct{}{}
 		}
 		return true
-	})
+	}})
 
 	assert.Equal(t, map[string]struct{}{
 		"v1.1.0": {},
@@ -199,15 +258,28 @@ type localURL struct {
 	URL *url.URL
 }
 
+type visitOptions struct {
+	// Called before each URL is visited.
+	// If it returns false, the URL and its children are skipped.
+	ShouldVisit func(localURL) bool
+
+	StartPage string // defaults to "/"
+}
+
 // visitLocalURLs visits all local URLs in the given directory.
 // It does so by spinning up a local HTTP server
 // and visiting every page.
 //
 // 'visit' is called before each URL is visited.
-// If it returns false, the URL and its children are skipped.
-func visitLocalURLs(t *testing.T, root string, visit func(localURL) bool) {
-	if visit == nil {
-		visit = func(localURL) bool { return true }
+func visitLocalURLs(t *testing.T, root string, opts *visitOptions) {
+	if opts == nil {
+		opts = new(visitOptions)
+	}
+	if opts.ShouldVisit == nil {
+		opts.ShouldVisit = func(localURL) bool { return true }
+	}
+	if opts.StartPage == "" {
+		opts.StartPage = "/"
 	}
 
 	srv := httptest.NewServer(http.FileServer(http.FS(os.DirFS(root))))
@@ -215,12 +287,13 @@ func visitLocalURLs(t *testing.T, root string, visit func(localURL) bool) {
 
 	u, err := url.Parse(srv.URL)
 	require.NoError(t, err)
+	u = u.JoinPath(opts.StartPage)
 
 	(&urlWalker{
 		t:           t,
 		seen:        make(map[string]struct{}),
 		client:      http.DefaultClient,
-		shouldVisit: visit,
+		shouldVisit: opts.ShouldVisit,
 	}).Walk(u.String())
 }
 
