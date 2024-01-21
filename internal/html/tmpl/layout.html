@@ -23,7 +23,10 @@
             {{ $crumb.Text -}}
           {{ end -}}
         {{ end -}}
-        <a href="#pkg-index">Index</a>
+        <span class="navbar-right">
+          <a href="{{ relativeRootPath }}">Root</a>
+          {{- block "NavbarExtra" $ }}{{ end }}
+        </span>
       </nav>
     {{- end -}}
     <main>{{ template "Body" $ -}}</main>

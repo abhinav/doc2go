@@ -317,10 +317,18 @@ type render struct {
 
 func (r *render) FuncMap() template.FuncMap {
 	return template.FuncMap{
-		"doc":               r.doc,
-		"code":              r.code,
-		"static":            r.static,
-		"relativePath":      r.relativePath,
+		"doc":          r.doc,
+		"code":         r.code,
+		"static":       r.static,
+		"relativePath": r.relativePath,
+		"relativeRootPath": func() string {
+			// "" is root unless we're in a subdirectory
+			var root string
+			if r.SubDirDepth > 0 {
+				root = strings.Repeat("../", r.SubDirDepth)
+			}
+			return r.relativePath(root)
+		},
 		"filterSubpackages": r.filterSubpackages,
 		"dict":              dict,
 		"normalizeRelativePath": func(p string) string {

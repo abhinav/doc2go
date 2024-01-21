@@ -1,0 +1,5 @@
+kind: Added
+body: |-
+  Standalone: Add a "Root" link to the navbar, going to the top-level page.
+  With `-subdir`, this will be the sub-directory listing.
+time: 2024-01-21T15:28:08.567401-05:00

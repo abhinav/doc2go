@@ -4,6 +4,8 @@
 </title>
 {{ end -}}
 
+{{ define "NavbarExtra" }} | <a href="#pkg-index">Index</a>{{ end -}}
+
 {{ define "Body" -}}
 <h2 id="pkg-overview">
   {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}

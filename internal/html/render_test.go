@@ -641,7 +641,6 @@ func TestRenderBreadcrumbs(t *testing.T) {
 		{"../../..", "example.com"},
 		{"../..", "foo"},
 		{"..", "bar"},
-		{"#pkg-index", "Index"},
 	}
 
 	assertCrumbs := func(t *testing.T, output []byte) {
@@ -694,6 +693,89 @@ func TestRenderBreadcrumbs(t *testing.T) {
 			Highlighter: _fakeHighlighter,
 		}).RenderPackageIndex(&buff, &pidx))
 		assertCrumbs(t, buff.Bytes())
+	})
+}
+
+func TestNavbarRightLinks(t *testing.T) {
+	crumbs := []Breadcrumb{
+		{Text: "example.com", Path: "example.com"},
+		{Text: "foo", Path: "example.com/foo"},
+		{Text: "bar", Path: "example.com/foo/bar"},
+	}
+
+	type link struct {
+		href string
+		body string
+	}
+
+	assertLinks := func(t *testing.T, output []byte, wantLinks ...link) {
+		doc, err := html.Parse(bytes.NewReader(output))
+		require.NoError(t, err, "invalid HTML:\n%s", output)
+
+		var got []link
+		for _, a := range querySelectorAll(doc, "nav .navbar-right > a") {
+			got = append(got, link{
+				href: attr(a, "href"),
+				body: text(a),
+			})
+		}
+
+		assert.Equal(t, wantLinks, got)
+	}
+
+	t.Run("package", func(t *testing.T) {
+		t.Parallel()
+
+		pinfo := PackageInfo{
+			Package: &godoc.Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo/bar/baz",
+			},
+			DocPrinter:  new(CommentDocPrinter),
+			Breadcrumbs: crumbs,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../..", "Root"},
+			link{"#pkg-index", "Index"},
+		)
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../..", "Root"},
+		)
+	})
+
+	t.Run("subdir", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+			SubDirDepth: 2,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../../../../", "Root"},
+		)
 	})
 }
 
