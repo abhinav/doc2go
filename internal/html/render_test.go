@@ -641,6 +641,7 @@ func TestRenderBreadcrumbs(t *testing.T) {
 		{"../../..", "example.com"},
 		{"../..", "foo"},
 		{"..", "bar"},
+		{"#pkg-index", "Index"},
 	}
 
 	assertCrumbs := func(t *testing.T, output []byte) {
