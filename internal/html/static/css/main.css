@@ -35,7 +35,7 @@ nav {
   border-radius: 0.5em;
   display: flex;
 }
-[href="#pkg-index"] {
+nav a[href="#pkg-index"] {
   margin-left: auto;
 }
 
