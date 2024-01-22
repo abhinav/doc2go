@@ -75,7 +75,8 @@ type Generator struct {
 	// and OutDir will get an index of siblings of SubDir.
 	//
 	// SubDir MUST NOT contain '/'.
-	SubDir string
+	SubDir     string
+	PkgVersion string
 
 	// Basename of generated files.
 	//
@@ -291,6 +292,7 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 			},
 		},
 		SubDirDepth: subdirDepth,
+		PkgVersion:  r.PkgVersion,
 	}
 	if err := r.Renderer.RenderPackage(f, &info); err != nil {
 		return nil, fmt.Errorf("render: %w", err)

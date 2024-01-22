@@ -16,6 +16,8 @@ OPTIONS
 	generate output to DIR/NAME instead of DIR.
 	An index of siblings of NAME will be generated in DIR.
 	Use for generating versioned documentation.
+  -pkg-version
+	inject package version into HTML
   -home PATH
 	import path for the home page of the documentation.
 	Packages that aren't descendants of this path will be omitted.

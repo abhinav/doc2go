@@ -13,22 +13,23 @@
     {{ template "Head" $ -}}
   </head>
   <body>
-    {{ with .Breadcrumbs -}}
-      <nav>
-        {{ range $idx, $crumb := . -}}
-          {{ if gt $idx 0 }}/{{ end -}}
-          {{ with (relativePath .Path) -}}
-            <a href="{{ . }}">{{ $crumb.Text }}</a>
-          {{- else -}}
-            {{ $crumb.Text -}}
-          {{ end -}}
-        {{ end -}}
-        <span class="navbar-right">
-          <a href="{{ relativeRootPath }}">Root</a>
-          {{- block "NavbarExtra" $ }}{{ end }}
-        </span>
-      </nav>
-    {{- end -}}
+{{ if .Breadcrumbs -}}
+  <nav>
+  {{ range $idx, $crumb := .Breadcrumbs -}}
+    {{ if gt $idx 0 }}/{{ end -}}
+    {{ with (relativePath .Path) -}}
+    <a href="{{ . }}">{{ $crumb.Text }}</a>
+    {{- else -}}
+      {{ $crumb.Text -}}
+    {{ end -}}
+  {{ end -}}
+    <span class="navbar-right">
+  {{ block "PkgVersion" . }}{{ end -}}
+      <a href="{{ relativeRootPath }}">Root</a>
+  {{- block "NavbarExtra" $ }}{{ end -}}
+    </span>
+  </nav>
+{{ end -}}
     <main>{{ template "Body" $ -}}</main>
     <hr>
     <footer>
