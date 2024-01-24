@@ -195,6 +195,7 @@ type PackageInfo struct {
 	Breadcrumbs []Breadcrumb
 
 	SubDirDepth int
+	PkgVersion  string
 
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter

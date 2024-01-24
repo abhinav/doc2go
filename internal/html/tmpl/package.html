@@ -4,6 +4,7 @@
 </title>
 {{ end -}}
 
+{{ define "PkgVersion" }}{{ with .PkgVersion }}{{ . }} | {{ end }}{{ end }}
 {{ define "NavbarExtra" }} | <a href="#pkg-index">Index</a>{{ end -}}
 
 {{ define "Body" -}}

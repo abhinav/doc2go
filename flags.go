@@ -34,10 +34,11 @@ type params struct {
 	Debug  flagvalue.FileSwitch
 	Config string
 
-	Basename  string
-	OutputDir string
-	SubDir    string
-	Home      string
+	Basename   string
+	OutputDir  string
+	SubDir     string
+	PkgVersion string
+	Home       string
 
 	Embed        bool
 	Internal     bool
@@ -73,6 +74,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
 	flag.StringVar(&p.SubDir, "subdir", "", "")
+	flag.StringVar(&p.PkgVersion, "pkg-version", "", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
 	flag.StringVar(&p.Home, "home", "", "")
 

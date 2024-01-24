@@ -190,10 +190,11 @@ func (cmd *mainCmd) run(opts *params) error {
 			Highlighter:           &highlighter,
 			NormalizeRelativePath: opts.RelLinkStyle.Normalize,
 		},
-		OutDir:    opts.OutputDir,
-		SubDir:    opts.SubDir,
-		Basename:  opts.Basename,
-		DocLinker: &linker,
+		OutDir:     opts.OutputDir,
+		SubDir:     opts.SubDir,
+		PkgVersion: opts.PkgVersion,
+		Basename:   opts.Basename,
+		DocLinker:  &linker,
 	}
 
 	return g.Generate(pkgRefs)

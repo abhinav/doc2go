@@ -24,11 +24,12 @@
           {{ end -}}
         {{ end -}}
         <span class="navbar-right">
+          {{ block "PkgVersion" $ }}{{ end -}}
           <a href="{{ relativeRootPath }}">Root</a>
-          {{- block "NavbarExtra" $ }}{{ end }}
+          {{- block "NavbarExtra" $ }}{{ end -}}
         </span>
       </nav>
-    {{- end -}}
+    {{ end -}}
     <main>{{ template "Body" $ -}}</main>
     <hr>
     <footer>
