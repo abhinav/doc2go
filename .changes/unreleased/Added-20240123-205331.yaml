@@ -1,0 +1,4 @@
+kind: Added
+body: Add -pkg-version flag to include a version number on pages in the standalone
+  website.
+time: 2024-01-23T20:53:31.478847-08:00
