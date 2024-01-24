@@ -8,5 +8,7 @@ home
 internal
 out
 pkg-doc
+pkg-version
 rel-link-style
+subdir
 tags
