@@ -44,7 +44,7 @@ or embed your documentation inside another static website
 
 Usage can be as simple as:
 
-<pre class="bg-light p-1 rounded"><code>mkdir www
+<pre class="bg-dark p-2 rounded"><code>mkdir www
 doc2go -out www/ ./...</code></pre>
 
 <a class="btn btn-dark" href="{{< relref "docs/usage" >}}">
@@ -56,7 +56,7 @@ doc2go -out www/ ./...</code></pre>
 </div>
 {{% /blocks/section %}}
 
-{{% blocks/section color="orange" %}}
+{{% blocks/section color="orange" type="row" %}}
 {{% blocks/feature title="Easy to publish" icon="fa-solid fa-server" url="docs/publish" %}}
 doc2go generates static websites
 that you can host on

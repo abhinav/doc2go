@@ -18,7 +18,7 @@ and is separated from the rest of the content
 by an empty line.
 
 {{< cardpane >}}
-{{< card-code header="YAML" lang="md" >}}
+{{< card code=true header="YAML" lang="md" >}}
 ---
 title: Getting started
 type: docs
@@ -26,9 +26,9 @@ no_toc: true
 ---
 
 To get started [..]
-{{< /card-code >}}
+{{< /card >}}
 
-{{< card-code header="TOML" lang="md" >}}
+{{< card code=true header="TOML" lang="md" >}}
 +++
 title = "Getting started"
 type = "docs"
@@ -36,7 +36,7 @@ no_toc = true
 +++
 
 To get started [..]
-{{< /card-code >}}
+{{< /card >}}
 {{< /cardpane >}}
 
 ## Front matter in doc2go
@@ -54,7 +54,7 @@ a Go [text/template](https://pkg.go.dev/text/template).
 The template must include the `---` or `+++` symbols
 that delimit the front matter block.
 
-{{< tabpane persistLang=false >}}
+{{< tabpane persist=false >}}
 {{< tab header="YAML" lang="plain" >}}
 ---
 # ...
@@ -86,7 +86,7 @@ with a `title` attribute in the front matter.
 You can use the following template
 to set the page title accurately for most cases.
 
-{{< tabpane persistLang=false >}}
+{{< tabpane persist=false >}}
 {{< tab header="YAML" lang="plain" >}}
 title: "{{ with .Name }}{{ . }}{{ else }}Reference{{ end }}"
 {{< /tab >}}
@@ -109,7 +109,7 @@ for SEO and directory listings.
 
 Add the following to your template to set this attribute.
 
-{{< tabpane persistLang=false >}}
+{{< tabpane persist=false >}}
 {{< tab header="YAML" lang="plain" >}}
 {{ with .Package.Synopsis -}}
   description: {{ printf "%q" . }}

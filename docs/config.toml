@@ -5,7 +5,7 @@ title = 'doc2go'
 contentDir = "content/en"
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
-disableKinds = ['taxonomy', 'taxonomyTerm']
+disableKinds = ['taxonomy', 'term']
 enableRobotsTXT = true
 enableGitInfo = true
 
@@ -29,6 +29,7 @@ github_subdir = "docs"
 github_branch = "release"
 offlineSearch = true
 description = "Your Go documentation, to-go."
+disable_click2copy_chroma = true
 
 cloudflareWebAnalytics = "085b42f4381f4b8999051fc40a656369"
 
