@@ -40,6 +40,7 @@ type params struct {
 	SubDir     string
 	PkgVersion string
 	Home       string
+	Pagefind   pagefindFlag
 
 	Embed        bool
 	Internal     bool
@@ -85,6 +86,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 	flag.Var(&p.RelLinkStyle, "rel-link-style", "")
+	flag.Var(&p.Pagefind, "pagefind", "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")
@@ -172,6 +174,12 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 	if printConfigKeys {
 		listConfigKeys(cmd.Stdout, flag, &cfgParser, 0)
 		return nil, errtrace.Wrap(errHelp)
+	}
+
+	// pagefind cannot be used in embedded mode.
+	if p.Embed && p.Pagefind.Mode == pagefindEnabled {
+		fmt.Fprintln(cmd.Stderr, "pagefind cannot be used in embedded mode")
+		return nil, errtrace.Wrap(errInvalidArguments)
 	}
 
 	// If subdir is specified, it must not contain '/' or a path separator.
@@ -375,5 +383,72 @@ func (ls relLinkStyle) Normalize(s string) string {
 		// Should never happen.
 		// But if it does, we'll just return the input.
 		return s
+	}
+}
+
+// pagefindFlag indicates whether to include client-side search
+// using pagefind.
+//
+// Examples usages:
+//
+//	--pagefind                   // enable
+//	--pagefind=true              // enable
+//	--pagefind=false             // disable
+//	--pagefind=auto              // enable if pagefind is found on PATH
+//	--pagefind=/path/to/pagefind // enable, use the specified pagefind binary
+type pagefindFlag struct {
+	Mode pagefindMode
+	Path string
+}
+
+var _ flag.Getter = (*pagefindFlag)(nil)
+
+func (*pagefindFlag) IsBoolFlag() bool { return true }
+
+func (f *pagefindFlag) Get() any { return f }
+
+func (f *pagefindFlag) String() string {
+	if f.Path != "" {
+		return f.Path
+	}
+
+	return f.Mode.String()
+}
+
+func (f *pagefindFlag) Set(v string) error {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "auto", "":
+		f.Mode = pagefindAuto
+	case "true", "t", "yes", "y", "on":
+		f.Mode = pagefindEnabled
+	case "false", "f", "no", "n", "off":
+		f.Mode = pagefindDisabled
+	default:
+		// Assume it's a path.
+		// We'll validate later.
+		f.Mode = pagefindEnabled
+		f.Path = v
+	}
+	return nil
+}
+
+type pagefindMode int
+
+const (
+	pagefindAuto pagefindMode = iota
+	pagefindEnabled
+	pagefindDisabled
+)
+
+func (m pagefindMode) String() string {
+	switch m {
+	case pagefindAuto:
+		return "auto"
+	case pagefindEnabled:
+		return "true"
+	case pagefindDisabled:
+		return "false"
+	default:
+		return fmt.Sprintf("pagefindMode(%d)", int(m))
 	}
 }

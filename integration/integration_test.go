@@ -24,8 +24,9 @@ import (
 )
 
 var (
-	_doc2go = flag.String("doc2go", "", "path to doc2go binary")
-	_rundir = flag.String("rundir", "", "path to directory to run doc2go in")
+	_doc2go   = flag.String("doc2go", "", "path to doc2go binary")
+	_pagefind = flag.String("pagefind", "", "path to pagefind binary")
+	_rundir   = flag.String("rundir", "", "path to directory to run doc2go in")
 )
 
 func TestMain(m *testing.M) {
@@ -70,6 +71,18 @@ func TestLinksAreValid(t *testing.T) {
 				"-subdir", "v1.2.3",
 				"./...",
 			},
+		},
+		{
+			name: "pagefind",
+			args: []string{"-pagefind=" + *_pagefind, "./..."},
+		},
+		{
+			name: "pagefind with home",
+			args: []string{"-home=go.abhg.dev/doc2go", "-pagefind=" + *_pagefind, "./..."},
+		},
+		{
+			name: "pagefind with subdir",
+			args: []string{"-subdir=v1.2.3", "-pagefind=" + *_pagefind, "./..."},
 		},
 	}
 
@@ -200,8 +213,17 @@ func TestOutputSubdir(t *testing.T) {
 }
 
 func generate(t *testing.T, args ...string) (outDir string) {
-	// Unless -internal=false is specified, we'll always add -internal.
-	var noInternal bool
+	// This function has a few convenient defaults:
+	//
+	// - Unless -internal=false is explicitly specified,
+	//   we'll always enable internal packages.
+	// - Unless an output directory is explicitly specified,
+	//   we'll generate to a temporary directory.
+	// - Unless a pagefind argument is explicitly specified,
+	//   we'll disable pagefind.
+	// - We always enable debug logging.
+
+	var noInternal, pagefindArg bool
 	for i, arg := range args {
 		if v, ok := strings.CutPrefix(arg, "-out="); ok {
 			outDir = v
@@ -211,6 +233,13 @@ func generate(t *testing.T, args ...string) (outDir string) {
 			outDir = args[i+1]
 			continue
 		}
+
+		if strings.HasPrefix(arg, "-pagefind=") {
+			pagefindArg = true
+		} else if arg == "-pagefind" && i+1 < len(args) {
+			pagefindArg = true
+		}
+
 		if arg == "-internal=false" {
 			noInternal = true
 			continue
@@ -224,6 +253,9 @@ func generate(t *testing.T, args ...string) (outDir string) {
 	extraArgs := []string{"-out=" + outDir, "-debug"}
 	if !noInternal {
 		extraArgs = append(extraArgs, "-internal")
+	}
+	if !pagefindArg {
+		extraArgs = append(extraArgs, "-pagefind=false")
 	}
 
 	output := iotest.Writer(t)
@@ -256,6 +288,23 @@ type localURL struct {
 	Href string
 
 	URL *url.URL
+}
+
+func (u localURL) String() string {
+	var s strings.Builder
+	s.WriteString("localURL{")
+	if u.Kind == localPage {
+		s.WriteString("page ")
+	} else {
+		s.WriteString("asset ")
+	}
+	s.WriteString(u.URL.String())
+	if u.From != nil {
+		s.WriteString(" from ")
+		s.WriteString(u.From.String())
+	}
+	s.WriteString("}")
+	return s.String()
 }
 
 type visitOptions struct {

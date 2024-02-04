@@ -22,6 +22,10 @@ OPTIONS
   -home PATH
 	import path for the home page of the documentation.
 	Packages that aren't descendants of this path will be omitted.
+  -pagefind[=auto|true|false|PATH]
+	enable or disable client-side page search.
+	See -help=pagefind for more information.
+	Defaults to auto.
   -embed
 	generate partial HTML pages fit for embedding.
   -internal

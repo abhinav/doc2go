@@ -19,6 +19,7 @@ export GOBIN ?= $(PROJECT_ROOT)/bin
 export PATH := $(GOBIN):$(PATH)
 
 ERRTRACE = $(GOBIN)/errtrace
+PAGEFIND = $(PROJECT_ROOT)/integration/node_modules/.bin/pagefind
 
 TEST_FLAGS ?= -race
 
@@ -46,9 +47,11 @@ test:
 	go test $(TEST_FLAGS) ./...
 
 .PHONY: test-integration
-test-integration: $(DOC2GO)
+test-integration: $(DOC2GO) $(PAGEFIND)
 	go test -C integration $(TEST_FLAGS) \
-		-doc2go $(shell pwd)/$(DOC2GO) -rundir $(PROJECT_ROOT)
+		-doc2go $(shell pwd)/$(DOC2GO) \
+		-pagefind $(PAGEFIND) \
+		-rundir $(PROJECT_ROOT)
 
 .PHONY: cover
 cover:
@@ -57,14 +60,16 @@ cover:
 
 .PHONY: cover-integration
 cover-integration: export GOEXPERIMENT = coverageredesign
-cover-integration:
+cover-integration: $(PAGEFIND)
 	$(eval BIN := $(shell mktemp -d))
 	$(eval COVERDIR := $(shell mktemp -d))
 	GOBIN=$(BIN) \
  		go install -race -cover -coverpkg=./... go.abhg.dev/doc2go
 	GOCOVERDIR=$(COVERDIR) PATH=$(BIN):$$PATH \
 		go test -C integration $(TEST_FLAGS) \
-		-doc2go $(BIN)/doc2go -rundir $(PROJECT_ROOT)
+		-doc2go $(BIN)/doc2go \
+		-pagefind $(PAGEFIND) \
+		-rundir $(PROJECT_ROOT)
 	go tool covdata textfmt -i=$(COVERDIR) -o=cover.integration.out
 	go tool cover -html=cover.integration.out -o cover.integration.html
 
@@ -102,3 +107,6 @@ errtrace-lint: $(ERRTRACE)
 
 $(ERRTRACE): go.mod
 	go install braces.dev/errtrace/cmd/errtrace
+
+$(PAGEFIND): integration/package-lock.json integration/package.json
+	cd integration && npm install
