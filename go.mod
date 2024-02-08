@@ -9,7 +9,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/net v0.20.0
+	golang.org/x/net v0.21.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.17.0
 )
