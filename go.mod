@@ -1,8 +1,6 @@
 module go.abhg.dev/doc2go
 
-go 1.21
-
-toolchain go1.21.0
+go 1.22.0
 
 require (
 	github.com/alecthomas/chroma/v2 v2.12.0

@@ -6,6 +6,12 @@ issues:
   # Don't ignore some of the issues that golangci-lint considers okay.
   exclude-use-default: false
 
+  exclude-rules:
+    # Don't warn on unused parameters.
+    # Parameter names are useful; replacing them with '_' is undesirable.
+    - linters: [revive]
+      text: 'unused-parameter: parameter \S+ seems to be unused, consider removing or renaming it as _'
+
 output:
   # Make output more digestible with quickfix in vim.
   sort-results: true
