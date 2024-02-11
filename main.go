@@ -60,18 +60,18 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 		if errors.Is(err, errHelp) {
 			return 0
 		}
-		fmt.Fprintln(cmd.Stderr, err)
+		fmt.Fprintf(cmd.Stderr, "%+v\n", err)
 		return 1
 	}
 
 	debugw, closedebug, err := opts.Debug.Create(cmd.Stderr)
 	if err != nil {
-		cmd.log.Printf("Unable to create debug log, using stderr: %v", err)
+		cmd.log.Printf("Unable to create debug log, using stderr: %+v", err)
 		debugw = cmd.Stderr
 	} else {
 		defer func() {
 			if err := closedebug(); err != nil {
-				cmd.log.Printf("Error closing debug log: %v", err)
+				cmd.log.Printf("Error closing debug log: %+v", err)
 			}
 		}()
 	}
@@ -79,7 +79,7 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.debugLog = log.New(debugw, "", 0)
 
 	if err := cmd.run(opts); err != nil {
-		cmd.log.Printf("doc2go: %v", err)
+		cmd.log.Printf("doc2go: %+v", err)
 		return 1
 	}
 	return 0

@@ -156,7 +156,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 
 	if len(help) != 0 {
 		if err := help.Write(cmd.Stderr); err != nil {
-			fmt.Fprintln(cmd.Stderr, err)
+			fmt.Fprintf(cmd.Stderr, "%+v\n", err)
 		}
 
 		// For configuration,

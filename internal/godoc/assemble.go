@@ -182,7 +182,7 @@ func (as *assembly) importFor(name, imp string) *highlight.Code {
 	if err != nil {
 		// If the syntax highlighter fails,
 		// show the statement without highlighting.
-		as.logf("Error highlighting import statement: %v", err)
+		as.logf("Error highlighting import statement: %+v", err)
 		return &highlight.Code{
 			Spans: []highlight.Span{
 				&highlight.TextSpan{Text: buff.Bytes()},
@@ -379,7 +379,7 @@ func (as *assembly) eg(parent ExampleParent, dex *doc.Example) (ex *Example) {
 
 	code, err := as.egCode(dex)
 	if err != nil {
-		as.logf("Could not format example defined in %v: %v", as.fset.Position(dex.Code.Pos()), err)
+		as.logf("Could not format example defined in %v: %+v", as.fset.Position(dex.Code.Pos()), err)
 		code = &highlight.Code{
 			Spans: []highlight.Span{
 				&highlight.ErrorSpan{

@@ -12,6 +12,6 @@ func panicf(format string, args ...interface{}) {
 // NotErrorf panics with the given message if the error is not nil.
 func NotErrorf(err error, format string, args ...interface{}) {
 	if err != nil {
-		panicf("unexpected error: %v\n%v", err, fmt.Sprintf(format, args...))
+		panicf("unexpected error: %+v\n%v", err, fmt.Sprintf(format, args...))
 	}
 }
