@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/iotest"
@@ -179,12 +180,12 @@ func testMainCmdGenerate(t *testing.T, exporter packagestest.Exporter) {
 			gotFiles := make(map[string]string)
 			err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 				if err != nil || d.IsDir() {
-					return err
+					return errtrace.Wrap(err)
 				}
 
 				got, err := fs.ReadFile(fsys, path)
 				if err != nil {
-					return err
+					return errtrace.Wrap(err)
 				}
 				gotFiles[filepath.ToSlash(path)] = string(got)
 				t.Logf("Found file %v", path)

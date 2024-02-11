@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/iotest"
@@ -486,7 +487,7 @@ func TestConfigFileParser(t *testing.T) {
 		giveErr := errors.New("great sadness")
 		err := p.Parse(strings.NewReader("foo"),
 			func(k, v string) error {
-				return giveErr
+				return errtrace.Wrap(giveErr)
 			})
 		assert.ErrorIs(t, err, giveErr)
 	})

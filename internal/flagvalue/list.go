@@ -3,6 +3,8 @@ package flagvalue
 import (
 	"fmt"
 	"strings"
+
+	"braces.dev/errtrace"
 )
 
 // List is a generic flag.Getter
@@ -38,7 +40,7 @@ func (lv *List[T, PT]) String() string {
 func (lv *List[T, PT]) Set(s string) error {
 	var v T
 	if err := PT(&v).Set(s); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	*lv = append(*lv, v)
 	return nil

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,5 +35,5 @@ type stubCloser struct {
 }
 
 func (s stubCloser) Close() error {
-	return s.err
+	return errtrace.Wrap(s.err)
 }

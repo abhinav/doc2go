@@ -6,6 +6,8 @@ import (
 	"go/parser"
 	"go/token"
 	"sort"
+
+	"braces.dev/errtrace"
 )
 
 // Package is a package that has been loaded from disk.
@@ -40,7 +42,7 @@ func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	files := make(map[string]*ast.File)
 	syntax, err := parseFiles(fset, ref.Files, files)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	var topLevel []string
@@ -54,7 +56,7 @@ func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 
 	testSyntax, err := parseFiles(fset, ref.TestFiles, nil /* fmap */)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	return &Package{
@@ -81,7 +83,7 @@ func parseFiles(fset *token.FileSet, files []string, fmap map[string]*ast.File) 
 		var err error
 		syntax[i], err = parser.ParseFile(fset, file, nil, parser.ParseComments)
 		if err != nil {
-			return nil, fmt.Errorf("parse file %q: %w", file, err)
+			return nil, errtrace.Wrap(fmt.Errorf("parse file %q: %w", file, err))
 		}
 		if fmap != nil {
 			fmap[file] = syntax[i]
@@ -104,7 +106,7 @@ func packageRefImporter(ref *PackageRef) ast.Importer {
 
 		name, ok := packageNames[path]
 		if !ok {
-			return nil, fmt.Errorf("package %q not found", path)
+			return nil, errtrace.Wrap(fmt.Errorf("package %q not found", path))
 		}
 
 		pkg = ast.NewObj(ast.Pkg, name)

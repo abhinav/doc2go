@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 
+	"braces.dev/errtrace"
 	chroma "github.com/alecthomas/chroma/v2"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 )
@@ -43,7 +44,7 @@ func (h *Highlighter) WriteCSS(w io.Writer) error {
 		return nil
 	}
 
-	return h.formatter.WriteCSS(w, h.Style)
+	return errtrace.Wrap(h.formatter.WriteCSS(w, h.Style))
 }
 
 // Highlight renders the given code block into HTML.

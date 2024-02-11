@@ -15,6 +15,7 @@ import (
 	"strings"
 	ttemplate "text/template"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -101,21 +102,21 @@ func (r *Renderer) WriteStatic(dir string) error {
 	dir = filepath.Join(dir, StaticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
-	return fs.WalkDir(static, ".", func(path string, d fs.DirEntry, err error) error {
+	return errtrace.Wrap(fs.WalkDir(static, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || path == "." {
-			return err
+			return errtrace.Wrap(err)
 		}
 
 		outPath := filepath.Join(dir, path)
 		if d.IsDir() {
-			return os.MkdirAll(outPath, 0o1755)
+			return errtrace.Wrap(os.MkdirAll(outPath, 0o1755))
 		}
 
 		bs, err := fs.ReadFile(static, path)
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 
 		// FIXME: This is a hack. That we need to append to main.css
@@ -124,13 +125,13 @@ func (r *Renderer) WriteStatic(dir string) error {
 			buff := bytes.NewBuffer(bs)
 			buff.WriteString("\n")
 			if err := r.Highlighter.WriteCSS(buff); err != nil {
-				return err
+				return errtrace.Wrap(err)
 			}
 			bs = buff.Bytes()
 		}
 
-		return os.WriteFile(outPath, bs, 0o644)
-	})
+		return errtrace.Wrap(os.WriteFile(outPath, bs, 0o644))
+	}))
 }
 
 type frontmatterPackageData struct {
@@ -162,7 +163,7 @@ func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
 
 	var buff bytes.Buffer
 	if err := r.FrontMatter.Execute(&buff, d); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 
 	bs := bytes.TrimSpace(buff.Bytes())
@@ -172,7 +173,7 @@ func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
 	bs = append(bs, '\n', '\n')
 
 	_, err := w.Write(bs)
-	return err
+	return errtrace.Wrap(err)
 }
 
 // Breadcrumb holds information about parents of a page
@@ -219,7 +220,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		},
 	})
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	render := render{
 		Home:                  r.Home,
@@ -230,9 +231,9 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		NormalizeRelativePath: r.NormalizeRelativePath,
 		SubDirDepth:           info.SubDirDepth,
 	}
-	return template.Must(_packageTmpl.Clone()).
+	return errtrace.Wrap(template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
-		ExecuteTemplate(w, r.templateName(), info)
+		ExecuteTemplate(w, r.templateName(), info))
 }
 
 // PackageIndex holds information about a package listing.
@@ -287,7 +288,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		NumChildren: pidx.NumChildren,
 	}
 	if err := r.renderFrontmatter(w, fmdata); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	render := render{
 		Home:                  r.Home,
@@ -297,9 +298,9 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
 	}
-	return template.Must(_packageIndexTmpl.Clone()).
+	return errtrace.Wrap(template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
-		ExecuteTemplate(w, r.templateName(), pidx)
+		ExecuteTemplate(w, r.templateName(), pidx))
 }
 
 type render struct {
@@ -395,13 +396,13 @@ func isInternal(relpath string) bool {
 // Odd numbered arguments are keys, even numbered arguments are values.
 func dict(args ...any) (map[string]any, error) {
 	if len(args)%2 != 0 {
-		return nil, fmt.Errorf("dict: odd number of arguments")
+		return nil, errtrace.Wrap(fmt.Errorf("dict: odd number of arguments"))
 	}
 	dict := make(map[string]any, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, ok := args[i].(string)
 		if !ok {
-			return nil, fmt.Errorf("dict: [%d] should be string, got %T", i, args[i])
+			return nil, errtrace.Wrap(fmt.Errorf("dict: [%d] should be string, got %T", i, args[i]))
 		}
 		dict[key] = args[i+1]
 	}
