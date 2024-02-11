@@ -12,6 +12,7 @@ import (
 	"testing"
 	ttemplate "text/template"
 
+	"braces.dev/errtrace"
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestRenderer_WriteStatic(t *testing.T) {
 	var want []string
 	err = fs.WalkDir(_staticFS, "static", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 		want = append(want, strings.TrimPrefix(path, "static"))
 		return nil
@@ -45,7 +46,7 @@ func TestRenderer_WriteStatic(t *testing.T) {
 	var got []string
 	err = fs.WalkDir(os.DirFS(dir), "_", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 		got = append(got, strings.TrimPrefix(path, "_"))
 		return nil

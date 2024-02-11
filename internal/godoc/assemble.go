@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"slices"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/sliceutil"
@@ -67,7 +68,7 @@ func (a *Assembler) Assemble(bpkg *gosrc.Package) (*Package, error) {
 
 	dpkg, err := doc.NewFromFiles(bpkg.Fset, allSyntaxes, bpkg.ImportPath)
 	if err != nil {
-		return nil, fmt.Errorf("assemble documentation: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("assemble documentation: %w", err))
 	}
 
 	newDeclFormatter := newDefaultDeclFormatter
@@ -181,7 +182,7 @@ func (as *assembly) importFor(name, imp string) *highlight.Code {
 	if err != nil {
 		// If the syntax highlighter fails,
 		// show the statement without highlighting.
-		as.logf("Error highlighting import statement: %v", err)
+		as.logf("Error highlighting import statement: %+v", err)
 		return &highlight.Code{
 			Spans: []highlight.Span{
 				&highlight.TextSpan{Text: buff.Bytes()},
@@ -378,7 +379,7 @@ func (as *assembly) eg(parent ExampleParent, dex *doc.Example) (ex *Example) {
 
 	code, err := as.egCode(dex)
 	if err != nil {
-		as.logf("Could not format example defined in %v: %v", as.fset.Position(dex.Code.Pos()), err)
+		as.logf("Could not format example defined in %v: %+v", as.fset.Position(dex.Code.Pos()), err)
 		code = &highlight.Code{
 			Spans: []highlight.Span{
 				&highlight.ErrorSpan{
@@ -412,13 +413,13 @@ func (as *assembly) egCode(dex *doc.Example) (*highlight.Code, error) {
 
 	var buff bytes.Buffer
 	if err := format.Node(&buff, as.fset, n); err != nil {
-		return nil, fmt.Errorf("format example: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("format example: %w", err))
 	}
 	src := gosrc.FormatExample(buff.Bytes())
 
 	tokens, err := as.lexer.Lex(src)
 	if err != nil {
-		return nil, fmt.Errorf("highlight example: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("highlight example: %w", err))
 	}
 
 	return &highlight.Code{

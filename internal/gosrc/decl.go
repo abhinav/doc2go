@@ -9,6 +9,8 @@ import (
 	"go/scanner"
 	"go/token"
 	"strconv"
+
+	"braces.dev/errtrace"
 )
 
 // DeclFormatter formats declarations from a single Go package.
@@ -49,7 +51,7 @@ func (f *DeclFormatter) FormatDecl(decl ast.Decl) (src []byte, regions []Region,
 
 	var buff bytes.Buffer
 	if err := format.Node(&buff, f.fset, decl); err != nil {
-		return nil, nil, fmt.Errorf("format decl: %w", err)
+		return nil, nil, errtrace.Wrap(fmt.Errorf("format decl: %w", err))
 	}
 	src = buff.Bytes()
 

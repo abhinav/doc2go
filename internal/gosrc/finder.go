@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/sliceutil"
 	"golang.org/x/tools/go/packages"
 )
@@ -83,11 +84,11 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 
 	pkgs, err := packages.Load(&cfg, patterns...)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	if len(pkgs) == 0 {
-		return nil, errors.New("no packages found")
+		return nil, errtrace.Wrap(errors.New("no packages found"))
 	}
 
 	infos := make([]*PackageRef, 0, len(pkgs))
@@ -100,7 +101,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		var pkgFailed bool
 		for _, err := range pkg.Errors {
 			pkgFailed = true
-			f.Log.Printf("[%v] %v", pkg.PkgPath, err)
+			f.Log.Printf("[%v] %+v", pkg.PkgPath, err)
 		}
 		if pkgFailed {
 			continue
@@ -119,7 +120,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 		pkgDir := filepath.Dir(goFiles[0])
 		var testFiles []string
 		if ents, err := os.ReadDir(pkgDir); err != nil {
-			f.Log.Printf("[%v] Skipping tests: unable to read directory: %v", pkg.PkgPath, err)
+			f.Log.Printf("[%v] Skipping tests: unable to read directory: %+v", pkg.PkgPath, err)
 		} else {
 			// FIXME: This ignores build tags in test files.
 			// Maybe, it should be two load calls:

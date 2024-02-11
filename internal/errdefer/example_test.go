@@ -4,18 +4,19 @@ import (
 	"io"
 	"os"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/errdefer"
 )
 
 func readFile(name string) (_ []byte, err error) {
 	f, err := os.Open(name)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 	defer errdefer.Close(&err, f)
 	// NOTE: err must be a named return.
 
-	return io.ReadAll(f)
+	return errtrace.Wrap2(io.ReadAll(f))
 }
 
 // This is a contrived example

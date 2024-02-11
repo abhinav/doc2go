@@ -6,6 +6,7 @@ import (
 	"io"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,7 +91,7 @@ func (sv *fallibleStringValue) String() string { return string(*sv) }
 
 func (sv *fallibleStringValue) Set(s string) error {
 	if s == "fail" {
-		return errors.New("great sadness")
+		return errtrace.Wrap(errors.New("great sadness"))
 	}
 	*sv = fallibleStringValue(s)
 	return nil

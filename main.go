@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/template"
 
+	"braces.dev/errtrace"
 	"github.com/alecthomas/chroma/v2/styles"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
@@ -59,18 +60,18 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 		if errors.Is(err, errHelp) {
 			return 0
 		}
-		fmt.Fprintln(cmd.Stderr, err)
+		fmt.Fprintf(cmd.Stderr, "%+v\n", err)
 		return 1
 	}
 
 	debugw, closedebug, err := opts.Debug.Create(cmd.Stderr)
 	if err != nil {
-		cmd.log.Printf("Unable to create debug log, using stderr: %v", err)
+		cmd.log.Printf("Unable to create debug log, using stderr: %+v", err)
 		debugw = cmd.Stderr
 	} else {
 		defer func() {
 			if err := closedebug(); err != nil {
-				cmd.log.Printf("Error closing debug log: %v", err)
+				cmd.log.Printf("Error closing debug log: %+v", err)
 			}
 		}()
 	}
@@ -78,7 +79,7 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.debugLog = log.New(debugw, "", 0)
 
 	if err := cmd.run(opts); err != nil {
-		cmd.log.Printf("doc2go: %v", err)
+		cmd.log.Printf("doc2go: %+v", err)
 		return 1
 	}
 	return 0
@@ -104,7 +105,7 @@ func (cmd *mainCmd) run(opts *params) error {
 		style := styles.Get(theme)
 		if style == nil {
 			if opts.HighlightPrintCSS {
-				return fmt.Errorf("unknown theme %q", theme)
+				return errtrace.Wrap(fmt.Errorf("unknown theme %q", theme))
 			}
 
 			cmd.log.Printf("Unknown theme %q. Falling back to %q.", theme, _defaultStyle.Name)
@@ -117,7 +118,7 @@ func (cmd *mainCmd) run(opts *params) error {
 	}
 
 	if opts.HighlightPrintCSS {
-		return highlighter.WriteCSS(cmd.Stdout)
+		return errtrace.Wrap(highlighter.WriteCSS(cmd.Stdout))
 	}
 
 	finder := gosrc.Finder{
@@ -131,7 +132,7 @@ func (cmd *mainCmd) run(opts *params) error {
 
 	pkgRefs, err := finder.FindPackages(opts.Patterns...)
 	if err != nil {
-		return fmt.Errorf("find packages: %w", err)
+		return errtrace.Wrap(fmt.Errorf("find packages: %w", err))
 	}
 
 	if home := opts.Home; home != "" {
@@ -152,7 +153,7 @@ func (cmd *mainCmd) run(opts *params) error {
 	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
 		if err != nil {
-			return fmt.Errorf("bad package documentation template %q: %w", lt.String(), err)
+			return errtrace.Wrap(fmt.Errorf("bad package documentation template %q: %w", lt.String(), err))
 		}
 		linker.Template(lt.Path, t)
 	}
@@ -164,12 +165,12 @@ func (cmd *mainCmd) run(opts *params) error {
 	if path := opts.FrontMatter; len(path) > 0 {
 		bs, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("-frontmatter: %w", err)
+			return errtrace.Wrap(fmt.Errorf("-frontmatter: %w", err))
 		}
 
 		frontmatter, err = template.New(path).Parse(string(bs))
 		if err != nil {
-			return fmt.Errorf("bad frontmatter template: %w\n%s", err, bs)
+			return errtrace.Wrap(fmt.Errorf("bad frontmatter template: %w\n%s", err, bs))
 		}
 	}
 
@@ -197,5 +198,5 @@ func (cmd *mainCmd) run(opts *params) error {
 		DocLinker:  &linker,
 	}
 
-	return g.Generate(pkgRefs)
+	return errtrace.Wrap(g.Generate(pkgRefs))
 }

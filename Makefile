@@ -18,6 +18,8 @@ GO_MODULES := $(filter-out ./docs, $(GO_MODULES))
 export GOBIN ?= $(PROJECT_ROOT)/bin
 export PATH := $(GOBIN):$(PATH)
 
+ERRTRACE = $(GOBIN)/errtrace
+
 TEST_FLAGS ?= -race
 
 # Non-test Go files.
@@ -37,7 +39,7 @@ $(DOC2GO): $(GO_SRC_FILES) $(wildcard ./internal/html/tmpl/*)
 	go install go.abhg.dev/doc2go
 
 .PHONY: lint
-lint: golangci-lint tidy-lint
+lint: golangci-lint tidy-lint errtrace-lint
 
 .PHONY: test
 test:
@@ -70,6 +72,10 @@ cover-integration:
 tidy:
 	$(foreach mod,$(GO_MODULES),(cd $(mod) && go mod tidy) &&) true
 
+.PHONY: errtrace
+errtrace: $(ERRTRACE)
+	$(ERRTRACE) -w ./...
+
 .PHONY: golangci-lint
 golangci-lint:
 	$(foreach mod,$(GO_MODULES), \
@@ -81,3 +87,18 @@ tidy-lint:
 		(cd $(mod) && go mod tidy && \
 			git diff --exit-code -- go.mod go.sum || \
 			(echo "[$(mod)] go mod tidy changed files" && false)) &&) true
+
+.PHONY: errtrace-lint
+errtrace-lint: $(ERRTRACE)
+	$(eval LOG := $(shell mktemp))
+	@$(foreach mod,$(GO_MODULES), \
+		(cd $(mod) && \
+		$(ERRTRACE) -l ./... | sed -e 's|^|$(mod)/|' >> "$(LOG)") &&) true
+	@if [ -s $(LOG) ]; then \
+		echo "errtrace found errors:"; \
+		cat $(LOG); \
+		false; \
+	fi
+
+$(ERRTRACE): go.mod
+	go install braces.dev/errtrace/cmd/errtrace

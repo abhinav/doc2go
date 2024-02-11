@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -798,7 +799,7 @@ func newPlainDeclFormatter(pkg *gosrc.Package) DeclFormatter {
 func (f *plainDeclFormatter) FormatDecl(decl ast.Decl) ([]byte, []gosrc.Region, error) {
 	var buff bytes.Buffer
 	err := format.Node(&buff, f.fset, decl)
-	return buff.Bytes(), nil, err
+	return buff.Bytes(), nil, errtrace.Wrap(err)
 }
 
 type nopLexer struct{}
@@ -822,7 +823,7 @@ type stubLexer struct {
 var _ highlight.Lexer = (*stubLexer)(nil)
 
 func (l *stubLexer) Lex([]byte) ([]chroma.Token, error) {
-	return l.Result, l.Err
+	return l.Result, errtrace.Wrap(l.Err)
 }
 
 type srcPackage struct {
