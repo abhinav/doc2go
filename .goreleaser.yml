@@ -38,7 +38,7 @@ aurs:
       email: mail@abhinavg.net
 
 brews:
-  - tap:
+  - repository:
       owner: abhinav
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
