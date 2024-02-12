@@ -8,16 +8,16 @@
 {{ define "NavbarExtra" }} | <a href="#pkg-index">Index</a>{{ end -}}
 
 {{ define "Body" -}}
-<h2 id="pkg-overview">
+<h2 id="pkg-overview" {{- if pagefind }} data-pagefind-meta="Import path:{{ .ImportPath }}"{{end }}>
   {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}
 </h2>
 {{ .Import | code }}
 {{ .Doc | doc 3 -}}
 {{ template "examples" (dict "Level" 3 "Examples" .Examples) -}}
 
-<h3 id="pkg-index">Index</h3>
+<h3 id="pkg-index" {{- pagefindIgnore -}}>Index</h3>
 {{ if or .Constants .Variables .Functions .Types -}}
-<ul>
+<ul {{- pagefindIgnore -}}>
   {{ if .Constants }}<li><a href="#pkg-constants">Constants</a></li>{{ end -}}
   {{ if .Variables }}<li><a href="#pkg-variables">Variables</a></li>{{ end -}}
   {{ range .Functions -}}
@@ -42,7 +42,7 @@
 {{- end }}
 
 {{- with .AllExamples -}}
-<h4 id="pkg-examples">Examples</h4>
+<h4 id="pkg-examples" {{- pagefindIgnore -}}>Examples</h4>
 <ul>
   {{ range . -}}
     {{- $id := printf "example-%s" .Parent.String -}}
@@ -55,17 +55,17 @@
 {{- end -}}
 
 {{ with .Constants -}}
-  <h3 id="pkg-constants">Constants</h3>
+  <h3 id="pkg-constants" {{- pagefindIgnore -}}>Constants</h3>
   {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Variables -}}
-  <h3 id="pkg-variables">Variables</h3>
+  <h3 id="pkg-variables" {{- pagefindIgnore -}}>Variables</h3>
   {{ range . }}{{ template "constOrVar" . }}{{ end -}}
 {{ end -}}
 
 {{ with .Functions -}}
-  <h3 id="pkg-functions">Functions</h3>
+  <h3 id="pkg-functions" {{- pagefindIgnore -}}>Functions</h3>
   {{ range . -}}
     {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
       <h3 id="{{ .Name }}">func {{ .Name }} {{- template "deprecatedTag" . }}</h3>
@@ -78,7 +78,7 @@
 {{ end -}}
 
 {{ with .Types -}}
-  <h3 id="pkg-types">Types</h3>
+  <h3 id="pkg-types" {{- pagefindIgnore -}}>Types</h3>
   {{ range . -}}
     {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
     <h3 id="{{ .Name }}">type {{ .Name }} {{- template "deprecatedTag" . }}</h3>

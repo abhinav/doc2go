@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"go/doc/comment"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
+	"go.abhg.dev/doc2go/internal/pagefind"
 	"go.abhg.dev/doc2go/internal/pathtree"
 	"go.abhg.dev/doc2go/internal/pathx"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -42,9 +44,17 @@ type Renderer interface {
 	WriteStatic(string) error
 	RenderPackage(io.Writer, *html.PackageInfo) error
 	RenderPackageIndex(io.Writer, *html.PackageIndex) error
+	RenderSiteIndex(io.Writer, *html.SiteIndex) error
 }
 
 var _ Renderer = (*html.Renderer)(nil)
+
+// PageIndexer generates a search index for a website.
+type PageIndexer interface {
+	Index(context.Context, pagefind.IndexRequest) error
+}
+
+var _ PageIndexer = (*pagefind.CLI)(nil)
 
 // Generator generates documentation for user-specified Go packages.
 //
@@ -64,6 +74,12 @@ type Generator struct {
 	// Renderer renders a package's documentation IR
 	// into HTML.
 	Renderer Renderer
+
+	// Pagefind specifies how to generate a search index
+	// for the documentation.
+	//
+	// If nil, a search index will not be generated.
+	Pagefind PageIndexer
 
 	DocLinker godoc.Linker
 
@@ -103,7 +119,7 @@ func (r *Generator) init() {
 }
 
 // Generate runs the generator over the provided packages.
-func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
+func (r *Generator) Generate(ctx context.Context, pkgRefs []*gosrc.PackageRef) error {
 	r.init()
 
 	if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
@@ -117,6 +133,20 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 
 	if _, err := r.renderTrees(nil, trees); err != nil {
 		return errtrace.Wrap(err)
+	}
+
+	if r.Pagefind != nil {
+		siteDir := filepath.Join(r.OutDir, r.SubDir)
+		req := pagefind.IndexRequest{
+			SiteDir:     siteDir,
+			AssetSubdir: filepath.Join(html.StaticDir, "pagefind"),
+		}
+
+		if err := r.Pagefind.Index(ctx, req); err != nil {
+			return errtrace.Wrap(fmt.Errorf("generate search index: %w", err))
+		}
+
+		r.DebugLog.Printf("Generated search index in %v", req.AssetSubdir)
 	}
 
 	if err := r.generateSiblingIndex(); err != nil {
@@ -147,14 +177,13 @@ func (r *Generator) generateSiblingIndex() (err error) {
 		return errtrace.Wrap(err)
 	}
 
-	idx := html.PackageIndex{Path: r.Home}
+	idx := html.SiteIndex{Path: r.Home}
 	for _, entry := range entries {
 		if !entry.IsDir() || entry.Name() == html.StaticDir {
 			continue
 		}
 
-		sub := html.Subpackage{RelativePath: entry.Name()}
-		idx.Subpackages = append(idx.Subpackages, sub)
+		idx.Sites = append(idx.Sites, entry.Name())
 	}
 
 	f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
@@ -163,7 +192,7 @@ func (r *Generator) generateSiblingIndex() (err error) {
 	}
 	defer errdefer.Close(&err, f)
 
-	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
+	if err := r.Renderer.RenderSiteIndex(f, &idx); err != nil {
 		return errtrace.Wrap(err)
 	}
 

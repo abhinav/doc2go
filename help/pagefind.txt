@@ -1,0 +1,16 @@
+-pagefind=[auto|true|false|PATH]
+
+The pagefind flag uses Pagefind (https://pagefind.app) to include
+a client-side search feature on the standalone website.
+This feature is enabled automatically if a 'pagefind' binary is found on $PATH.
+Specify 'true' or 'false' to explicitly enable or disable the feature.
+
+	-pagefind
+	-pagefind=false
+
+Alternatively, enable the feature by specifying the path
+to the 'pagefind' binary to use.
+
+	-pagefind=/usr/local/bin/pagefind
+
+This feature cannot be used in combination with -embed.

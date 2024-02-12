@@ -31,6 +31,9 @@ var (
 	//go:embed help/config.txt
 	_configHelp string
 
+	//go:embed help/pagefind.txt
+	_pagefindHelp string
+
 	_usageHelp = firstLineOf(_defaultHelp)
 
 	_helpTopics = map[Help]string{
@@ -38,6 +41,7 @@ var (
 		"default":     _defaultHelp,
 		"frontmatter": _frontmatterHelp,
 		"highlight":   _highlightHelp,
+		"pagefind":    _pagefindHelp,
 		"pkg-doc":     _packageDocHelp,
 		"usage":       _usageHelp,
 	}

@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
 	"go.abhg.dev/doc2go/internal/iotest"
+	"go.abhg.dev/doc2go/internal/pagefind"
 )
 
 func TestGenerator_hierarchy(t *testing.T) {
@@ -201,7 +204,7 @@ func TestGenerator_hierarchy(t *testing.T) {
 				OutDir:    t.TempDir(),
 				Home:      tt.home,
 			}
-			require.NoError(t, g.Generate(refs))
+			require.NoError(t, g.Generate(context.Background(), refs))
 
 			for k := range tt.wantDirs {
 				t.Errorf("Missed directory: %q", k)
@@ -252,7 +255,7 @@ func TestGenerator_basename(t *testing.T) {
 		OutDir:    outDir,
 		Basename:  "_index.html",
 	}
-	require.NoError(t, g.Generate([]*gosrc.PackageRef{
+	require.NoError(t, g.Generate(context.Background(), []*gosrc.PackageRef{
 		{
 			Name:       "foo",
 			ImportPath: "foo",
@@ -262,6 +265,65 @@ func TestGenerator_basename(t *testing.T) {
 	indexPath := filepath.Join(outDir, "foo", "_index.html")
 	_, err := os.Stat(indexPath)
 	require.NoError(t, err, "file must exist: %v", indexPath)
+}
+
+func TestGenerator_pagefind(t *testing.T) {
+	t.Parallel()
+
+	pkgs := map[string]*fakePackage{"foo": {ImportPath: "foo"}}
+	parser := fakeParser{t: t, packages: pkgs}
+	assembler := fakeAssembler{t: t, packages: pkgs}
+	renderer := fakeRenderer{
+		t: t,
+		wantPackages: map[string]*renderInfo{
+			"foo": {
+				Breadcrumbs: []html.Breadcrumb{
+					{Text: "foo", Path: "foo"},
+				},
+			},
+		},
+		wantDirectories: map[string]*renderInfo{
+			"": {
+				Subpackages: []html.Subpackage{
+					{RelativePath: "foo"},
+				},
+			},
+		},
+	}
+
+	outDir := t.TempDir()
+
+	var indexed bool
+	var indexer indexerFunc = func(req pagefind.IndexRequest) error {
+		indexed = true
+		assert.Equal(t, outDir, req.SiteDir)
+		return nil
+	}
+	defer func() {
+		assert.True(t, indexed, "pagefind.Index not called")
+	}()
+
+	g := Generator{
+		DebugLog:  log.New(iotest.Writer(t), "", 0),
+		Parser:    &parser,
+		Assembler: &assembler,
+		Renderer:  &renderer,
+		Pagefind:  indexer,
+		OutDir:    outDir,
+	}
+
+	require.NoError(t, g.Generate(context.Background(), []*gosrc.PackageRef{
+		{
+			Name:       "foo",
+			ImportPath: "foo",
+		},
+	}))
+}
+
+type indexerFunc func(pagefind.IndexRequest) error
+
+func (f indexerFunc) Index(_ context.Context, req pagefind.IndexRequest) error {
+	return errtrace.Wrap(f(req))
 }
 
 type fakePackage struct {
@@ -340,5 +402,9 @@ func (r *fakeRenderer) RenderPackageIndex(_ io.Writer, idx *html.PackageIndex) e
 
 	assert.Equal(r.t, want.Breadcrumbs, idx.Breadcrumbs, "breadcrumbs for %q", path)
 	assert.Equal(r.t, want.Subpackages, idx.Subpackages, "subpackages for %q", path)
+	return nil
+}
+
+func (r *fakeRenderer) RenderSiteIndex(io.Writer, *html.SiteIndex) error {
 	return nil
 }

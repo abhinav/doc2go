@@ -80,4 +80,6 @@ span.deprecated-tag {
   cursor: pointer;
 }
 
+#search { margin: 0.3em 0; }
+
 #generated-by-footer { font-size: x-small; }

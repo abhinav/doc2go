@@ -2,11 +2,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 
@@ -16,6 +18,7 @@ import (
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/html"
+	"go.abhg.dev/doc2go/internal/pagefind"
 	"go.abhg.dev/doc2go/internal/pathx"
 	"golang.org/x/tools/go/packages"
 )
@@ -78,14 +81,17 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.debug = opts.Debug.Bool()
 	cmd.debugLog = log.New(debugw, "", 0)
 
-	if err := cmd.run(opts); err != nil {
+	// TODO:
+	// In the future, tie this context to a signal handler.
+	ctx := context.Background()
+	if err := cmd.run(ctx, opts); err != nil {
 		cmd.log.Printf("doc2go: %+v", err)
 		return 1
 	}
 	return 0
 }
 
-func (cmd *mainCmd) run(opts *params) error {
+func (cmd *mainCmd) run(ctx context.Context, opts *params) error {
 	if opts.HighlightListThemes {
 		for _, name := range styles.Names() {
 			fmt.Fprintln(cmd.Stdout, name)
@@ -174,6 +180,28 @@ func (cmd *mainCmd) run(opts *params) error {
 		}
 	}
 
+	var indexer PageIndexer
+	if p := opts.Pagefind; p.Mode != pagefindDisabled {
+		enable := p.Mode == pagefindEnabled
+
+		// If no explicitly enabled, and not in embed mode,
+		// enable only if the pagefind binary is available.
+		pagefindPath := p.Path
+		if !enable && p.Mode == pagefindAuto && !opts.Embed {
+			pagefindPath, err = exec.LookPath("pagefind")
+			if err == nil {
+				enable = true
+			}
+		}
+
+		if enable {
+			indexer = &pagefind.CLI{
+				Pagefind: pagefindPath,
+				Log:      cmd.debugLog,
+			}
+		}
+	}
+
 	g := Generator{
 		Home:     opts.Home,
 		DebugLog: cmd.debugLog,
@@ -183,6 +211,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			Lexer:  highlight.GoLexer,
 			Logger: cmd.log,
 		},
+		Pagefind: indexer,
 		Renderer: &html.Renderer{
 			Home:                  opts.Home,
 			Embedded:              opts.Embed,
@@ -190,6 +219,7 @@ func (cmd *mainCmd) run(opts *params) error {
 			FrontMatter:           frontmatter,
 			Highlighter:           &highlighter,
 			NormalizeRelativePath: opts.RelLinkStyle.Normalize,
+			Pagefind:              indexer != nil,
 		},
 		OutDir:     opts.OutputDir,
 		SubDir:     opts.SubDir,
@@ -198,5 +228,5 @@ func (cmd *mainCmd) run(opts *params) error {
 		DocLinker:  &linker,
 	}
 
-	return errtrace.Wrap(g.Generate(pkgRefs))
+	return errtrace.Wrap(g.Generate(ctx, pkgRefs))
 }

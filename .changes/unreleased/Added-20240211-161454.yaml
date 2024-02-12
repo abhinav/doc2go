@@ -1,0 +1,4 @@
+kind: Added
+body: Add -pagefind flag to enable or disable client-side search. By default, it's
+  enabled if [pagefind](https://pagefind.app) is found on `$PATH`.
+time: 2024-02-11T16:14:54.920267-08:00

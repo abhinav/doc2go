@@ -1,0 +1,26 @@
+{{ define "pagefindHead" -}}
+<link href="{{ siteStatic "pagefind/pagefind-ui.css" }}" rel="stylesheet">
+<script src="{{ siteStatic "pagefind/pagefind-ui.js" }}"></script>
+{{- end }}
+
+{{ define "pagefindWidget" -}}
+<div id="search"></div>
+{{- end }}
+
+{{ define "pagefindTail" -}}
+<script>
+  window.addEventListener('DOMContentLoaded', (event) => {
+    var path = window.location.pathname;
+    {{- with siteRootRelative }}
+    if (!path.endsWith("/")) { path += "/"; }
+    path += {{ . }};
+    {{- end }}
+
+    new PagefindUI({
+      element: "#search",
+      showSubResults: true,
+      baseUrl: path,
+    });
+  });
+</script>
+{{- end }}

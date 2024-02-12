@@ -41,11 +41,14 @@ footer_about_disable = true
 sidebar_menu_compact = false
 
 [[params.menu.examples]]
-  name = "Embedded"
+  name = "doc2go (embedded)"
   url = "api/"
 [[params.menu.examples]]
-  name = "Standalone"
+  name = "doc2go (standalone)"
   url = "example/"
+[[params.menu.examples]]
+  name = "Go standard library (standalone)"
+  url = "std/"
 
 [params.links]
   [[params.links.developer]]
