@@ -24,7 +24,7 @@ serve: $(DEPS)
 
 .PHONY: clean
 clean:
-	rm -fr content/en/api/ content/en/example/
+	rm -fr content/en/api/ content/en/example/ content/en/std/
 	rm -fr public/*
 
 .PHONY: standalone
