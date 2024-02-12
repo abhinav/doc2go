@@ -33,6 +33,12 @@ nav {
   padding: 1em;
   background-color: #eee;
   border-radius: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+nav .navbar-right {
+  margin-left: auto;
 }
 
 /* Remove first level of nesting for a package's index section. */
@@ -73,5 +79,7 @@ span.deprecated-tag {
   vertical-align: middle;
   cursor: pointer;
 }
+
+#search { margin: 0.3em 0; }
 
 #generated-by-footer { font-size: x-small; }

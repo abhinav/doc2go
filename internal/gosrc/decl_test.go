@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -290,7 +291,7 @@ func TestDeclFormatter(t *testing.T) {
 
 				name, ok := tt.imports[path]
 				if !ok {
-					return nil, fmt.Errorf("unknown import %q", path)
+					return nil, errtrace.Wrap(fmt.Errorf("unknown import %q", path))
 				}
 
 				o := ast.NewObj(ast.Pkg, name)

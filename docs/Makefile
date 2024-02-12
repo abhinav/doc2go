@@ -3,12 +3,16 @@ DOC2GO = $(shell pwd)/../bin/doc2go
 
 EMBEDDED_REF = content/en/api/_index.html
 STANDALONE_REF = content/en/example/index.html
+STD_REF = content/en/std/index.html
 
 DEPS = \
 	standalone \
 	embedded \
+	std \
 	assets/scss/_chroma.scss \
 	content/en/docs/usage/config-keys.txt
+
+PAGEFIND = $(shell pwd)/node_modules/.bin/pagefind
 
 .PHONY: build
 build: $(DEPS)
@@ -20,18 +24,23 @@ serve: $(DEPS)
 
 .PHONY: clean
 clean:
-	rm -fr content/en/api/ content/en/example/
+	rm -fr content/en/api/ content/en/example/ content/en/std/
 	rm -fr public/*
 
 .PHONY: standalone
 standalone: $(STANDALONE_REF)
 
-
 .PHONY: embedded
 embedded: $(EMBEDDED_REF)
 
-$(STANDALONE_REF): $(DOC2GO)
-	cd .. && $(DOC2GO) -config docs/standalone.rc ./...
+.PHONY: std
+std: $(STD_REF)
+
+$(STD_REF): $(DOC2GO) $(PAGEFIND)
+	$(DOC2GO) -pagefind=$(PAGEFIND) -out=content/en/std std
+
+$(STANDALONE_REF): $(DOC2GO) $(PAGEFIND)
+	cd .. && $(DOC2GO) -config docs/standalone.rc -pagefind=$(PAGEFIND) ./...
 
 $(EMBEDDED_REF): $(DOC2GO) frontmatter.tmpl
 	cd .. && $(DOC2GO) -config docs/embed.rc ./...
@@ -44,6 +53,9 @@ content/en/docs/usage/config-keys.txt: $(DOC2GO)
 
 $(DOC2GO): doc2go.force
 	make -C .. bin/doc2go
+
+$(PAGEFIND): yarn.lock
+	yarn install
 
 .PHONY: doc2go.force
 doc2go.force:

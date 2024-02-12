@@ -15,6 +15,7 @@ import (
 	"strings"
 	ttemplate "text/template"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -40,13 +41,21 @@ var (
 		template.New("package.html").
 			Funcs((*render)(nil).FuncMap()).
 			ParseFS(_tmplFS,
-				"tmpl/package.html", "tmpl/layout.html", "tmpl/subpackages.html"),
+				"tmpl/package.html", "tmpl/layout.html", "tmpl/subpackages.html", "tmpl/pagefind.html"),
 	)
 
 	_packageIndexTmpl = template.Must(
 		template.New("directory.html").
 			Funcs((*render)(nil).FuncMap()).
-			ParseFS(_tmplFS, "tmpl/directory.html", "tmpl/layout.html", "tmpl/subpackages.html"),
+			ParseFS(_tmplFS,
+				"tmpl/directory.html", "tmpl/layout.html", "tmpl/subpackages.html", "tmpl/pagefind.html"),
+	)
+
+	_siteIndexTmpl = template.Must(
+		template.New("siteindex.html").
+			Funcs((*render)(nil).FuncMap()).
+			ParseFS(_tmplFS,
+				"tmpl/siteindex.html", "tmpl/layout.html", "tmpl/pagefind.html"),
 	)
 )
 
@@ -81,6 +90,10 @@ type Renderer struct {
 	// NormalizeRelativePath is an optional function that
 	// normalizes relative paths printed in the generated HTML.
 	NormalizeRelativePath func(string) string
+
+	// Pagefind specifies whether we have enabled client-side search with
+	// pagefind.
+	Pagefind bool
 }
 
 func (r *Renderer) templateName() string {
@@ -101,21 +114,21 @@ func (r *Renderer) WriteStatic(dir string) error {
 	dir = filepath.Join(dir, StaticDir)
 	static, err := fs.Sub(_staticFS, "static")
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
-	return fs.WalkDir(static, ".", func(path string, d fs.DirEntry, err error) error {
+	return errtrace.Wrap(fs.WalkDir(static, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || path == "." {
-			return err
+			return errtrace.Wrap(err)
 		}
 
 		outPath := filepath.Join(dir, path)
 		if d.IsDir() {
-			return os.MkdirAll(outPath, 0o1755)
+			return errtrace.Wrap(os.MkdirAll(outPath, 0o1755))
 		}
 
 		bs, err := fs.ReadFile(static, path)
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 
 		// FIXME: This is a hack. That we need to append to main.css
@@ -124,13 +137,13 @@ func (r *Renderer) WriteStatic(dir string) error {
 			buff := bytes.NewBuffer(bs)
 			buff.WriteString("\n")
 			if err := r.Highlighter.WriteCSS(buff); err != nil {
-				return err
+				return errtrace.Wrap(err)
 			}
 			bs = buff.Bytes()
 		}
 
-		return os.WriteFile(outPath, bs, 0o644)
-	})
+		return errtrace.Wrap(os.WriteFile(outPath, bs, 0o644))
+	}))
 }
 
 type frontmatterPackageData struct {
@@ -162,7 +175,7 @@ func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
 
 	var buff bytes.Buffer
 	if err := r.FrontMatter.Execute(&buff, d); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 
 	bs := bytes.TrimSpace(buff.Bytes())
@@ -172,7 +185,7 @@ func (r *Renderer) renderFrontmatter(w io.Writer, d frontmatterData) error {
 	bs = append(bs, '\n', '\n')
 
 	_, err := w.Write(bs)
-	return err
+	return errtrace.Wrap(err)
 }
 
 // Breadcrumb holds information about parents of a page
@@ -195,6 +208,7 @@ type PackageInfo struct {
 	Breadcrumbs []Breadcrumb
 
 	SubDirDepth int
+	PkgVersion  string
 
 	// DocPrinter specifies how to render godoc comments.
 	DocPrinter DocPrinter
@@ -203,6 +217,12 @@ type PackageInfo struct {
 // Basename is the last component of this package's path.
 func (b *PackageInfo) Basename() string {
 	return filepath.Base(b.ImportPath)
+}
+
+// IsInternal reports whether this package should be considered
+// internal to some other package.
+func (b *PackageInfo) IsInternal() bool {
+	return isInternal(b.ImportPath)
 }
 
 // RenderPackage renders the documentation for a single Go package.
@@ -218,7 +238,7 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		},
 	})
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	render := render{
 		Home:                  r.Home,
@@ -228,10 +248,11 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
 		SubDirDepth:           info.SubDirDepth,
+		Pagefind:              r.Pagefind,
 	}
-	return template.Must(_packageTmpl.Clone()).
+	return errtrace.Wrap(template.Must(_packageTmpl.Clone()).
 		Funcs(render.FuncMap()).
-		ExecuteTemplate(w, r.templateName(), info)
+		ExecuteTemplate(w, r.templateName(), info))
 }
 
 // PackageIndex holds information about a package listing.
@@ -260,6 +281,12 @@ func (idx *PackageIndex) Basename() string {
 	return filepath.Base(idx.Path)
 }
 
+// IsInternal reports whether packages under this index
+// should be considered internal to some other package.
+func (idx *PackageIndex) IsInternal() bool {
+	return isInternal(idx.Path)
+}
+
 // Subpackage is a descendant of a Go package.
 //
 // This is typically a direct descendant,
@@ -286,7 +313,7 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		NumChildren: pidx.NumChildren,
 	}
 	if err := r.renderFrontmatter(w, fmdata); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	render := render{
 		Home:                  r.Home,
@@ -295,10 +322,41 @@ func (r *Renderer) RenderPackageIndex(w io.Writer, pidx *PackageIndex) error {
 		Internal:              r.Internal,
 		Highlighter:           r.Highlighter,
 		NormalizeRelativePath: r.NormalizeRelativePath,
+		Pagefind:              r.Pagefind,
 	}
-	return template.Must(_packageIndexTmpl.Clone()).
+	return errtrace.Wrap(template.Must(_packageIndexTmpl.Clone()).
 		Funcs(render.FuncMap()).
-		ExecuteTemplate(w, r.templateName(), pidx)
+		ExecuteTemplate(w, r.templateName(), pidx))
+}
+
+// SiteIndex holds information about the root-level site list.
+// It's used when the -subdir flag is used to generate
+// the top-level index of the various sub-sites.
+type SiteIndex struct {
+	// Path will be empty unless -home was used.
+	Path string
+
+	Sites []string
+}
+
+// RenderSiteIndex renders the list of sub-sites as HTML.
+func (r *Renderer) RenderSiteIndex(w io.Writer, sidx *SiteIndex) error {
+	var data struct {
+		*SiteIndex
+
+		Breadcrumbs []Breadcrumb // unused
+	}
+
+	data.SiteIndex = sidx
+
+	render := render{
+		Home:                  r.Home,
+		Path:                  sidx.Path,
+		NormalizeRelativePath: r.NormalizeRelativePath,
+	}
+	return errtrace.Wrap(template.Must(_siteIndexTmpl.Clone()).
+		Funcs(render.FuncMap()).
+		ExecuteTemplate(w, r.templateName(), data))
 }
 
 type render struct {
@@ -307,6 +365,7 @@ type render struct {
 
 	SubDirDepth int
 	Internal    bool
+	Pagefind    bool
 
 	// DocPrinter converts Go comment.Doc objects into HTML.
 	DocPrinter DocPrinter
@@ -316,22 +375,69 @@ type render struct {
 }
 
 func (r *render) FuncMap() template.FuncMap {
+	// NOTE:
+	// This function cannot have any state that relies on reading from the
+	// render struct because it's called at init time with a nil receiver.
 	return template.FuncMap{
-		"doc":               r.doc,
-		"code":              r.code,
-		"static":            r.static,
-		"relativePath":      r.relativePath,
+		"doc":      r.doc,
+		"code":     r.code,
+		"pagefind": func() bool { return r.Pagefind },
+		// pagefindIgnore:
+		// Helpers to add the "data-pagefind-ignore" tag.
+		// No-op if pagefind is disabled.
+		"pagefindIgnore": func() template.HTMLAttr {
+			if !r.Pagefind {
+				return ""
+			}
+			// Extra space because this will be next to a tag.
+			return " data-pagefind-ignore"
+		},
+		"static":     r.static,
+		"siteStatic": r.siteStatic,
+		// relativevPath:
+		// Returns the relative path to the package or directory
+		// identified by the given import path.
+		// Adds a trailing '/' or not as requested by the user.
+		"relativePath": r.relativePath,
+		// outputRootRelative:
+		// The relative path to the root of the output directory.
+		// Includes a trailing '/' if requested by the user.
+		"outputRootRelative": func() string {
+			root := r.Home
+			if r.SubDirDepth > 0 {
+				root = path.Join(root, strings.Repeat("../", r.SubDirDepth))
+			}
+			return r.relativePath(root)
+		},
+		// siteRootRelative:
+		// The relative path to the root of the site directory.
+		// Includes a trailing '/' if requested by the user.
+		// This is the same as outputRootRelative if -subdir was not used.
+		"siteRootRelative": func() string {
+			return r.relativePath(r.Home)
+		},
 		"filterSubpackages": r.filterSubpackages,
-		"dict":              dict,
+		// normalizeRelativePath:
+		// Normalizes a relative path to have a '/' or not
+		// depending on the rel-link-style flag.
 		"normalizeRelativePath": func(p string) string {
 			if f := r.NormalizeRelativePath; f != nil {
 				return f(p)
 			}
 			return p
 		},
+		// dict(k1, v1, k2, v2, ...):
+		// Turns key-value pairs into a map.
+		// Useful for building objects in templates.
+		"dict": dict,
 	}
 }
 
+// Returns the relative path to the package or directory
+// identified by the given import path,
+// based on the package being generated.
+//
+// Adds a trailing '/' or not as requested by the user.
 func (r *render) relativePath(p string) string {
 	p = relative.Path(r.Path, p)
 	if r.NormalizeRelativePath != nil {
@@ -340,11 +446,22 @@ func (r *render) relativePath(p string) string {
 	return p
 }
 
+// Returns the path to a static asset stored in the output directory.
+// If -subdir was used, these assets are shared with other websites.
 func (r *render) static(p string) string {
 	elem := []string{r.Home}
 	for i := 0; i < r.SubDirDepth; i++ {
 		elem = append(elem, "..")
 	}
+	elem = append(elem, StaticDir, p)
+	return r.relativePath(path.Join(elem...))
+}
+
+// Returns the path to an asset stored in the site directory
+// (outdir/subdir/static).
+// This is the same as static if -subdir was not used.
+func (r *render) siteStatic(p string) string {
+	elem := []string{r.Home}
 	elem = append(elem, StaticDir, p)
 	return r.relativePath(path.Join(elem...))
 }
@@ -386,13 +503,13 @@ func isInternal(relpath string) bool {
 // Odd numbered arguments are keys, even numbered arguments are values.
 func dict(args ...any) (map[string]any, error) {
 	if len(args)%2 != 0 {
-		return nil, fmt.Errorf("dict: odd number of arguments")
+		return nil, errtrace.Wrap(fmt.Errorf("dict: odd number of arguments"))
 	}
 	dict := make(map[string]any, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
 		key, ok := args[i].(string)
 		if !ok {
-			return nil, fmt.Errorf("dict: [%d] should be string, got %T", i, args[i])
+			return nil, errtrace.Wrap(fmt.Errorf("dict: [%d] should be string, got %T", i, args[i]))
 		}
 		dict[key] = args[i+1]
 	}

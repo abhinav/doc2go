@@ -7,6 +7,9 @@ highlight
 home
 internal
 out
+pagefind
 pkg-doc
+pkg-version
 rel-link-style
+subdir
 tags

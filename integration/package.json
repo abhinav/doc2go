@@ -1,0 +1,14 @@
+{
+  "name": "doc2go-integration-test",
+  "version": "1.0.0",
+  "description": "Integration tests for doc2go.",
+  "main": "index.js",
+  "scripts": {
+    "test": "cd .. && make test-integration"
+  },
+  "author": "Abhinav Gupta",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "pagefind": "^1.0.4"
+  }
+}

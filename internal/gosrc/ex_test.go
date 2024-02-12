@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -284,13 +285,13 @@ loop:
 		case token.RBRACE:
 			depth--
 			if depth < 0 {
-				return nil, fmt.Errorf("unmatched brace at %v", file.Offset(pos))
+				return nil, errtrace.Wrap(fmt.Errorf("unmatched brace at %v", file.Offset(pos)))
 			}
 			if depth == 0 {
 				// There shouldn't be any more tokens after this.
 				pos, tok, _ := scan.Scan()
 				if tok != token.EOF {
-					return nil, fmt.Errorf("unexpected token %v at %v", tok, file.Offset(pos))
+					return nil, errtrace.Wrap(fmt.Errorf("unexpected token %v at %v", tok, file.Offset(pos)))
 				}
 			}
 		case token.COMMENT, token.SEMICOLON:
@@ -301,7 +302,7 @@ loop:
 	}
 
 	if depth > 0 {
-		return nil, errors.New("file ended before closing brace")
+		return nil, errtrace.Wrap(errors.New("file ended before closing brace"))
 	}
 
 	return toks, nil

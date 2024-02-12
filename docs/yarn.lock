@@ -23,6 +23,31 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@pagefind/darwin-arm64@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@pagefind/darwin-arm64/-/darwin-arm64-1.0.4.tgz#01cf61eeeb5ed3f2ce42a9cddfa6826fa30164c2"
+  integrity sha512-2OcthvceX2xhm5XbgOmW+lT45oLuHqCmvFeFtxh1gsuP5cO8vcD8ZH8Laj4pXQFCcK6eAdSShx+Ztx/LsQWZFQ==
+
+"@pagefind/darwin-x64@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@pagefind/darwin-x64/-/darwin-x64-1.0.4.tgz#7d8a63503c8ad39fb10faefa6838162b6845d4e7"
+  integrity sha512-xkdvp0D9Ld/ZKsjo/y1bgfhTEU72ITimd2PMMQtts7jf6JPIOJbsiErCvm37m/qMFuPGEq/8d+fZ4pydOj08HQ==
+
+"@pagefind/linux-arm64@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@pagefind/linux-arm64/-/linux-arm64-1.0.4.tgz#d755a104125eaac32201b1359e3cd575a6382674"
+  integrity sha512-jGBrcCzIrMnNxLKVtogaQyajVfTAXM59KlBEwg6vTn8NW4fQ6nuFbbhlG4dTIsaamjEM5e8ZBEAKZfTB/qd9xw==
+
+"@pagefind/linux-x64@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@pagefind/linux-x64/-/linux-x64-1.0.4.tgz#f8992b9a46d382d698c85cfa8c2e909d8e5b79ba"
+  integrity sha512-LIn/QcvcEtLEBqKe5vpSbSC2O3fvqbRCWOTIklslqSORisCsvzsWbP6j+LYxE9q0oWIfkdMoWV1vrE/oCKRxHg==
+
+"@pagefind/windows-x64@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@pagefind/windows-x64/-/windows-x64-1.0.4.tgz#43e3dd4a4cb96dc5d0c1a2c239b9d5792b794667"
+  integrity sha512-QlBCVeZfj9fc9sbUgdOz76ZDbeK4xZihOBAFqGuRJeChfM8pnVeH9iqSnXgO3+m9oITugTf7PicyRUFAG76xeQ==
+
 ansi-regex@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/ansi-regex/-/ansi-regex-5.0.1.tgz#082cb2c89c9fe8659a311a53bd6a4dc5301db304"
@@ -302,6 +327,17 @@ normalize-range@^0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha512-bdok/XvKII3nUpklnV6P2hxtMNrCboOjAcyBuQnWEhO665FwrSNRxU+AqpsyvO6LgGYPspN+lu5CLtw4jPRKNA==
+
+pagefind@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/pagefind/-/pagefind-1.0.4.tgz#ada6a17fefdecfaa654e730544f2d827ee35fcc7"
+  integrity sha512-oRIizYe+zSI2Jw4zcMU0ebDZm27751hRFiSOBLwc1OIYMrsZKk+3m8p9EVaOmc6zZdtqwwdilNUNxXvBeHcP9w==
+  optionalDependencies:
+    "@pagefind/darwin-arm64" "1.0.4"
+    "@pagefind/darwin-x64" "1.0.4"
+    "@pagefind/linux-arm64" "1.0.4"
+    "@pagefind/linux-x64" "1.0.4"
+    "@pagefind/windows-x64" "1.0.4"
 
 path-type@^4.0.0:
   version "4.0.0"

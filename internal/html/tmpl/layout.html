@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="doc2go">
     <link href="{{ static "css/main.css" }}" rel="stylesheet" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ static "icons/apple-touch-icon.png"}}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ static "icons/favicon-32x32.png"}}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ static "icons/favicon-16x16.png"}}">
+    <link rel="shortcut icon" href="{{ static "icons/favicon.ico"}}">
+    {{- if pagefind }}{{ template "pagefindHead" $ }}{{ end -}}
     {{ template "Head" $ -}}
   </head>
   <body>
@@ -19,9 +24,20 @@
             {{ $crumb.Text -}}
           {{ end -}}
         {{ end -}}
+        <span class="navbar-right">
+          {{ block "PkgVersion" $ }}{{ end -}}
+          <a href="{{ outputRootRelative }}">Root</a>
+          {{- block "NavbarExtra" $ }}{{ end -}}
+        </span>
       </nav>
-    {{- end -}}
-    <main>{{ template "Body" $ -}}</main>
+    {{ end -}}
+    {{- if pagefind }}{{ template "pagefindWidget" $ }}{{ end -}}
+    <main {{- if pagefind }}
+      data-pagefind-body
+      data-pagefind-filter="Visibility:{{ if $.IsInternal }}Internal{{ else }}Public{{ end }}"
+    {{- end }}>
+      {{- template "Body" $ -}}
+    </main>
     <hr>
     <footer>
       <small id="generated-by-footer">
@@ -29,6 +45,7 @@
       </small>
     </footer>
     <script src="{{ static "js/permalink.js" }}"></script>
+    {{- if pagefind }}{{ template "pagefindTail" $ }}{{ end -}}
   </body>
 </html>
 {{ end -}}

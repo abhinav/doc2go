@@ -7,6 +7,8 @@ import (
 	"io"
 	"sort"
 	"strings"
+
+	"braces.dev/errtrace"
 )
 
 // Help is doc2go's -h/-help flag.
@@ -29,6 +31,9 @@ var (
 	//go:embed help/config.txt
 	_configHelp string
 
+	//go:embed help/pagefind.txt
+	_pagefindHelp string
+
 	_usageHelp = firstLineOf(_defaultHelp)
 
 	_helpTopics = map[Help]string{
@@ -36,6 +41,7 @@ var (
 		"default":     _defaultHelp,
 		"frontmatter": _frontmatterHelp,
 		"highlight":   _highlightHelp,
+		"pagefind":    _pagefindHelp,
 		"pkg-doc":     _packageDocHelp,
 		"usage":       _usageHelp,
 	}
@@ -57,7 +63,7 @@ func (h Help) Write(w io.Writer) error {
 
 	if doc, ok := _helpTopics[h]; ok {
 		_, err := io.WriteString(w, doc)
-		return err
+		return errtrace.Wrap(err)
 	}
 
 	topics := make([]string, 0, len(_helpTopics))
@@ -66,7 +72,7 @@ func (h Help) Write(w io.Writer) error {
 	}
 	sort.Strings(topics)
 
-	return fmt.Errorf("unknown help topic %q: valid values are %q", string(h), topics)
+	return errtrace.Wrap(fmt.Errorf("unknown help topic %q: valid values are %q", string(h), topics))
 }
 
 var _ flag.Getter = (*Help)(nil)

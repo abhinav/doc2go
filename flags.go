@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"braces.dev/errtrace"
 	chroma "github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/styles"
 	ff "github.com/peterbourgon/ff/v3"
@@ -34,10 +35,12 @@ type params struct {
 	Debug  flagvalue.FileSwitch
 	Config string
 
-	Basename  string
-	OutputDir string
-	SubDir    string
-	Home      string
+	Basename   string
+	OutputDir  string
+	SubDir     string
+	PkgVersion string
+	Home       string
+	Pagefind   pagefindFlag
 
 	Embed        bool
 	Internal     bool
@@ -73,6 +76,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
 	flag.StringVar(&p.SubDir, "subdir", "", "")
+	flag.StringVar(&p.PkgVersion, "pkg-version", "", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
 	flag.StringVar(&p.Home, "home", "", "")
 
@@ -82,6 +86,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.StringVar(&p.FrontMatter, "frontmatter", "", "")
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 	flag.Var(&p.RelLinkStyle, "rel-link-style", "")
+	flag.Var(&p.Pagefind, "pagefind", "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")
@@ -131,13 +136,13 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 		ff.WithConfigFileParser(cfgParser.Parse),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 	args = flag.Args()
 
 	if version {
 		fmt.Fprintln(cmd.Stdout, "doc2go", _version)
-		return nil, errHelp
+		return nil, errtrace.Wrap(errHelp)
 	}
 
 	if help == "default" && len(args) > 0 {
@@ -153,7 +158,7 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 
 	if len(help) != 0 {
 		if err := help.Write(cmd.Stderr); err != nil {
-			fmt.Fprintln(cmd.Stderr, err)
+			fmt.Fprintf(cmd.Stderr, "%+v\n", err)
 		}
 
 		// For configuration,
@@ -163,25 +168,31 @@ func (cmd *cliParser) Parse(args []string) (*params, error) {
 			listConfigKeys(cmd.Stderr, flag, &cfgParser, 2)
 		}
 
-		return nil, errHelp
+		return nil, errtrace.Wrap(errHelp)
 	}
 
 	if printConfigKeys {
 		listConfigKeys(cmd.Stdout, flag, &cfgParser, 0)
-		return nil, errHelp
+		return nil, errtrace.Wrap(errHelp)
+	}
+
+	// pagefind cannot be used in embedded mode.
+	if p.Embed && p.Pagefind.Mode == pagefindEnabled {
+		fmt.Fprintln(cmd.Stderr, "pagefind cannot be used in embedded mode")
+		return nil, errtrace.Wrap(errInvalidArguments)
 	}
 
 	// If subdir is specified, it must not contain '/' or a path separator.
 	if p.SubDir != "" && strings.ContainsAny(p.SubDir, _slashes) {
 		fmt.Fprintf(cmd.Stderr, "subdir %q must not contain path separators\n", p.SubDir)
-		return nil, errInvalidArguments
+		return nil, errtrace.Wrap(errInvalidArguments)
 	}
 
 	p.Patterns = args
 	if len(p.Patterns) == 0 && !p.HighlightPrintCSS && !p.HighlightListThemes {
 		fmt.Fprintln(cmd.Stderr, "Please provide at least one pattern.")
 		_ = Help("usage").Write(cmd.Stderr)
-		return nil, errInvalidArguments
+		return nil, errtrace.Wrap(errInvalidArguments)
 	}
 
 	return p, nil
@@ -232,7 +243,7 @@ func (m *highlightMode) Set(s string) error {
 	case "inline":
 		*m = highlightModeInline
 	default:
-		return fmt.Errorf("unrecognized highlight mode %q", s)
+		return errtrace.Wrap(fmt.Errorf("unrecognized highlight mode %q", s))
 	}
 	return nil
 }
@@ -253,7 +264,7 @@ func (p *highlightParams) String() string {
 func (p *highlightParams) Set(s string) error {
 	if idx := strings.IndexRune(s, ':'); idx > 0 {
 		if err := p.Mode.Set(s[:idx]); err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 		s = s[idx+1:]
 	}
@@ -277,7 +288,7 @@ func (pt *pathTemplate) String() string {
 func (pt *pathTemplate) Set(s string) error {
 	idx := strings.IndexRune(s, '=')
 	if idx < 0 {
-		return fmt.Errorf("expected form 'path=template'")
+		return errtrace.Wrap(fmt.Errorf("expected form 'path=template'"))
 	}
 
 	pt.Path = s[:idx]
@@ -312,12 +323,12 @@ func (f *configFileParser) Parse(r io.Reader, set func(string, string) error) er
 		return nil
 	}
 
-	return ff.PlainParser(r, func(name, value string) error {
+	return errtrace.Wrap(ff.PlainParser(r, func(name, value string) error {
 		if !f.Allowed(name) {
-			return fmt.Errorf("flag %q cannot be set from configuration", name)
+			return errtrace.Wrap(fmt.Errorf("flag %q cannot be set from configuration", name))
 		}
-		return set(name, value)
-	})
+		return errtrace.Wrap(set(name, value))
+	}))
 }
 
 // relLinkStyle specifies how we relative links to directories.
@@ -354,7 +365,7 @@ func (ls *relLinkStyle) Set(s string) error {
 	case "directory":
 		*ls = relLinkStyleDirectory
 	default:
-		return fmt.Errorf("unrecognized link style %q", s)
+		return errtrace.Wrap(fmt.Errorf("unrecognized link style %q", s))
 	}
 	return nil
 }
@@ -372,5 +383,72 @@ func (ls relLinkStyle) Normalize(s string) string {
 		// Should never happen.
 		// But if it does, we'll just return the input.
 		return s
+	}
+}
+
+// pagefindFlag indicates whether to include client-side search
+// using pagefind.
+//
+// Examples usages:
+//
+//	--pagefind                   // enable
+//	--pagefind=true              // enable
+//	--pagefind=false             // disable
+//	--pagefind=auto              // enable if pagefind is found on PATH
+//	--pagefind=/path/to/pagefind // enable, use the specified pagefind binary
+type pagefindFlag struct {
+	Mode pagefindMode
+	Path string
+}
+
+var _ flag.Getter = (*pagefindFlag)(nil)
+
+func (*pagefindFlag) IsBoolFlag() bool { return true }
+
+func (f *pagefindFlag) Get() any { return f }
+
+func (f *pagefindFlag) String() string {
+	if f.Path != "" {
+		return f.Path
+	}
+
+	return f.Mode.String()
+}
+
+func (f *pagefindFlag) Set(v string) error {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "auto", "":
+		f.Mode = pagefindAuto
+	case "true", "t", "yes", "y", "on":
+		f.Mode = pagefindEnabled
+	case "false", "f", "no", "n", "off":
+		f.Mode = pagefindDisabled
+	default:
+		// Assume it's a path.
+		// We'll validate later.
+		f.Mode = pagefindEnabled
+		f.Path = v
+	}
+	return nil
+}
+
+type pagefindMode int
+
+const (
+	pagefindAuto pagefindMode = iota
+	pagefindEnabled
+	pagefindDisabled
+)
+
+func (m pagefindMode) String() string {
+	switch m {
+	case pagefindAuto:
+		return "auto"
+	case pagefindEnabled:
+		return "true"
+	case pagefindDisabled:
+		return "false"
+	default:
+		return fmt.Sprintf("pagefindMode(%d)", int(m))
 	}
 }

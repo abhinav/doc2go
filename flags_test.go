@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"braces.dev/errtrace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/doc2go/internal/iotest"
@@ -48,6 +49,7 @@ func TestFlagHelp_topics(t *testing.T) {
 		{topic: "pkg-doc", contains: "documentation"},
 		{topic: "highlight", contains: "chroma"},
 		{topic: "config", contains: "internal"},
+		{topic: "pagefind", contains: "pagefind"},
 		{topic: "usage", contains: "USAGE"},
 	}
 
@@ -334,6 +336,11 @@ func TestCLIParser_Errors(t *testing.T) {
 			give: []string{"-subdir", "foo/bar", "./..."},
 			want: "must not contain path separators",
 		},
+		{
+			desc: "pagefind with embed",
+			give: []string{"-embed", "-pagefind", "./..."},
+			want: "pagefind cannot be used in embedded mode",
+		},
 	}
 
 	for _, tt := range tests {
@@ -486,7 +493,7 @@ func TestConfigFileParser(t *testing.T) {
 		giveErr := errors.New("great sadness")
 		err := p.Parse(strings.NewReader("foo"),
 			func(k, v string) error {
-				return giveErr
+				return errtrace.Wrap(giveErr)
 			})
 		assert.ErrorIs(t, err, giveErr)
 	})
@@ -619,6 +626,59 @@ func TestRelLinkStyle_Normalize(t *testing.T) {
 			t.Parallel()
 
 			assert.Equal(t, tt.want, tt.style.Normalize(tt.give))
+		})
+	}
+}
+
+func TestPagefindFlag(t *testing.T) {
+	tests := []struct {
+		desc       string
+		give       []string
+		want       pagefindFlag
+		wantString string
+	}{
+		{
+			desc:       "default",
+			want:       pagefindFlag{Mode: pagefindAuto},
+			wantString: "auto",
+		},
+		{
+			desc:       "switch",
+			give:       []string{"-pagefind"},
+			want:       pagefindFlag{Mode: pagefindEnabled},
+			wantString: "true",
+		},
+		{
+			desc:       "auto",
+			give:       []string{"-pagefind=auto"},
+			want:       pagefindFlag{Mode: pagefindAuto},
+			wantString: "auto",
+		},
+		{
+			desc:       "disabled",
+			give:       []string{"-pagefind=false"},
+			want:       pagefindFlag{Mode: pagefindDisabled},
+			wantString: "false",
+		},
+		{
+			desc:       "path",
+			give:       []string{"-pagefind=path/to/pagefind"},
+			want:       pagefindFlag{Mode: pagefindEnabled, Path: "path/to/pagefind"},
+			wantString: "path/to/pagefind",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.desc, func(t *testing.T) {
+			var got pagefindFlag
+			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+			fset.Var(&got, "pagefind", "")
+
+			require.NoError(t, fset.Parse(tt.give))
+			assert.Equal(t, tt.want, got)
+
+			assert.Equal(t, tt.wantString, got.String())
 		})
 	}
 }

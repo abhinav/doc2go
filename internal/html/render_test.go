@@ -12,6 +12,7 @@ import (
 	"testing"
 	ttemplate "text/template"
 
+	"braces.dev/errtrace"
 	"github.com/andybalholm/cascadia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestRenderer_WriteStatic(t *testing.T) {
 	var want []string
 	err = fs.WalkDir(_staticFS, "static", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 		want = append(want, strings.TrimPrefix(path, "static"))
 		return nil
@@ -45,7 +46,7 @@ func TestRenderer_WriteStatic(t *testing.T) {
 	var got []string
 	err = fs.WalkDir(os.DirFS(dir), "_", func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errtrace.Wrap(err)
 		}
 		got = append(got, strings.TrimPrefix(path, "_"))
 		return nil
@@ -693,6 +694,130 @@ func TestRenderBreadcrumbs(t *testing.T) {
 			Highlighter: _fakeHighlighter,
 		}).RenderPackageIndex(&buff, &pidx))
 		assertCrumbs(t, buff.Bytes())
+	})
+}
+
+func TestNavbarRightLinks(t *testing.T) {
+	crumbs := []Breadcrumb{
+		{Text: "example.com", Path: "example.com"},
+		{Text: "foo", Path: "example.com/foo"},
+		{Text: "bar", Path: "example.com/foo/bar"},
+	}
+
+	type link struct {
+		href string
+		body string
+	}
+
+	assertLinks := func(t *testing.T, output []byte, wantLinks ...link) {
+		doc, err := html.Parse(bytes.NewReader(output))
+		require.NoError(t, err, "invalid HTML:\n%s", output)
+
+		var got []link
+		for _, a := range querySelectorAll(doc, "nav .navbar-right > a") {
+			got = append(got, link{
+				href: attr(a, "href"),
+				body: text(a),
+			})
+		}
+
+		assert.Equal(t, wantLinks, got)
+	}
+
+	t.Run("package", func(t *testing.T) {
+		t.Parallel()
+
+		pinfo := PackageInfo{
+			Package: &godoc.Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo/bar/baz",
+			},
+			DocPrinter:  new(CommentDocPrinter),
+			Breadcrumbs: crumbs,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../..", "Root"},
+			link{"#pkg-index", "Index"},
+		)
+	})
+
+	t.Run("package with home", func(t *testing.T) {
+		t.Parallel()
+
+		pinfo := PackageInfo{
+			Package: &godoc.Package{
+				Name:       "foo",
+				ImportPath: "example.com/foo/bar/baz",
+			},
+			DocPrinter:  new(CommentDocPrinter),
+			Breadcrumbs: crumbs,
+		}
+
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Home:        "example.com/foo/bar",
+			Highlighter: _fakeHighlighter,
+		}).RenderPackage(&buff, &pinfo))
+		assertLinks(t, buff.Bytes(),
+			link{"..", "Root"},
+			link{"#pkg-index", "Index"},
+		)
+	})
+
+	t.Run("directory", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../..", "Root"},
+		)
+	})
+
+	t.Run("subdir", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+			SubDirDepth: 2,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../../../../..", "Root"},
+		)
+	})
+
+	t.Run("subdir with home", func(t *testing.T) {
+		t.Parallel()
+
+		pidx := PackageIndex{
+			Path:        "example.com/foo/bar/baz",
+			Breadcrumbs: crumbs,
+			SubDirDepth: 2,
+		}
+		var buff bytes.Buffer
+		require.NoError(t, (&Renderer{
+			Home:        "example.com/foo/bar",
+			Highlighter: _fakeHighlighter,
+		}).RenderPackageIndex(&buff, &pidx))
+		assertLinks(t, buff.Bytes(),
+			link{"../../..", "Root"},
+		)
 	})
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"go/doc/comment"
 	"io"
@@ -10,10 +11,12 @@ import (
 	"strings"
 	"sync"
 
+	"braces.dev/errtrace"
 	"go.abhg.dev/doc2go/internal/errdefer"
 	"go.abhg.dev/doc2go/internal/godoc"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/html"
+	"go.abhg.dev/doc2go/internal/pagefind"
 	"go.abhg.dev/doc2go/internal/pathtree"
 	"go.abhg.dev/doc2go/internal/pathx"
 	"go.abhg.dev/doc2go/internal/relative"
@@ -41,9 +44,17 @@ type Renderer interface {
 	WriteStatic(string) error
 	RenderPackage(io.Writer, *html.PackageInfo) error
 	RenderPackageIndex(io.Writer, *html.PackageIndex) error
+	RenderSiteIndex(io.Writer, *html.SiteIndex) error
 }
 
 var _ Renderer = (*html.Renderer)(nil)
+
+// PageIndexer generates a search index for a website.
+type PageIndexer interface {
+	Index(context.Context, pagefind.IndexRequest) error
+}
+
+var _ PageIndexer = (*pagefind.CLI)(nil)
 
 // Generator generates documentation for user-specified Go packages.
 //
@@ -64,6 +75,12 @@ type Generator struct {
 	// into HTML.
 	Renderer Renderer
 
+	// Pagefind specifies how to generate a search index
+	// for the documentation.
+	//
+	// If nil, a search index will not be generated.
+	Pagefind PageIndexer
+
 	DocLinker godoc.Linker
 
 	// OutDir is the destination directory.
@@ -75,7 +92,8 @@ type Generator struct {
 	// and OutDir will get an index of siblings of SubDir.
 	//
 	// SubDir MUST NOT contain '/'.
-	SubDir string
+	SubDir     string
+	PkgVersion string
 
 	// Basename of generated files.
 	//
@@ -101,11 +119,11 @@ func (r *Generator) init() {
 }
 
 // Generate runs the generator over the provided packages.
-func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
+func (r *Generator) Generate(ctx context.Context, pkgRefs []*gosrc.PackageRef) error {
 	r.init()
 
 	if err := r.Renderer.WriteStatic(r.OutDir); err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 
 	trees := buildTrees(pkgRefs)
@@ -114,11 +132,25 @@ func (r *Generator) Generate(pkgRefs []*gosrc.PackageRef) error {
 	}
 
 	if _, err := r.renderTrees(nil, trees); err != nil {
-		return err
+		return errtrace.Wrap(err)
+	}
+
+	if r.Pagefind != nil {
+		siteDir := filepath.Join(r.OutDir, r.SubDir)
+		req := pagefind.IndexRequest{
+			SiteDir:     siteDir,
+			AssetSubdir: filepath.Join(html.StaticDir, "pagefind"),
+		}
+
+		if err := r.Pagefind.Index(ctx, req); err != nil {
+			return errtrace.Wrap(fmt.Errorf("generate search index: %w", err))
+		}
+
+		r.DebugLog.Printf("Generated search index in %v", req.AssetSubdir)
 	}
 
 	if err := r.generateSiblingIndex(); err != nil {
-		return fmt.Errorf("generate version index: %w", err)
+		return errtrace.Wrap(fmt.Errorf("generate version index: %w", err))
 	}
 
 	return nil
@@ -142,27 +174,26 @@ func (r *Generator) generateSiblingIndex() (err error) {
 
 	entries, err := os.ReadDir(siblingDir)
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 
-	idx := html.PackageIndex{Path: r.Home}
+	idx := html.SiteIndex{Path: r.Home}
 	for _, entry := range entries {
 		if !entry.IsDir() || entry.Name() == html.StaticDir {
 			continue
 		}
 
-		sub := html.Subpackage{RelativePath: entry.Name()}
-		idx.Subpackages = append(idx.Subpackages, sub)
+		idx.Sites = append(idx.Sites, entry.Name())
 	}
 
 	f, err := os.Create(filepath.Join(r.OutDir, r.Basename))
 	if err != nil {
-		return err
+		return errtrace.Wrap(err)
 	}
 	defer errdefer.Close(&err, f)
 
-	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
-		return err
+	if err := r.Renderer.RenderSiteIndex(f, &idx); err != nil {
+		return errtrace.Wrap(err)
 	}
 
 	return nil
@@ -173,7 +204,7 @@ func (r *Generator) renderTrees(crumbs []html.Breadcrumb, trees []packageTree) (
 	for _, t := range trees {
 		rpkgs, err := r.renderTree(crumbs, t)
 		if err != nil {
-			return nil, err
+			return nil, errtrace.Wrap(err)
 		}
 		pkgs = append(pkgs, rpkgs...)
 	}
@@ -192,11 +223,11 @@ func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*rend
 	}
 
 	if t.Value == nil {
-		return r.renderPackageIndex(crumbs, t)
+		return errtrace.Wrap2(r.renderPackageIndex(crumbs, t))
 	}
 	rpkg, err := r.renderPackage(crumbs, t)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 	return []*renderedPackage{rpkg}, nil
 }
@@ -204,19 +235,19 @@ func (r *Generator) renderTree(crumbs []html.Breadcrumb, t packageTree) ([]*rend
 func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) (_ []*renderedPackage, err error) {
 	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	r.DebugLog.Printf("Rendering directory %v", t.Path)
 
 	dir := filepath.Join(r.OutDir, r.SubDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	f, err := os.Create(filepath.Join(dir, r.Basename))
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 	defer errdefer.Close(&err, f)
 
@@ -233,7 +264,7 @@ func (r *Generator) renderPackageIndex(crumbs []html.Breadcrumb, t packageTree) 
 		Breadcrumbs: crumbs,
 	}
 	if err := r.Renderer.RenderPackageIndex(f, &idx); err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	return subpkgs, nil
@@ -247,29 +278,29 @@ type renderedPackage struct {
 func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *renderedPackage, err error) {
 	subpkgs, err := r.renderTrees(crumbs, t.Children)
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	ref := *t.Value
 	r.DebugLog.Printf("Rendering package %v", t.Path)
 	bpkg, err := r.Parser.ParsePackage(ref)
 	if err != nil {
-		return nil, fmt.Errorf("parse: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("parse: %w", err))
 	}
 
 	dpkg, err := r.Assembler.Assemble(bpkg)
 	if err != nil {
-		return nil, fmt.Errorf("assemble: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("assemble: %w", err))
 	}
 
 	dir := filepath.Join(r.OutDir, r.SubDir, relative.Path(r.Home, t.Path))
 	if err := os.MkdirAll(dir, 0o1755); err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 
 	f, err := os.Create(filepath.Join(dir, r.Basename))
 	if err != nil {
-		return nil, err
+		return nil, errtrace.Wrap(err)
 	}
 	defer errdefer.Close(&err, f)
 
@@ -291,9 +322,10 @@ func (r *Generator) renderPackage(crumbs []html.Breadcrumb, t packageTree) (_ *r
 			},
 		},
 		SubDirDepth: subdirDepth,
+		PkgVersion:  r.PkgVersion,
 	}
 	if err := r.Renderer.RenderPackage(f, &info); err != nil {
-		return nil, fmt.Errorf("render: %w", err)
+		return nil, errtrace.Wrap(fmt.Errorf("render: %w", err))
 	}
 
 	return &renderedPackage{

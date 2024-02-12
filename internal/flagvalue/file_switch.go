@@ -4,6 +4,8 @@ import (
 	"flag"
 	"io"
 	"os"
+
+	"braces.dev/errtrace"
 )
 
 // FileSwitch is a flag that accepts both "-x" and "-x=value",
@@ -60,7 +62,7 @@ func (fs *FileSwitch) Create(fallback io.Writer) (w io.Writer, done func() error
 	default:
 		f, err := os.Create(string(*fs))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errtrace.Wrap(err)
 		}
 		return f, f.Close, nil
 	}

@@ -7,7 +7,7 @@ on:
     branches: [ '*' ]
 
 env:
-  GO_VERSION: 1.21.x
+  GO_VERSION: 1.22.x
 
 jobs:
 
@@ -49,7 +49,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: ./cover.out
 
@@ -64,11 +64,18 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: true
 
+    # Node is needed to download pagefind.
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        cache: npm
+        cache-dependency-path: integration/package-lock.json
+
     - name: Test
       run: make cover-integration
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: ./cover.integration.out

@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"braces.dev/errtrace"
 	chroma "github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
 )
@@ -18,5 +19,5 @@ type chromaLexer struct{ l chroma.Lexer }
 
 // Lex lexically analyzes the given source code using Chroma.
 func (cl *chromaLexer) Lex(src []byte) ([]chroma.Token, error) {
-	return chroma.Tokenise(cl.l, nil, string(src))
+	return errtrace.Wrap2(chroma.Tokenise(cl.l, nil, string(src)))
 }

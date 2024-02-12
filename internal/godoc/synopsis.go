@@ -169,7 +169,7 @@ func OneLineNodeDepth(fset *token.FileSet, node ast.Node, depth int) string {
 		// As a fallback, use default formatter for all unknown node types.
 		buf := new(bytes.Buffer)
 		err := format.Node(buf, fset, node)
-		must.NotErrorf(err, "Error formatting node: %v", err)
+		must.NotErrorf(err, "Error formatting node: %+v", err)
 		s := buf.String()
 		if strings.Contains(s, "\n") {
 			return dotDotDot

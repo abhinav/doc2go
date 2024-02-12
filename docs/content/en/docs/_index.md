@@ -58,6 +58,9 @@ check out the following links:
 {{% card header="[**Standalone**](../example/)" %}}
 A documentation website generated from doc2go's own source code
 is available [here](../example/).
+
+A standalone website generated from the Go standard library
+is available [here](../std/).
 {{% /card %}}
 
 {{% card header="[**Embedded**](../api/)" %}}
