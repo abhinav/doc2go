@@ -167,8 +167,10 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 
 	root := generate(t, "-rel-link-style=directory", "./...")
 	visitLocalURLs(t, root, &visitOptions{ShouldVisit: func(local localURL) bool {
-		if local.Kind != localPage {
-			return false
+		if local.Kind == localAsset {
+			return assert.False(t,
+				strings.HasSuffix(local.URL.Path, "/"),
+				"%v: path for relative asset ends with '/': %v", local.From, local.Href)
 		}
 
 		href := local.Href
