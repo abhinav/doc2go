@@ -256,6 +256,15 @@ func TestRenderPackage_index(t *testing.T) {
 			}
 		}
 		assert.Equal(t, tt.want, items)
+
+		for _, link := range querySelectorAll(doc, "link") {
+			href := attr(link, "href")
+			if assert.NotEmpty(t, href) {
+				staticPath := "static/" + strings.TrimPrefix(href, "_/")
+				_, err := _staticFS.ReadFile(staticPath)
+				require.NoError(t, err)
+			}
+		}
 	}
 
 	for _, tt := range tests {
@@ -277,6 +286,18 @@ func TestRenderPackage_index(t *testing.T) {
 
 				runTest(t, (&Renderer{
 					Highlighter: _fakeHighlighter,
+				}), tt)
+			})
+
+			t.Run("Standalone with trailing slash", func(t *testing.T) {
+				t.Parallel()
+
+				ensureTrailingSlash := func(s string) string {
+					return strings.TrimSuffix(s, "/") + "/"
+				}
+				runTest(t, (&Renderer{
+					Highlighter:           _fakeHighlighter,
+					NormalizeRelativePath: ensureTrailingSlash,
 				}), tt)
 			})
 		})
