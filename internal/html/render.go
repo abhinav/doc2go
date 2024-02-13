@@ -446,6 +446,13 @@ func (r *render) relativePath(p string) string {
 	return p
 }
 
+// Returns the relative path to a file, generally a static asset.
+//
+// No trailing '/' is added.
+func (r *render) relativePathFile(p string) string {
+	return relative.Path(r.Path, p)
+}
+
 // Returns the path to a static asset stored in the output directory.
 // If -subdir was used, these assets are shared with other websites.
 func (r *render) static(p string) string {
@@ -454,7 +461,7 @@ func (r *render) static(p string) string {
 		elem = append(elem, "..")
 	}
 	elem = append(elem, StaticDir, p)
-	return r.relativePath(path.Join(elem...))
+	return r.relativePathFile(path.Join(elem...))
 }
 
 // Returns the path to an asset stored in the site directory
@@ -463,7 +470,7 @@ func (r *render) static(p string) string {
 func (r *render) siteStatic(p string) string {
 	elem := []string{r.Home}
 	elem = append(elem, StaticDir, p)
-	return r.relativePath(path.Join(elem...))
+	return r.relativePathFile(path.Join(elem...))
 }
 
 func (r *render) code(code *highlight.Code) template.HTML {
