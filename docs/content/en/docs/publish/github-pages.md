@@ -203,7 +203,7 @@ To add search to your documentation, follow these steps:
                   # Specify a different cache-dependency-path if you didn't
                   # run the command in the root of the repository.
 
-              - name: Install Pagefind
+              - name: Install Node dependencies
                 run: npm install
     ```
 
