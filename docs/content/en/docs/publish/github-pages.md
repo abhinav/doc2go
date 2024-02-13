@@ -165,3 +165,52 @@ Now, the documentation for that package will be at:
 Use the import path for your module instead of the above
 if you're using a vanity import path.
 {{% /alert %}}
+
+## Adding search
+
+doc2go supports [client-side search]({{< relref "/docs/usage/search" >}})
+powered by [Pagefind](https://pagefind.app).
+
+To add search to your documentation, follow these steps:
+
+1. Install Pagefind to your repository with NPM.
+
+    ```bash
+    npm install pagefind@latest
+    ```
+
+    This will generate a package-lock.json,
+    locking the version of Pagefind in use.
+
+2. Check in the package.json and package-lock.json into your repository.
+
+    ```bash
+    git add package.json package-lock.json
+    git commit -m "Pin Pagefind version"
+    ```
+
+    In the future, you can use `npm update` to update to the latest version.
+
+3. In the GitHub Workflow, add steps to set up Node and download Pagefind
+   before the "Generate API reference" step.
+
+    ```yaml
+              - name: Set up Node
+                uses: actions/setup-node@v4
+                with:
+                  cache: 'npm'
+                  cache-dependency-path: package-lock.json
+                  # Specify a different cache-dependency-path if you didn't
+                  # run the command in the root of the repository.
+
+              - name: Install Node dependencies
+                run: npm install
+    ```
+
+4. Modify the command in the "Generate API Reference" step
+   to pass the path to the newly installed Pagefind binary.
+
+    ```yaml
+              - name: Generate API reference
+                run: doc2go -pagefind=node_modules/.bin/pagefind ./...
+    ```

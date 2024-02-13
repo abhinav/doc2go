@@ -1,5 +1,5 @@
 ---
-title: Syntax Highlighting
+title: Syntax highlighting
 description: >-
   Customize doc2go's syntax highlighting of code blocks.
 weight: 3
