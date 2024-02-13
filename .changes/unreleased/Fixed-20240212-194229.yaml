@@ -1,0 +1,3 @@
+kind: Fixed
+body: '-rel-link-style: Don''t generate trailling ''/'' for static assets.'
+time: 2024-02-12T19:42:29.769904-08:00
