@@ -44,6 +44,9 @@ sidebar_menu_compact = false
   name = "doc2go (embedded)"
   url = "api/"
 [[params.menu.examples]]
+  name = "godoc tricks (embedded)"
+  url = "tricks/"
+[[params.menu.examples]]
   name = "doc2go (standalone)"
   url = "example/"
 [[params.menu.examples]]

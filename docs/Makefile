@@ -4,11 +4,13 @@ DOC2GO = $(shell pwd)/../bin/doc2go
 EMBEDDED_REF = content/en/api/_index.html
 STANDALONE_REF = content/en/example/index.html
 STD_REF = content/en/std/index.html
+TRICKS_REF = content/en/tricks/index.html
 
 DEPS = \
 	standalone \
 	embedded \
 	std \
+	tricks \
 	assets/scss/_chroma.scss \
 	content/en/docs/usage/config-keys.txt
 
@@ -24,7 +26,7 @@ serve: $(DEPS)
 
 .PHONY: clean
 clean:
-	rm -fr content/en/api/ content/en/example/ content/en/std/
+	rm -fr content/en/api/ content/en/example/ content/en/std/ content/en/tricks/
 	rm -fr public/*
 
 .PHONY: standalone
@@ -36,6 +38,9 @@ embedded: $(EMBEDDED_REF)
 .PHONY: std
 std: $(STD_REF)
 
+.PHONY: tricks
+tricks: $(TRICKS_REF)
+
 $(STD_REF): $(DOC2GO) $(PAGEFIND)
 	$(DOC2GO) -pagefind=$(PAGEFIND) -out=content/en/std std
 
@@ -44,6 +49,9 @@ $(STANDALONE_REF): $(DOC2GO) $(PAGEFIND)
 
 $(EMBEDDED_REF): $(DOC2GO) frontmatter.tmpl
 	cd .. && $(DOC2GO) -config docs/embed.rc ./...
+
+$(TRICKS_REF): $(DOC2GO) frontmatter.tmpl
+	cd .. && $(DOC2GO) -config docs/tricks.rc github.com/fluhus/godoc-tricks
 
 assets/scss/_chroma.scss: $(DOC2GO)
 	$(DOC2GO) -highlight=tango -highlight-print-css > $@
