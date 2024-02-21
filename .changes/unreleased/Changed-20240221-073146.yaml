@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  Don't render types and functions in main packages.
+  The only consumable part of these is the command itself.
+  Subpackages will still be rendered as before.
+time: 2024-02-21T07:31:46.540936-08:00
