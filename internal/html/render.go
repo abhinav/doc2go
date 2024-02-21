@@ -44,6 +44,13 @@ var (
 				"tmpl/package.html", "tmpl/layout.html", "tmpl/subpackages.html", "tmpl/pagefind.html"),
 	)
 
+	_commandTmpl = template.Must(
+		template.New("command.html").
+			Funcs((*render)(nil).FuncMap()).
+			ParseFS(_tmplFS,
+				"tmpl/command.html", "tmpl/layout.html", "tmpl/subpackages.html", "tmpl/pagefind.html"),
+	)
+
 	_packageIndexTmpl = template.Must(
 		template.New("directory.html").
 			Funcs((*render)(nil).FuncMap()).
@@ -250,7 +257,15 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		SubDirDepth:           info.SubDirDepth,
 		Pagefind:              r.Pagefind,
 	}
-	return errtrace.Wrap(template.Must(_packageTmpl.Clone()).
+
+	var tmpl *template.Template
+	if info.BinName != "" {
+		tmpl = _commandTmpl
+	} else {
+		tmpl = _packageTmpl
+	}
+
+	return errtrace.Wrap(template.Must(tmpl.Clone()).
 		Funcs(render.FuncMap()).
 		ExecuteTemplate(w, r.templateName(), info))
 }

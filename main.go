@@ -1,4 +1,6 @@
 // doc2go generates static HTML documentation from one or more Go packages.
+//
+// See https://abhinav.github.io/doc2go/ for information on how to use it.
 package main
 
 import (
