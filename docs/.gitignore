@@ -2,3 +2,5 @@
 .hugo_build.lock
 /resources
 /node_modules
+/static/example
+/static/std
