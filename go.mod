@@ -9,9 +9,9 @@ require (
 	github.com/fluhus/godoc-tricks v1.5.0
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/net v0.24.0
+	golang.org/x/net v0.25.0
 	golang.org/x/text v0.15.0
-	golang.org/x/tools v0.20.0
+	golang.org/x/tools v0.21.0
 )
 
 require (
