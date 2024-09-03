@@ -9,6 +9,6 @@
   "author": "Abhinav Gupta",
   "license": "Apache-2.0",
   "dependencies": {
-    "pagefind": "^1.0.4"
+    "pagefind": "^1.1.1"
   }
 }
