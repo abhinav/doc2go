@@ -49,7 +49,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./cover.out
 
@@ -76,6 +76,6 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./cover.integration.out
