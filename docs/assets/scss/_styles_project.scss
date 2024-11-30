@@ -7,6 +7,9 @@
 /* Link color takes precedence over highlighting. */
 .chroma a > span { color: #3176d9 !important; }
 
+/* Don't underline links in code blocks. */
+.chroma a { text-decoration: none; }
+
 /*
   Don't show "edit this page" links on API reference pages.
   To do that, hide all and only show those inside the docs directory.

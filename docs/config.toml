@@ -37,7 +37,7 @@ cloudflareWebAnalytics = "085b42f4381f4b8999051fc40a656369"
 navbar_logo = false
 sidebar_search_disable = true
 # sidebar_menu_foldable = true
-footer_about_disable = true
+footer_about_enable = false
 sidebar_menu_compact = false
 
 [[params.menu.examples]]
