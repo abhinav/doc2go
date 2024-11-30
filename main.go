@@ -205,10 +205,14 @@ func (cmd *mainCmd) run(ctx context.Context, opts *params) error {
 		}
 	}
 
+	parser := gosrc.Parser{
+		Logger: cmd.log,
+	}
+
 	g := Generator{
 		Home:     opts.Home,
 		DebugLog: cmd.debugLog,
-		Parser:   new(gosrc.Parser),
+		Parser:   &parser,
 		Assembler: &godoc.Assembler{
 			Linker: &linker,
 			Lexer:  highlight.GoLexer,

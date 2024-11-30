@@ -5,7 +5,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"sort"
+	"go/types"
+	"io"
+	"log"
+	"maps"
+	"slices"
 
 	"braces.dev/errtrace"
 )
@@ -28,31 +32,76 @@ type Package struct {
 	Fset *token.FileSet
 
 	// Names of top-level declarations defined in this package.
+	//
+	// Includes unexported declarations.
 	TopLevelDecls []string
+
+	// Type information for the package.
+	Info *types.Info
 }
 
 // Parser loads the contents of a package by parsing it from source.
-type Parser struct{}
+type Parser struct {
+	Logger *log.Logger
+}
 
 // ParsePackage parses all files in the package at the given path
 // and fills a Package object with the result.
-func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
-	fset := token.NewFileSet()
+func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
+	logger := p.Logger
+	if logger == nil {
+		logger = log.New(io.Discard, "", 0)
+	}
 
+	fset := token.NewFileSet()
 	files := make(map[string]*ast.File)
 	syntax, err := parseFiles(fset, ref.Files, files)
 	if err != nil {
 		return nil, errtrace.Wrap(err)
 	}
 
-	var topLevel []string
-	if pkg, _ := ast.NewPackage(fset, files, packageRefImporter(ref), nil); pkg != nil {
-		topLevel = make([]string, 0, len(pkg.Scope.Objects))
-		for name := range pkg.Scope.Objects {
-			topLevel = append(topLevel, name)
-		}
-		sort.Strings(topLevel)
+	info := types.Info{
+		Uses: make(map[*ast.Ident]types.Object),
+		Defs: make(map[*ast.Ident]types.Object),
 	}
+	typesPkg, _ := (&types.Config{
+		IgnoreFuncBodies: true,
+		FakeImportC:      true,
+		Importer:         newPackageImporter(ref.Imports),
+		Error: func(error) {
+			// Errors are expected.
+			// We are using a fake importer.
+		},
+		DisableUnusedImportCheck: true,
+	}).Check(ref.ImportPath, fset, syntax, &info)
+
+	topLevelNames := make(map[string]struct{})
+	pkgScope := typesPkg.Scope()
+	for _, name := range pkgScope.Names() {
+		obj := pkgScope.Lookup(name)
+		switch obj.(type) {
+		case *types.TypeName, *types.Const, *types.Var:
+			topLevelNames[name] = struct{}{}
+
+		case *types.Func:
+			if name == "init" {
+				// init functions are not top-level declarations.
+				continue
+			}
+
+			typ := obj.Type().(*types.Signature)
+			if typ.Recv() != nil {
+				// Methods are not top-level declarations.
+				continue
+			}
+
+			topLevelNames[name] = struct{}{}
+
+		default:
+			logger.Printf("unexpected object in package scope: (%T) %v", obj, obj)
+		}
+	}
+	topLevel := slices.Sorted(maps.Keys(topLevelNames))
 
 	testSyntax, err := parseFiles(fset, ref.TestFiles, nil /* fmap */)
 	if err != nil {
@@ -66,6 +115,7 @@ func (*Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 		TestSyntax:    testSyntax,
 		Fset:          fset,
 		TopLevelDecls: topLevel,
+		Info:          &info,
 	}, nil
 }
 
@@ -93,25 +143,31 @@ func parseFiles(fset *token.FileSet, files []string, fmap map[string]*ast.File) 
 	return syntax, nil
 }
 
-func packageRefImporter(ref *PackageRef) ast.Importer {
-	packageNames := make(map[string]string, len(ref.Imports)) // import path => name
-	for _, imp := range ref.Imports {
+type packageImporter struct {
+	pkgNames map[string]string // import path -> package name
+}
+
+func newPackageImporter(imports []ImportedPackage) *packageImporter {
+	packageNames := make(map[string]string)
+	for _, imp := range imports {
 		packageNames[imp.ImportPath] = imp.Name
 	}
-
-	return func(imports map[string]*ast.Object, path string) (pkg *ast.Object, err error) {
-		if pkg := imports[path]; pkg != nil {
-			return pkg, nil
-		}
-
-		name, ok := packageNames[path]
-		if !ok {
-			return nil, errtrace.Wrap(fmt.Errorf("package %q not found", path))
-		}
-
-		pkg = ast.NewObj(ast.Pkg, name)
-		pkg.Data = ast.NewScope(nil)
-		imports[path] = pkg
-		return pkg, nil
+	return &packageImporter{
+		pkgNames: packageNames,
 	}
+}
+
+func (p *packageImporter) Import(path string) (*types.Package, error) {
+	panic("Import not expected to be called: use ImportFrom")
+}
+
+func (p *packageImporter) ImportFrom(path string, _ string, _ types.ImportMode) (*types.Package, error) {
+	name, ok := p.pkgNames[path]
+	if !ok {
+		return nil, fmt.Errorf("unexpected package import: %q", path)
+	}
+	pkg := types.NewPackage(path, name)
+	// important: package must be marked complete to be listed in imports
+	pkg.MarkComplete()
+	return pkg, nil
 }
