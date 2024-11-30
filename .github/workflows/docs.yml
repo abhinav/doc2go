@@ -18,8 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.22.x
-          cache: true
+          go-version-file: go.mod
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -31,7 +30,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: '0.123.4'
+          hugo-version: '0.139.3'
           extended: true
 
       - name: Build
@@ -51,7 +50,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.output.pages_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
 
     runs-on: ubuntu-latest
     steps:

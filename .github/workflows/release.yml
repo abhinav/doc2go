@@ -27,8 +27,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: 1.22.x
-        cache: true
+        go-version-file: go.mod
 
     - name: Install parse-changelog
       uses: taiki-e/install-action@v2
