@@ -9,7 +9,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/doc2go v0.8.1
-	golang.org/x/net v0.31.0
+	golang.org/x/net v0.32.0
 )
 
 require (
