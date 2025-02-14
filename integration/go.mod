@@ -1,6 +1,6 @@
 module go.abhg.dev/doc2go/integration
 
-go 1.23
+go 1.24
 
 replace go.abhg.dev/doc2go => ../
 
