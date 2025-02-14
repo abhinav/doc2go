@@ -1,6 +1,6 @@
 module go.abhg.dev/doc2go
 
-go 1.23
+go 1.24
 
 require (
 	braces.dev/errtrace v0.3.0
