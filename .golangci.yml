@@ -31,7 +31,7 @@ linters-settings:
       - fmt.Fprintln
   govet:
     enable:
-      - niliness
+      - nilness
       - reflectvaluecompare
       - sortslice
       - unusedwrite
