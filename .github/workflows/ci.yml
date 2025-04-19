@@ -14,17 +14,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: Check out repository
-    - uses: actions/setup-go@v5
-      name: Set up Go
+    - name: Set up mise
+      uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version-file: go.mod
-    - uses: golangci/golangci-lint-action@v6
-      name: Install golangci-lint
-      with:
-        version: latest
-        args: --help
-    - run: make lint
-      name: Lint
+        cache_key_prefix: mise-v0-stable
+    - run: mise run lint
 
   test:
     runs-on: ${{ matrix.os }}
@@ -34,13 +30,15 @@ jobs:
         os: ["ubuntu-latest", "windows-latest"]
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Set up mise
+      uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version-file: go.mod
+        cache_key_prefix: mise-v0-stable
 
     - name: Test
-      run: make cover
+      run: mise run cover:unit
       shell: bash
 
     - name: Upload coverage
@@ -53,20 +51,15 @@ jobs:
     name: Integration test
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Set up mise
+      uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version-file: go.mod
-
-    # Node is needed to download pagefind.
-    - name: Set up Node
-      uses: actions/setup-node@v4
-      with:
-        cache: npm
-        cache-dependency-path: integration/package-lock.json
+        cache_key_prefix: mise-v0-stable
 
     - name: Test
-      run: make cover-integration
+      run: mise run cover:integration
       shell: bash
 
     - name: Upload coverage
