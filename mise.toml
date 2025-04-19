@@ -77,7 +77,7 @@ GOCOVERDIR=$GOCOVERDIR PATH=$GOBIN:$PATH \
     -doc2go $GOBIN/doc2go \
     -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
     -rundir {{ config_root }}
-go tool covdata textfmt -i=$COVERDIR -o=cover.integration.out
+go tool covdata textfmt -i=$GOCOVERDIR -o=cover.integration.out
 go tool cover -html=cover.integration.out -o cover.integration.html
 """
 
