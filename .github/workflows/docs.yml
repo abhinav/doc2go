@@ -12,26 +12,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      MISE_ENV: docs
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up mise
+        uses: jdx/mise-action@v2
         with:
-          go-version-file: go.mod
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          cache: 'yarn'
-          cache-dependency-path: docs/yarn.lock
+          cache_key_prefix: mise-v0-docs
+
       - name: Install Node dependencies
-        run: yarn install
+        run: npm i
         working-directory: docs
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3
-        with:
-          hugo-version: '0.139.3'
-          extended: true
 
       - name: Build
         run: make build

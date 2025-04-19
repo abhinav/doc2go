@@ -48,10 +48,10 @@ content/en/docs/usage/config-keys.txt: $(DOC2GO)
 	$(DOC2GO) -print-config-keys > $@
 
 $(DOC2GO): doc2go.force
-	make -C .. bin/doc2go
+	cd .. && mise run build
 
-$(PAGEFIND): yarn.lock
-	yarn install
+$(PAGEFIND): package-lock.json
+	npm install
 
 .PHONY: doc2go.force
 doc2go.force:
