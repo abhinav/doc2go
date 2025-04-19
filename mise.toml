@@ -41,7 +41,7 @@ GOBIN=$(mktemp -d)
 GOBIN=$GOBIN go install -race go.abhg.dev/doc2go
 PATH=$GOBIN:$PATH \
     go test -C integration ./... \
-    -doc2go {{ config_root }}/bin/doc2go \
+    -doc2go $GOBIN/doc2go \
     -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
     -rundir {{ config_root }}
 """
@@ -74,7 +74,7 @@ GOCOVERDIR=$(mktemp -d)
 GOBIN=$GOBIN go install -race -cover -coverpkg=./... go.abhg.dev/doc2go
 GOCOVERDIR=$GOCOVERDIR PATH=$GOBIN:$PATH \
     go test -C integration ./... \
-    -doc2go {{ config_root }}/bin/doc2go \
+    -doc2go $GOBIN/doc2go \
     -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
     -rundir {{ config_root }}
 go tool covdata textfmt -i=$COVERDIR -o=cover.integration.out
