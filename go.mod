@@ -9,7 +9,7 @@ require (
 	github.com/fluhus/godoc-tricks v1.5.0
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/text v0.23.0
 	golang.org/x/tools v0.31.0
 )
