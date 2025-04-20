@@ -1,0 +1,19 @@
+[tools."aqua:golangci/golangci-lint"]
+version = "2.1.2"
+backend = "aqua:golangci/golangci-lint"
+
+[tools.go]
+version = "1.24.2"
+backend = "core:go"
+
+[tools.gofumpt]
+version = "0.8.0"
+backend = "ubi:mvdan/gofumpt"
+
+[tools.node]
+version = "22.14.0"
+backend = "core:node"
+
+[tools."ubi:miniscruff/changie"]
+version = "1.21.1"
+backend = "ubi:miniscruff/changie"
