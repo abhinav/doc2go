@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	braces.dev/errtrace v0.3.0
-	github.com/alecthomas/chroma/v2 v2.18.0
+	github.com/alecthomas/chroma/v2 v2.19.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/fluhus/godoc-tricks v1.6.0
 	github.com/peterbourgon/ff/v3 v3.4.0
