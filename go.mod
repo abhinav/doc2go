@@ -3,7 +3,7 @@ module go.abhg.dev/doc2go
 go 1.24
 
 require (
-	braces.dev/errtrace v0.3.0
+	braces.dev/errtrace v0.4.0
 	github.com/alecthomas/chroma/v2 v2.19.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/fluhus/godoc-tricks v1.6.0
