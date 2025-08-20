@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         ref: ${{ inputs.version || github.ref }}
 
@@ -35,7 +35,7 @@ jobs:
         tool: parse-changelog@0.5.1
 
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Determine version (tagged release)
       if:  github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')

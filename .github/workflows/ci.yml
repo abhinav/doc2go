@@ -12,10 +12,10 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       name: Check out repository
     - name: Set up mise
-      uses: jdx/mise-action@v2
+      uses: jdx/mise-action@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -29,9 +29,9 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up mise
-      uses: jdx/mise-action@v2
+      uses: jdx/mise-action@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -50,9 +50,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Integration test
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up mise
-      uses: jdx/mise-action@v2
+      uses: jdx/mise-action@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
