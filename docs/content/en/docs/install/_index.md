@@ -19,7 +19,7 @@ If you're using [Homebrew](https://brew.sh/) on macOS or Linux,
 run the following command:
 
 ```bash
-brew install abhinav/tap/doc2go
+brew install --cask abhinav/tap/doc2go
 ```
 
 ### ArchLinux
