@@ -8,7 +8,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/fluhus/godoc-tricks v1.6.0
 	github.com/peterbourgon/ff/v3 v3.4.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/net v0.43.0
 	golang.org/x/text v0.28.0
 	golang.org/x/tools v0.36.0
