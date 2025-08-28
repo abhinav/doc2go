@@ -6,9 +6,9 @@ replace go.abhg.dev/doc2go => ../
 
 require (
 	github.com/andybalholm/cascadia v1.3.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	go.abhg.dev/container/ring v0.3.0
-	go.abhg.dev/doc2go v0.8.1
+	go.abhg.dev/doc2go v0.9.1
 	golang.org/x/net v0.43.0
 )
 
