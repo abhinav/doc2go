@@ -54,7 +54,6 @@ func TestFlagHelp_topics(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.topic, func(t *testing.T) {
 			t.Parallel()
 
@@ -195,7 +194,6 @@ func TestCLIParser(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -288,7 +286,6 @@ func TestCLIParser_Config_disallowed(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -344,7 +341,6 @@ func TestCLIParser_Errors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -398,7 +394,6 @@ func TestHighlightParams_Parse(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -534,7 +529,6 @@ func TestRelLinkStyle(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -621,7 +615,6 @@ func TestRelLinkStyle_Normalize(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -669,7 +662,6 @@ func TestPagefindFlag(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			var got pagefindFlag
 			fset := flag.NewFlagSet(t.Name(), flag.ContinueOnError)

@@ -104,7 +104,7 @@ type assembly struct {
 	allExamples []*Example
 }
 
-func (as *assembly) logf(format string, args ...interface{}) {
+func (as *assembly) logf(format string, args ...any) {
 	format = "[%v] " + format
 	as.logger.Printf(format, append([]any{as.importPath}, args...)...)
 }

@@ -22,7 +22,6 @@ func TestDescends(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(fmt.Sprintf("Descends(%q,%q)", tt.a, tt.b), func(t *testing.T) {
 			t.Parallel()
 
