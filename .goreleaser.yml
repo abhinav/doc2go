@@ -52,6 +52,12 @@ homebrew_casks:
     description: "Your Go documentation, to-go."
     license: "Apache-2.0"
     skip_upload: auto
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/doc2go"]
+          end
 
 checksum:
   name_template: 'checksums.txt'
