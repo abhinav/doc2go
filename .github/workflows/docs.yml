@@ -12,34 +12,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      MISE_ENV: docs
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/checkout@v5
+      - name: Set up mise
+        uses: jdx/mise-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          go-version: 1.22.x
-          cache: true
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          cache: 'yarn'
-          cache-dependency-path: docs/yarn.lock
+          cache_key_prefix: mise-v0-docs
+
       - name: Install Node dependencies
-        run: yarn install
+        run: npm i
         working-directory: docs
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v2
-        with:
-          hugo-version: '0.121.2'
-          extended: true
 
       - name: Build
         run: make build
         working-directory: docs
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: docs/public/
 
@@ -51,7 +46,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.output.pages_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
 
     runs-on: ubuntu-latest
     steps:

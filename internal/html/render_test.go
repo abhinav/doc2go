@@ -80,6 +80,7 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 		give          godoc.Package
 		wantHeadTitle string // contents of <title>
 		wantBodyTitle string // page header
+		wantIndex     bool   // whether #pkg-index is present
 	}{
 		{
 			desc: "library",
@@ -89,6 +90,7 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 			},
 			wantHeadTitle: "foo",
 			wantBodyTitle: "package foo",
+			wantIndex:     true,
 		},
 		{
 			desc: "binary",
@@ -128,6 +130,13 @@ func TestRenderer_RenderPackage_title(t *testing.T) {
 			bodyTitle := querySelector(doc, "#pkg-overview")
 			require.NotNil(t, bodyTitle)
 			assert.Equal(t, tt.wantBodyTitle, allText(bodyTitle))
+
+			index := querySelector(doc, "#pkg-index")
+			if tt.wantIndex {
+				require.NotNil(t, index)
+			} else {
+				assert.Nil(t, index)
+			}
 		})
 	}
 }

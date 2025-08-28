@@ -1,0 +1,18 @@
+{{ define "Head" -}}
+<title>{{ .BinName }}</title>
+{{ end -}}
+
+{{ define "PkgVersion" }}{{ with .PkgVersion }}{{ . }} | {{ end }}{{ end }}
+
+{{ define "Body" -}}
+<h2 id="pkg-overview" {{- if pagefind }} data-pagefind-meta="Import path:{{ .ImportPath }}"{{end }}>
+  {{- /**/ -}}
+  {{- .BinName -}}
+</h2>
+
+{{ .Doc | doc 3 -}}
+
+{{ with (filterSubpackages .Subpackages) -}}
+  {{ template "subpackages.html" . -}}
+{{ end -}}
+{{ end }}

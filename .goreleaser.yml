@@ -1,11 +1,13 @@
-project_name: doc2go
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+version: 2
 
 builds:
   - env:
       - CGO_ENABLED=0
     goos: [darwin, linux, windows]
     goarch: ["386", amd64, arm, arm64]
-    goarm: [5, 6, 7]
+    goarm: ["5", "6", "7"]
     ignore:
       - goos: windows
         goarch: arm
@@ -37,12 +39,12 @@ aurs:
       name: Abhinav Gupta
       email: mail@abhinavg.net
 
-brews:
+homebrew_casks:
   - repository:
       owner: abhinav
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    commit_msg_template: "{{ .ProjectName }}: Update formula to {{ .Tag }}"
+    commit_msg_template: "{{ .ProjectName }}: Update to {{ .Tag }}"
     commit_author:
       name: Abhinav Gupta
       email: mail@abhinavg.net
@@ -50,11 +52,9 @@ brews:
     description: "Your Go documentation, to-go."
     license: "Apache-2.0"
     skip_upload: auto
-    test: |
-      system "#{bin}/doc2go -version"
 
 checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ incminor .Tag }}-dev"
+  version_template: "{{ incminor .Tag }}-dev"

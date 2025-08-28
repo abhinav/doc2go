@@ -1,0 +1,121 @@
+[env]
+GOBIN = "{{ config_root }}/bin"
+_.path = ["bin"]
+
+[tools]
+go = "latest"
+"aqua:golangci/golangci-lint" = "latest"
+"ubi:miniscruff/changie" = "latest"
+gofumpt = "latest"
+node = "lts"
+
+[tasks.all]
+description = "Build, lint and test the code."
+depends = ["build", "lint", "test"]
+
+[tasks.build]
+run = "go install go.abhg.dev/doc2go"
+description = "Build the project"
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["lint:*"]
+
+[tasks.test]
+description = "Run all tests"
+depends = ["test:*"]
+
+[tasks.cover]
+description = "Run all tests with coverage"
+depends = ["cover:*"]
+
+[tasks."test:unit"]
+description = "Run unit tests"
+run = "go test -race ./..."
+
+[tasks."test:integration"]
+description = "Run integration tests"
+depends = ["tools"]
+run = """
+GOBIN=$(mktemp -d)
+GOBIN=$GOBIN go install -race go.abhg.dev/doc2go
+PATH=$GOBIN:$PATH \
+    go test -C integration ./... \
+    -doc2go $GOBIN/doc2go \
+    -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
+    -rundir {{ config_root }}
+"""
+
+[tasks.tools]
+description = "Install tools"
+depends = ["tools:*"]
+
+[tasks.errtrace]
+description = "Run errtrace"
+depends = ["tools:go"]
+run = """
+errtrace -w ./...
+(cd integration && errtrace -w ./...)
+"""
+
+[tasks."cover:unit"]
+description = "Run tests with coverage"
+run = [
+    "go test -coverprofile=cover.out -coverpkg=./... ./...",
+    "go tool cover -html=cover.out -o cover.html"
+]
+
+[tasks."cover:integration"]
+description = "Run tests with coverage and generate HTML report"
+depends = ["tools"]
+run = """
+GOBIN=$(mktemp -d)
+GOCOVERDIR=$(mktemp -d)
+GOBIN=$GOBIN go install -race -cover -coverpkg=./... go.abhg.dev/doc2go
+GOCOVERDIR=$GOCOVERDIR PATH=$GOBIN:$PATH \
+    go test -C integration ./... \
+    -doc2go $GOBIN/doc2go \
+    -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
+    -rundir {{ config_root }}
+go tool covdata textfmt -i=$GOCOVERDIR -o=cover.integration.out
+go tool cover -html=cover.integration.out -o cover.integration.html
+"""
+
+[tasks."lint:tidy"]
+description = "Ensure go.mod is tidy"
+run = "go mod tidy -diff"
+
+[tasks."lint:golangci"]
+description = "Run golangci-lint"
+run = "golangci-lint run"
+
+[tasks."lint:errtrace"]
+description = "Run errtrace"
+depends = ["tools:go"]
+run = """
+LOG=$(mktemp)
+errtrace -l ./.. | sed -e 's|^|./|g' >> "$LOG"
+(cd integration && errtrace -l ./.. | sed -e 's|^|./|g') >> "$LOG"
+if [ -s "$LOG" ]; then
+    echo "Errtrace found errors:"
+    cat "$LOG"
+    echo "Run 'mise run errtrace' to fix them."
+    false
+fi
+"""
+
+[tasks."changes:new"]
+description = "Add a changelog entry"
+run = "changie new"
+
+[tasks."changes:prepare"]
+description = "Prepare the changelog for release"
+run = 'changie batch {{arg(name="version")}} && changie merge'
+
+[tasks."tools:go"]
+description = "Install Go tools"
+run = "go install tool"
+
+[tasks."tools:node"]
+description = "Install Node tools"
+run = "cd integration && npm install"

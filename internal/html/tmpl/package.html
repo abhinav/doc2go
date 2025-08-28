@@ -1,7 +1,5 @@
 {{ define "Head" -}}
-<title>
-  {{- with .BinName }}{{ . }}{{ else }}{{ .Name }}{{ end -}}
-</title>
+<title>{{ .Name }}</title>
 {{ end -}}
 
 {{ define "PkgVersion" }}{{ with .PkgVersion }}{{ . }} | {{ end }}{{ end }}
@@ -9,7 +7,8 @@
 
 {{ define "Body" -}}
 <h2 id="pkg-overview" {{- if pagefind }} data-pagefind-meta="Import path:{{ .ImportPath }}"{{end }}>
-  {{- with .BinName }}{{ . }}{{ else }}package {{ .Name }}{{ end -}}
+  {{- /**/ -}}
+  package {{ .Name -}}
 </h2>
 {{ .Import | code }}
 {{ .Doc | doc 3 -}}

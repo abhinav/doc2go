@@ -6,29 +6,21 @@ on:
   pull_request:
     branches: [ '*' ]
 
-env:
-  GO_VERSION: 1.22.x
-
 jobs:
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       name: Check out repository
-    - uses: actions/setup-go@v5
-      name: Set up Go
+    - name: Set up mise
+      uses: jdx/mise-action@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version: ${{ env.GO_VERSION }}
-        cache: false
-    - uses: golangci/golangci-lint-action@v4
-      name: Install golangci-lint
-      with:
-        version: latest
-        args: --version
-    - run: make lint
-      name: Lint
+        cache_key_prefix: mise-v0-stable
+    - run: mise run lint
 
   test:
     runs-on: ${{ matrix.os }}
@@ -37,19 +29,20 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - uses: actions/checkout@v5
+    - name: Set up mise
+      uses: jdx/mise-action@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version: ${{ env.GO_VERSION }}
-        cache: true
+        cache_key_prefix: mise-v0-stable
 
     - name: Test
-      run: make cover
+      run: mise run cover:unit
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./cover.out
 
@@ -57,25 +50,19 @@ jobs:
     runs-on: ubuntu-latest
     name: Integration test
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - uses: actions/checkout@v5
+    - name: Set up mise
+      uses: jdx/mise-action@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        go-version: ${{ env.GO_VERSION }}
-        cache: true
-
-    # Node is needed to download pagefind.
-    - name: Set up Node
-      uses: actions/setup-node@v4
-      with:
-        cache: npm
-        cache-dependency-path: integration/package-lock.json
+        cache_key_prefix: mise-v0-stable
 
     - name: Test
-      run: make cover-integration
+      run: mise run cover:integration
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: ./cover.integration.out
