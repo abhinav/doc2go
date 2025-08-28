@@ -25,7 +25,6 @@ func TestHelp_Write(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.give.String(), func(t *testing.T) {
 			t.Parallel()
 
