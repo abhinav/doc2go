@@ -12,9 +12,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      MISE_ENV: docs
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -23,7 +20,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          cache_key_prefix: mise-v0-docs
+          working_directory: docs
+          cache_key_prefix: mise-v1-docs
 
       - name: Install Node dependencies
         run: npm i
