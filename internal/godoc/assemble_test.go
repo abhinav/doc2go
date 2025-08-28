@@ -648,7 +648,7 @@ func TestAssembler_ImportFor(t *testing.T) {
 				&highlight.TokenSpan{
 					Tokens: []chroma.Token{
 						{Type: chroma.KeywordNamespace, Value: "import"},
-						{Type: chroma.Text, Value: " "},
+						{Type: chroma.Whitespace, Value: " "},
 						{Type: chroma.LiteralString, Value: `"example.com/foo"`},
 					},
 				},
@@ -662,7 +662,7 @@ func TestAssembler_ImportFor(t *testing.T) {
 				&highlight.TokenSpan{
 					Tokens: []chroma.Token{
 						{Type: chroma.KeywordNamespace, Value: "import"},
-						{Type: chroma.Text, Value: " "},
+						{Type: chroma.Whitespace, Value: " "},
 						{Type: chroma.LiteralString, Value: `"example.com/foo"`},
 					},
 				},
@@ -676,9 +676,9 @@ func TestAssembler_ImportFor(t *testing.T) {
 				&highlight.TokenSpan{
 					Tokens: []chroma.Token{
 						{Type: chroma.KeywordNamespace, Value: "import"},
-						{Type: chroma.Text, Value: " "},
+						{Type: chroma.Whitespace, Value: " "},
 						{Type: chroma.NameOther, Value: "foo"},
-						{Type: chroma.Text, Value: " "},
+						{Type: chroma.Whitespace, Value: " "},
 						{Type: chroma.LiteralString, Value: `"example.com/foo/v2"`},
 					},
 				},
@@ -687,7 +687,6 @@ func TestAssembler_ImportFor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
