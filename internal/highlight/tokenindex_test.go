@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"fmt"
 	"testing"
 
 	chroma "github.com/alecthomas/chroma/v2"
@@ -78,7 +79,6 @@ func TestTokenIndex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
@@ -86,6 +86,67 @@ func TestTokenIndex(t *testing.T) {
 			assert.Equal(t, tt.tokens, tokens)
 			assert.Equal(t, tt.lead, string(lead))
 			assert.Equal(t, tt.trail, string(trail))
+		})
+	}
+}
+
+// TestTokenIndexNoPanic tests that TokenIndex.Interval does not panic
+// for various edge cases, including the condition that probably caused
+// https://github.com/abhinav/doc2go/issues/290
+func TestTokenIndexNoPanic(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{
+		`package main`,
+
+		`package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("hello")
+}`,
+		`// Comment at start
+package main
+/* multi
+   line
+   comment */
+func test() {}`,
+
+		`package main; import "fmt"; func main() { fmt.Println("compact") }`,
+
+		"package main\n\n\n\nfunc main() {\n\t\t\n\tprintln(\"lots of whitespace\")\n\n}",
+
+		`package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+func main() {
+	s := "string with\ttabs and\nnewlines"
+	fmt.Println(strings.TrimSpace(s))
+}`,
+	}
+
+	for i, src := range tests {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			t.Parallel()
+
+			tokens, err := GoLexer.Lex([]byte(src))
+			require.NoError(t, err)
+
+			tidx := NewTokenIndex([]byte(src), tokens)
+
+			srcLen := len(src)
+			for start := 0; start <= srcLen; start++ {
+				for end := start; end <= srcLen; end++ {
+					require.NotPanics(t, func() {
+						tidx.Interval(start, end)
+					}, "start=%d end=%d", start, end)
+				}
+			}
 		})
 	}
 }

@@ -60,7 +60,9 @@ func (ts *TokenIndex) Interval(start, end int) (tokens []chroma.Token, lead, tra
 	// In that case, we'll drop that token but take text up to end
 	// as trailing text.
 	if off := ts.ends[endIdx]; end < off {
-		trail = ts.src[ts.starts[endIdx]:end]
+		if ts.starts[endIdx] < end {
+			trail = ts.src[ts.starts[endIdx]:end]
+		}
 	} else {
 		// If ends[endIdx] is equal to end, though,
 		// that token must be included in its entirety.
