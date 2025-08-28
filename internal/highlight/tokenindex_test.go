@@ -31,7 +31,7 @@ func TestTokenIndex(t *testing.T) {
 			end:   10,
 			tokens: []chroma.Token{
 				{Type: chroma.KeywordDeclaration, Value: "func"},
-				{Type: chroma.Text, Value: " "},
+				{Type: chroma.Whitespace, Value: " "},
 				{Type: chroma.NameFunction, Value: "foo"},
 				{Type: chroma.Punctuation, Value: "()"},
 			},
@@ -43,7 +43,7 @@ func TestTokenIndex(t *testing.T) {
 			end:   10,
 			lead:  "unc",
 			tokens: []chroma.Token{
-				{Type: chroma.Text, Value: " "},
+				{Type: chroma.Whitespace, Value: " "},
 				{Type: chroma.NameFunction, Value: "foo"},
 				{Type: chroma.Punctuation, Value: "()"},
 			},
@@ -55,7 +55,7 @@ func TestTokenIndex(t *testing.T) {
 			end:   7,
 			tokens: []chroma.Token{
 				{Type: chroma.KeywordDeclaration, Value: "func"},
-				{Type: chroma.Text, Value: " "},
+				{Type: chroma.Whitespace, Value: " "},
 			},
 			trail: "fo",
 		},
@@ -71,9 +71,9 @@ func TestTokenIndex(t *testing.T) {
 			end:   len(src),
 			tokens: []chroma.Token{
 				{Type: chroma.KeywordConstant, Value: "nil"},
-				{Type: chroma.Text, Value: "\n"},
+				{Type: chroma.Whitespace, Value: "\n"},
 				{Type: chroma.Punctuation, Value: "}"},
-				{Type: chroma.Text, Value: "\n"},
+				{Type: chroma.Whitespace, Value: "\n"},
 			},
 		},
 	}
