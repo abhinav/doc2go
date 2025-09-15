@@ -1,6 +1,6 @@
 module go.abhg.dev/doc2go/integration
 
-go 1.24
+go 1.24.0
 
 replace go.abhg.dev/doc2go => ../
 
@@ -9,7 +9,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/doc2go v0.9.1
-	golang.org/x/net v0.43.0
+	golang.org/x/net v0.44.0
 )
 
 require (
