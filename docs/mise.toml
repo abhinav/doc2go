@@ -1,2 +1,90 @@
+[env]
+_.path = ["node_modules/.bin"]
+
+DOC_ROOT = "{{ config_root }}"
+
+PAGEFIND_BIN = "{{ config_root }}/node_modules/.bin/pagefind"
+DOC2GO_BIN = "{{ env.PROJECT_ROOT }}/bin/doc2go"
+CONFIG_KEYS = "content/en/docs/usage/config-keys.txt"
+CHROMA_SCSS = "assets/scss/_chroma.scss"
+
+DOC2GO_EMBED_ROOT = "content/en/api/_index.html"
+TRICKS_EMBED_ROOT = "content/en/tricks/_index.html"
+DOC2GO_STANDALONE_ROOT = "static/example/index.html"
+STD_STANDALONE_ROOT = "static/std/index.html"
+
 [tools]
 hugo-extended = "latest"
+
+[tasks.build]
+description = "Build the documentation site"
+depends = ["tool:*", "gen:*", "doc:*"]
+run = "hugo --minify"
+
+[tasks.serve]
+description = "Serve the documentation site locally"
+depends = ["tool:*", "gen:*", "doc:*"]
+run = "hugo serve --disableLiveReload"
+
+[tasks.clean]
+description = "Clean generated files"
+run = '''
+rm -fr \
+  content/en/api/ \
+  content/en/example/ \
+  content/en/std/ \
+  content/en/tricks/ \
+  public/*
+'''
+
+[tasks."doc:doc2go-embed"]
+description = "Generate doc2go embedded documentation"
+depends = ["tool:doc2go"]
+sources = ["{{ env.DOC2GO_BIN }}", "frontmatter.tmpl"]
+dir = "{{ env.PROJECT_ROOT }}"
+run = "doc2go -config {{ env.DOC_ROOT }}/embed.rc ./..."
+
+[tasks."doc:tricks-embed"]
+description = "Generate tricks embedded documentation"
+depends = ["tool:doc2go"]
+sources = ["{{ env.DOC2GO_BIN }}", "frontmatter.tmpl"]
+run = "doc2go -config {{ env.DOC_ROOT }}/tricks.rc github.com/fluhus/godoc-tricks"
+dir = "{{ env.PROJECT_ROOT }}"
+
+[tasks."doc:doc2go-standalone"]
+description = "Generate doc2go standalone documentation"
+depends = ["tool:doc2go", "tool:pagefind"]
+sources = ["{{ env.DOC2GO_BIN }}"]
+run = "doc2go -config {{ env.DOC_ROOT }}/standalone.rc -pagefind={{ env.PAGEFIND_BIN }} ./..."
+dir = "{{ env.PROJECT_ROOT }}"
+
+[tasks."doc:std-standalone"]
+description = "Generate standard library standalone documentation"
+depends = ["tool:doc2go", "tool:pagefind"]
+sources = ["{{ env.DOC2GO_BIN }}"]
+run = "doc2go -pagefind={{ env.PAGEFIND_BIN }} -out=static/std std"
+
+[tasks."gen:chroma-scss"]
+description = "Generate Chroma SCSS file"
+depends = ["tool:doc2go"]
+run = "doc2go -highlight=tango -highlight-print-css > {{ env.CHROMA_SCSS }}"
+sources = ["{{ env.DOC2GO_BIN }}"]
+outputs = ["{{ env.CHROMA_SCSS }}"]
+
+[tasks."gen:config-keys"]
+description = "Generate config keys documentation"
+depends = ["tool:doc2go"]
+run = "doc2go -print-config-keys > {{ env.CONFIG_KEYS }}"
+sources = ["{{ env.DOC2GO_BIN }}"]
+outputs = ["{{ env.CONFIG_KEYS }}"]
+
+[tasks."tool:doc2go"]
+description = "Build doc2go binary"
+run = "mise run build"
+dir = "{{ env.PROJECT_ROOT }}"
+
+[tasks."tool:pagefind"]
+description = "Install Pagefind"
+run = "npm install"
+sources = ["package-lock.json"]
+outputs = ["{{ env.PAGEFIND_BIN }}"]

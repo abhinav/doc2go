@@ -1,6 +1,7 @@
 [env]
 GOBIN = "{{ config_root }}/bin"
 _.path = ["bin"]
+PROJECT_ROOT = "{{ config_root }}"
 
 [tools]
 go = "latest"

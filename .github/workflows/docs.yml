@@ -21,14 +21,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           working_directory: docs
-          cache_key_prefix: mise-v1-docs
-
-      - name: Install Node dependencies
-        run: npm i
-        working-directory: docs
+          cache_key_prefix: mise-v2-docs
 
       - name: Build
-        run: make build
+        run: mise run build
         working-directory: docs
 
       - name: Upload artifact
