@@ -3,11 +3,16 @@ name: Prepare release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Version to release (e.g. v1.2.3)
+      level:
+        description: Version level to bump (major, minor, patch)
         required: false
         default: 'auto'
-        type: string
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
 
 permissions:
   contents: write
@@ -32,11 +37,7 @@ jobs:
     - name: Determine version
       id: version
       run: |
-        if [[ "${{ inputs.version }}" == "auto" ]]; then
-          VERSION=$(changie next auto)
-        else
-          VERSION="${{ inputs.version }}"
-        fi
+        VERSION=$(changie next ${{ inputs.level }})
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "Preparing release for $VERSION"
 

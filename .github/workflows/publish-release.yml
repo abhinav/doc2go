@@ -70,7 +70,7 @@ jobs:
 
     - name: Tag release
       run: |
-        git tag -a "v$VERSION" -m "v$VERSION"
+        git tag "v$VERSION"
         git push origin "v$VERSION"
 
     - name: Release
