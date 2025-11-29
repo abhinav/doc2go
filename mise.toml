@@ -9,6 +9,7 @@ go = "latest"
 "ubi:miniscruff/changie" = "latest"
 gofumpt = "latest"
 node = "lts"
+"ubi:abhinav/requiredfield" = "latest"
 
 [tasks.all]
 description = "Build, lint and test the code."
@@ -89,6 +90,10 @@ run = "go mod tidy -diff"
 [tasks."lint:golangci"]
 description = "Run golangci-lint"
 run = "golangci-lint run"
+
+[tasks."lint:requiredfield"]
+run = "go vet -vettool=$(command -v requiredfield) ./..."
+description = "Check for required fields"
 
 [tasks."lint:errtrace"]
 description = "Run errtrace"

@@ -27,6 +27,10 @@ checksum = "blake3:58afa2c8f89ef60ed81a84502504fe23518cd62e2ea708c918be1f7d56289
 version = "24.11.1"
 backend = "core:node"
 
+[[tools."ubi:abhinav/requiredfield"]]
+version = "0.7.1"
+backend = "ubi:abhinav/requiredfield"
+
 [[tools."ubi:miniscruff/changie"]]
 version = "1.24.0"
 backend = "ubi:miniscruff/changie"
