@@ -1,0 +1,60 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. v1.2.3)
+        required: false
+        default: 'auto'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-pr:
+    runs-on: ubuntu-latest
+    name: Generate release PR
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Set up mise
+      uses: jdx/mise-action@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        cache_key_prefix: mise-v0-stable
+
+    - name: Determine version
+      id: version
+      run: |
+        if [[ "${{ inputs.version }}" == "auto" ]]; then
+          VERSION=$(changie next auto)
+        else
+          VERSION="${{ inputs.version }}"
+        fi
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "Preparing release for $VERSION"
+
+    - name: Prepare release
+      run: |
+        changie batch ${{ steps.version.outputs.version }}
+        changie merge
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v7
+      with:
+        title: Release ${{ steps.version.outputs.version }}
+        branch: release/${{ steps.version.outputs.version }}
+        labels: prepare-release
+        commit-message: Prepare release ${{ steps.version.outputs.version }}
+        token: ${{ secrets.PAT }}
+        body: |
+          Preparing release ${{ steps.version.outputs.version }}.
+
+          After merging, trigger the "Publish release" workflow
+          with ref set to `main` to complete the release.
