@@ -8,10 +8,17 @@ import (
 	"go/format"
 	"go/scanner"
 	"go/token"
-	"strconv"
+	"go/types"
 
 	"braces.dev/errtrace"
 )
+
+// TypesInfo provides type information for identifiers in declarations.
+type TypesInfo interface {
+	// ObjectOf returns the object denoted by the given identifier,
+	// or nil if the identifier is not in the Uses or Defs maps.
+	ObjectOf(id *ast.Ident) types.Object
+}
 
 // DeclFormatter formats declarations from a single Go package.
 //
@@ -20,10 +27,11 @@ type DeclFormatter struct {
 	fset     *token.FileSet
 	topLevel map[string]struct{}
 	debug    bool
+	info     TypesInfo
 }
 
 // NewDeclFormatter builds a new DeclFormatter for the given package.
-func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string) *DeclFormatter {
+func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string, info TypesInfo) *DeclFormatter {
 	topLevel := make(map[string]struct{}, len(topLevelDecls))
 	for _, name := range topLevelDecls {
 		topLevel[name] = struct{}{}
@@ -32,6 +40,7 @@ func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string) *DeclFormatte
 	return &DeclFormatter{
 		fset:     fset,
 		topLevel: topLevel,
+		info:     info,
 	}
 }
 
@@ -46,6 +55,7 @@ func (f *DeclFormatter) Debug(debug bool) {
 func (f *DeclFormatter) FormatDecl(decl ast.Decl) (src []byte, regions []Region, err error) {
 	lb := labeler{
 		topLevel: f.topLevel,
+		info:     f.info,
 	}
 	ast.Walk(&lb, decl)
 
@@ -167,7 +177,8 @@ func (*PackageRefLabel) label() {}
 type labeler struct {
 	labels   []Label
 	parents  []string
-	topLevel map[string]struct{}
+	topLevel map[string]struct{} // required
+	info     TypesInfo           // required
 }
 
 var _ ast.Visitor = (*labeler)(nil)
@@ -246,14 +257,13 @@ func (lb *labeler) Visit(n ast.Node) ast.Visitor {
 	case *ast.Ident:
 		name := n.Name
 		switch {
-		case n.Obj == nil && doc.IsPredeclared(name):
+		case doc.IsPredeclared(name):
 			lb.add(&EntityRefLabel{
 				ImportPath: Builtin,
 				Name:       name,
 			})
-		case n.Obj != nil && ast.IsExported(name) && lb.isTopLevel(name):
-			// We need to filter to top-leve exported declarations
-			// to avoid generating links for type parameters.
+
+		case ast.IsExported(name) && lb.isTopLevel(name):
 			lb.add(&EntityRefLabel{
 				Name: name,
 			})
@@ -272,27 +282,29 @@ func (lb *labeler) Visit(n ast.Node) ast.Visitor {
 }
 
 func (lb *labeler) packageEntityRef(n *ast.SelectorExpr) (ok bool) {
+	// Uses types.Info.ObjectOf to distinguish package references from
+	// shadowed local variables. If x refers to a package import, ObjectOf
+	// returns a *types.PkgName; if it's a local variable or other binding,
+	// ObjectOf returns a different types.Object kind or nil.
+	// This is safe because the type checker has already resolved all bindings.
 	x, _ := n.X.(*ast.Ident)
 	if x == nil {
 		return false
 	}
 
-	obj := x.Obj
-	if obj == nil || obj.Kind != ast.Pkg {
+	obj := lb.info.ObjectOf(x)
+	if obj == nil {
+		return false
+	}
+	pkgName, ok := obj.(*types.PkgName)
+	if !ok {
 		return false
 	}
 
-	spec, _ := obj.Decl.(*ast.ImportSpec)
-	if spec == nil {
-		return false
-	}
-
-	importPath, err := strconv.Unquote(spec.Path.Value)
-	if err != nil {
-		return false // unreachable for all valid ASTs
-	}
-
-	lb.add(&PackageRefLabel{ImportPath: importPath})
+	importPath := pkgName.Imported().Path()
+	lb.add(&PackageRefLabel{
+		ImportPath: importPath,
+	})
 	if importPath == "C" {
 		lb.ignore()
 	} else {
