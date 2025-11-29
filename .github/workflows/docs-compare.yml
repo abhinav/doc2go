@@ -37,30 +37,44 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: old_docs
-          path: old_docs
+          path: a
 
       - name: Download new docs
         uses: actions/download-artifact@v4
         with:
           name: docs
-          path: docs
+          path: b
 
       - name: Extract archives
         run: |
-          (cd old_docs && tar -xzf docs.tar.gz && rm docs.tar.gz)
-          (cd docs && tar -xzf docs.tar.gz && rm docs.tar.gz)
+          (cd a && tar -xzf docs.tar.gz && rm docs.tar.gz)
+          (cd b && tar -xzf docs.tar.gz && rm docs.tar.gz)
 
       - name: Generate diff
         id: diff
+        shell: bash
         run: |
+          DIFF_OPTS=(
+            --ignore-space-change
+            --unified
+            --recursive
+            --exclude=pagefind
+            -I "/doc2go/offline-search-index."
+            -I "Last modified"
+            -I 'meta property="article:modified_time"'
+            -I 'meta itemprop="dateModified"'
+            -I 'meta itemprop="wordCount"'
+            -I '<lastmod>'
+          )
+
           echo "Docs Diff:" > comment.md
           echo "" >> comment.md
           echo '```diff' >> comment.md
           echo "::group::Diff"
-          if diff -bur old_docs/ docs/ >> comment.md; then
-            echo "has_diff=false" >> $GITHUB_OUTPUT
+          if diff "${DIFF_OPTS[@]}" a/ b/ >> comment.md; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
           else
-            echo "has_diff=true" >> $GITHUB_OUTPUT
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
           fi
           echo "::endgroup::"
           echo '```' >> comment.md
