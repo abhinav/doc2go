@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         description: "Upload as GitHub Pages artifact"
+      minify:
+        type: boolean
+        required: false
+        default: true
+        description: "Minify the output"
 
 jobs:
   build:
@@ -39,6 +44,8 @@ jobs:
       - name: Build
         run: mise run build
         working-directory: docs
+        env:
+          DOC2GO_MINIFY: ${{ inputs.minify }}
 
       - name: Archive
         if: ${{ !inputs.upload-as-pages }}

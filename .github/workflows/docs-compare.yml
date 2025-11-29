@@ -16,6 +16,7 @@ jobs:
       ref: ${{ github.base_ref }}
       artifact-name: old_docs
       upload-as-pages: false
+      minify: false
 
   build:
     name: Build new docs
@@ -24,6 +25,7 @@ jobs:
       ref: ${{ github.ref }}
       artifact-name: docs
       upload-as-pages: false
+      minify: false
 
   diff:
     name: Compare docs
