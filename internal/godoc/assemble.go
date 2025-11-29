@@ -48,11 +48,11 @@ func newDefaultDeclFormatter(pkg *gosrc.Package) DeclFormatter {
 
 // Assembler assembles a [Package] from a [go/doc.Package].
 type Assembler struct {
-	Linker Linker
+	Linker Linker      // required
 	Logger *log.Logger // optional
 
 	// Lexer used to highlight code blocks.
-	Lexer highlight.Lexer
+	Lexer highlight.Lexer // required
 
 	// newDeclFormatter builds a DeclFormatter for the given package.
 	//

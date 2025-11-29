@@ -61,7 +61,7 @@ type params struct {
 // cliParser parses the command line arguments for doc2go.
 type cliParser struct {
 	Stdout io.Writer
-	Stderr io.Writer
+	Stderr io.Writer // required
 }
 
 func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet) {

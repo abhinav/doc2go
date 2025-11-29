@@ -15,7 +15,7 @@ import (
 // Highlighter turns [Code] into HTML.
 type Highlighter struct {
 	// Style used for syntax highlighting of code.
-	Style *chroma.Style
+	Style *chroma.Style // required
 
 	// UseClasses specifies whether the highlighter
 	// uses inline 'style' attributes for highlighting,
