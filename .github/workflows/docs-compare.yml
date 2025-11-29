@@ -34,13 +34,13 @@ jobs:
 
     steps:
       - name: Download old docs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: old_docs
           path: a
 
       - name: Download new docs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: docs
           path: b
@@ -81,7 +81,7 @@ jobs:
 
       - name: Find existing comment
         if: steps.diff.outputs.has_diff == 'true'
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -90,7 +90,7 @@ jobs:
 
       - name: Create or update comment
         if: steps.diff.outputs.has_diff == 'true'
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
