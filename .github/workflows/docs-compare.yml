@@ -1,0 +1,84 @@
+name: Docs Compare
+
+on:
+  pull_request:
+    branches: ['*']
+
+concurrency:
+  group: docs-compare-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-old:
+    name: Build old docs
+    uses: ./.github/workflows/docs-build.yml
+    with:
+      ref: ${{ github.base_ref }}
+      artifact-name: old_docs
+      upload-as-pages: false
+      minify: false
+
+  build:
+    name: Build new docs
+    uses: ./.github/workflows/docs-build.yml
+    with:
+      ref: ${{ github.ref }}
+      artifact-name: docs
+      upload-as-pages: false
+      minify: false
+
+  diff:
+    name: Compare docs
+    needs: [build-old, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download old docs
+        uses: actions/download-artifact@v4
+        with:
+          name: old_docs
+          path: old_docs
+
+      - name: Download new docs
+        uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs
+
+      - name: Extract archives
+        run: |
+          (cd old_docs && tar -xzf docs.tar.gz && rm docs.tar.gz)
+          (cd docs && tar -xzf docs.tar.gz && rm docs.tar.gz)
+
+      - name: Generate diff
+        id: diff
+        run: |
+          echo "Docs Diff:" > comment.md
+          echo "" >> comment.md
+          echo '```diff' >> comment.md
+          echo "::group::Diff"
+          if diff -bur old_docs/ docs/ >> comment.md; then
+            echo "has_diff=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_diff=true" >> $GITHUB_OUTPUT
+          fi
+          echo "::endgroup::"
+          echo '```' >> comment.md
+
+      - name: Find existing comment
+        if: steps.diff.outputs.has_diff == 'true'
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Docs Diff
+
+      - name: Create or update comment
+        if: steps.diff.outputs.has_diff == 'true'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-file: comment.md
+          edit-mode: replace

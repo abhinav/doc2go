@@ -19,7 +19,10 @@ hugo-extended = "latest"
 [tasks.build]
 description = "Build the documentation site"
 depends = ["tool:*", "gen:*", "doc:*"]
-run = "hugo --minify"
+run = "hugo --minify=${usage_minify}"
+usage = '''
+flag "--minify" negate="--no-minify" default=#true help="Minify HTML output" env="DOC2GO_MINIFY"
+'''
 
 [tasks.serve]
 description = "Serve the documentation site locally"
