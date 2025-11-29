@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"go/doc/comment"
 	"io"
 	"log"
 	"os"
@@ -202,6 +203,7 @@ func TestGenerator_hierarchy(t *testing.T) {
 				Renderer:  &renderer,
 				OutDir:    t.TempDir(),
 				Home:      tt.home,
+				DocLinker: new(nopDocLinker),
 			}
 			require.NoError(t, g.Generate(context.Background(), refs))
 
@@ -253,6 +255,7 @@ func TestGenerator_basename(t *testing.T) {
 		Renderer:  &renderer,
 		OutDir:    outDir,
 		Basename:  "_index.html",
+		DocLinker: new(nopDocLinker),
 	}
 	require.NoError(t, g.Generate(context.Background(), []*gosrc.PackageRef{
 		{
@@ -309,6 +312,7 @@ func TestGenerator_pagefind(t *testing.T) {
 		Renderer:  &renderer,
 		Pagefind:  indexer,
 		OutDir:    outDir,
+		DocLinker: new(nopDocLinker),
 	}
 
 	require.NoError(t, g.Generate(context.Background(), []*gosrc.PackageRef{
@@ -406,4 +410,10 @@ func (r *fakeRenderer) RenderPackageIndex(_ io.Writer, idx *html.PackageIndex) e
 
 func (r *fakeRenderer) RenderSiteIndex(io.Writer, *html.SiteIndex) error {
 	return nil
+}
+
+type nopDocLinker struct{}
+
+func (n *nopDocLinker) DocLinkURL(string, *comment.DocLink) string {
+	return ""
 }

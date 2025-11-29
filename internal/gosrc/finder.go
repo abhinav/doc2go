@@ -52,7 +52,7 @@ type Finder struct {
 	Tags []string
 
 	// Logger to write regular log messages to.
-	Log *log.Logger
+	Log *log.Logger // required
 
 	// Logger to write debug messages to.
 	//

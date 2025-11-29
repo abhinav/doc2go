@@ -92,7 +92,7 @@ type Renderer struct {
 	FrontMatter *ttemplate.Template
 
 	// Highlighter renders code blocks into HTML.
-	Highlighter Highlighter
+	Highlighter Highlighter // required
 
 	// NormalizeRelativePath is an optional function that
 	// normalizes relative paths printed in the generated HTML.

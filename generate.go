@@ -65,15 +65,15 @@ type Generator struct {
 	DebugLog *log.Logger
 
 	// Parser parses package information from PackageRefs.
-	Parser Parser
+	Parser Parser // required
 
 	// Assembler converts parsed Package ASTs
 	// into a documentation-level IR.
-	Assembler Assembler
+	Assembler Assembler // required
 
 	// Renderer renders a package's documentation IR
 	// into HTML.
-	Renderer Renderer
+	Renderer Renderer // required
 
 	// Pagefind specifies how to generate a search index
 	// for the documentation.
@@ -81,11 +81,11 @@ type Generator struct {
 	// If nil, a search index will not be generated.
 	Pagefind PageIndexer
 
-	DocLinker godoc.Linker
+	DocLinker godoc.Linker // required
 
 	// OutDir is the destination directory.
 	// It will be created it if it doesn't exist.
-	OutDir string
+	OutDir string // required
 
 	// SubDir is an optional subdirectory inside OutDir.
 	// If speciifed, pages will be generated under OutDir/SubDir,
