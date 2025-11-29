@@ -1,0 +1,60 @@
+name: Build Docs
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+        default: ""
+        description: "Git ref to checkout (empty = current ref)"
+      artifact-name:
+        type: string
+        required: true
+        description: "Name for the artifact"
+      upload-as-pages:
+        type: boolean
+        required: false
+        default: false
+        description: "Upload as GitHub Pages artifact"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up mise
+        uses: jdx/mise-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          working_directory: docs
+          cache_key_prefix: mise-v2-docs
+
+      - name: Build
+        run: mise run build
+        working-directory: docs
+
+      - name: Archive
+        if: ${{ !inputs.upload-as-pages }}
+        run: |
+          tar -cvf docs.tar -C docs/public .
+          gzip docs.tar
+
+      - name: Upload artifact
+        if: ${{ !inputs.upload-as-pages }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: docs.tar.gz
+
+      - name: Upload pages artifact
+        if: ${{ inputs.upload-as-pages }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/public/
