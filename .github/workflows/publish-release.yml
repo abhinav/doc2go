@@ -1,0 +1,86 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          Version to release (e.g. v1.2.3).
+          Uses latest version from changelog if unset.
+        default: ''
+        type: string
+      ref:
+        description: Git ref to release from.
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ inputs.ref }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+
+    - name: Set up mise
+      uses: jdx/mise-action@v3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        cache_key_prefix: mise-v0-stable
+
+    - name: Set version (changie)
+      if: inputs.version == ''
+      run: |
+        CHANGIE_VERSION=$(changie latest)
+        echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
+
+    - name: Set version (input)
+      if: inputs.version != ''
+      run: |
+        echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Verify version
+      run: |
+        if [[ -z "$VERSION" ]]; then
+          echo "No version set"
+          exit 1
+        fi
+        echo "Releasing version v$VERSION"
+
+    - name: Extract changelog
+      run: |
+        tail -n+2 .changes/v${{ env.VERSION }}.md \
+          | tee ${{ github.workspace }}-CHANGELOG.txt
+        echo "::group::CHANGELOG"
+        cat ${{ github.workspace }}-CHANGELOG.txt
+        echo "::endgroup::"
+
+    - name: Tag release
+      run: |
+        git tag -a "v$VERSION" -m "v$VERSION"
+        git push origin "v$VERSION"
+
+    - name: Release
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --clean --release-notes ${{ github.workspace }}-CHANGELOG.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        AUR_KEY: ${{ secrets.AUR_KEY }}
+        HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        GORELEASER_CURRENT_TAG: v${{ env.VERSION }}

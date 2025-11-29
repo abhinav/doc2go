@@ -7,64 +7,40 @@
 The following must be installed for a new release:
 
 - [GitHub CLI (gh)](https://cli.github.com/)
-- [Changie](https://changie.dev/)
 
 ## Steps
 
 To release a new version of doc2go, take the following steps:
 
-1. Set an environment variable `VERSION` specifying the release version
-   **with** the 'v' prefix.
-   Be aware that doc2go follows [semver](https://semver.org/).
+1. Trigger the "Prepare release" workflow.
+   This will automatically determine the next version,
+   prepare the changelog,
+   and create a pull request to `main`.
 
     ```bash
-    VERSION=$(changie next auto)
+    gh workflow run prepare-release.yml
     ```
 
-2. Create a branch to prepare the release off `main`.
-```bash
-    git checkout main
-    git pull
-    git checkout -b prepare-$VERSION
-    ```
-
-3. Prepare the release notes for the new version.
+   Alternatively, specify a version explicitly:
 
     ```bash
-    changie batch $VERSION
-    changie merge
+    VERSION=v1.2.3  # or "minor" or "patch"
+    gh workflow run prepare-release.yml -f version=$VERSION
     ```
 
-4. Stage and commit everything.
+2. Review and merge the pull request created by the workflow.
+
+3. Trigger the "Publish release" workflow to tag and publish the release.
 
     ```bash
-    git add CHANGELOG.md .changes
-    git commit -m "Prepare release $VERSION"
+    gh workflow run publish-release.yml -f ref=main
     ```
 
-5. Create a pull request against the release branch.
+   Optionally, specify the version explicitly:
 
     ```bash
-    gh pr create -B release -t "Release $VERSION" -b ""
+    gh workflow run publish-release.yml -f ref=main -f version=$VERSION
     ```
 
-6. Once the build is green, merge the branch.
-
-    ```bash
-    gh pr merge -m -d
-    ```
-
-7. Tag and push the release.
-
-    ```bash
-    git tag -a "$VERSION" -m "$VERSION"
-    git push origin $VERSION
-    ```
-
-8. Update main.
-
-    ```bash
-    git checkout main
-    git merge origin/release
-    git push
-    ```
+4. Verify the release appears on the
+   [GitHub releases page](https://github.com/abhinav/doc2go/releases).
