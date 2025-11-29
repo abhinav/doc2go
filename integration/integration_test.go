@@ -47,8 +47,9 @@ func TestLinksAreValid(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name string
-		args []string
+		name     string
+		args     []string
+		basename string // index file basename if using rel-link-style=index
 	}{
 		{name: "self", args: []string{"./..."}},
 		{name: "exact home", args: []string{"-home=go.abhg.dev/doc2go", "./..."}},
@@ -63,6 +64,16 @@ func TestLinksAreValid(t *testing.T) {
 		{
 			name: "rel-link-style=directory",
 			args: []string{"-rel-link-style=directory", "./..."},
+		},
+		{
+			name:     "rel-link-style=index",
+			args:     []string{"-rel-link-style=index", "./..."},
+			basename: "index.html",
+		},
+		{
+			name:     "rel-link-style=index with custom basename",
+			args:     []string{"-rel-link-style=index", "-basename=_index.html", "./..."},
+			basename: "_index.html",
 		},
 		{
 			name: "home with subdir",
@@ -87,12 +98,11 @@ func TestLinksAreValid(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			dir := generate(t, tt.args...)
-			visitLocalURLs(t, dir, nil)
+			visitLocalURLs(t, dir, &visitOptions{Basename: tt.basename})
 		})
 	}
 }
@@ -117,7 +127,6 @@ func TestDocumentationIsRelocatable(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -184,6 +193,82 @@ func TestDirectoryRelativeLinks(t *testing.T) {
 			strings.HasSuffix(u.Path, "/"),
 			"%v: path for relative link does not end with '/': %v", local.From, href)
 	}})
+}
+
+// Verifies that with -rel-link-style=index,
+// all relative links to PACKAGE PAGES in generated HTML
+// end with '/index.html' (or just 'index.html' for self-references).
+func TestIndexRelativeLinks(t *testing.T) {
+	t.Parallel()
+
+	root := generate(t, "-rel-link-style=index", "./...")
+	basename := "index.html"
+	visitLocalURLs(t, root, &visitOptions{
+		Basename: basename,
+		ShouldVisit: func(local localURL) bool {
+			if local.Kind == localAsset {
+				return assert.False(t,
+					strings.HasSuffix(local.URL.Path, "/"+basename),
+					"%v: relative asset incorrectly ends with '/%s': %v", local.From, basename, local.Href)
+			}
+
+			href := local.Href
+			u, err := url.Parse(href)
+			require.NoError(t, err, "%v: bad URL: %v", local.From, href)
+			if u.IsAbs() || len(u.Host) > 0 || len(u.Path) == 0 {
+				return true
+			}
+
+			// For relative links to package pages, check they end with the basename
+			// or are directory links (ending with "/")
+			if strings.HasSuffix(u.Path, "/") && !strings.HasSuffix(u.Path, "/"+basename) {
+				// Directory link like "_/" - this is OK
+				return true
+			}
+
+			return assert.True(t,
+				strings.HasSuffix(u.Path, "/"+basename) || u.Path == basename,
+				"%v: relative link does not end with '%s': %v", local.From, basename, href)
+		},
+	})
+}
+
+// Verifies that with -rel-link-style=index and a custom basename,
+// all relative links to PACKAGE PAGES in generated HTML
+// end with the custom basename.
+func TestIndexRelativeLinksCustomBasename(t *testing.T) {
+	t.Parallel()
+
+	basename := "_index.html"
+	root := generate(t, "-rel-link-style=index", "-basename="+basename, "./...")
+	visitLocalURLs(t, root, &visitOptions{
+		Basename: basename,
+		ShouldVisit: func(local localURL) bool {
+			if local.Kind == localAsset {
+				return assert.False(t,
+					strings.HasSuffix(local.URL.Path, "/"+basename),
+					"%v: relative asset incorrectly ends with '/%s': %v", local.From, basename, local.Href)
+			}
+
+			href := local.Href
+			u, err := url.Parse(href)
+			require.NoError(t, err, "%v: bad URL: %v", local.From, href)
+			if u.IsAbs() || len(u.Host) > 0 || len(u.Path) == 0 {
+				return true
+			}
+
+			// For relative links to package pages, check they end with the basename
+			// or are directory links (ending with "/")
+			if strings.HasSuffix(u.Path, "/") && !strings.HasSuffix(u.Path, "/"+basename) {
+				// Directory link like "_/" - this is OK
+				return true
+			}
+
+			return assert.True(t,
+				strings.HasSuffix(u.Path, "/"+basename) || u.Path == basename,
+				"%v: relative link does not end with '%s': %v", local.From, basename, href)
+		},
+	})
 }
 
 // Verifies that multiple runs with different -subdir
@@ -315,6 +400,7 @@ type visitOptions struct {
 	ShouldVisit func(localURL) bool
 
 	StartPage string // defaults to "/"
+	Basename  string // basename of index file (e.g., "index.html" or "_index.html")
 }
 
 // visitLocalURLs visits all local URLs in the given directory.
@@ -345,6 +431,7 @@ func visitLocalURLs(t *testing.T, root string, opts *visitOptions) {
 		seen:        make(map[string]struct{}),
 		client:      http.DefaultClient,
 		shouldVisit: opts.ShouldVisit,
+		basename:    opts.Basename,
 	}).Walk(u.String())
 }
 
@@ -358,6 +445,7 @@ type urlWalker struct {
 	client *http.Client
 
 	shouldVisit func(localURL) bool
+	basename    string // basename of index file (e.g., "index.html" or "_index.html")
 }
 
 func (w *urlWalker) Walk(startPage string) {
@@ -448,10 +536,27 @@ func (w *urlWalker) push(from localURL, kind localURLKind, href string) {
 		return
 	}
 
+	// For relative links, resolve them relative to the directory of the current page.
+	// If the current page is an index file, get its directory first.
+	// Example: /go.abhg.dev/doc2go/_index.html => /go.abhg.dev/doc2go/
+	basePath := from.URL.Path
+	if w.basename != "" && strings.HasSuffix(basePath, w.basename) {
+		basePath = path.Dir(basePath)
+	}
+
+	// Join the relative path with the base directory.
+	// Example: /go.abhg.dev/doc2go/ + internal/godoc/_index.html
+	// => /go.abhg.dev/doc2go/internal/godoc/_index.html
+	resolvedPath := path.Join(basePath, u.Path)
+
+	// Create a new URL with the resolved path
+	resolvedURL := *from.URL
+	resolvedURL.Path = resolvedPath
+
 	w.queue.Push(localURL{
 		Kind: kind,
 		Href: href,
-		URL:  from.URL.JoinPath(u.Path),
+		URL:  &resolvedURL,
 		From: from.URL,
 	})
 }

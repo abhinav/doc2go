@@ -157,6 +157,7 @@ func (cmd *mainCmd) run(ctx context.Context, opts *params) error {
 
 	linker := docLinker{
 		RelLinkStyle: opts.RelLinkStyle,
+		Basename:     opts.Basename,
 	}
 	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
@@ -215,13 +216,15 @@ func (cmd *mainCmd) run(ctx context.Context, opts *params) error {
 		},
 		Pagefind: indexer,
 		Renderer: &html.Renderer{
-			Home:                  opts.Home,
-			Embedded:              opts.Embed,
-			Internal:              opts.Internal,
-			FrontMatter:           frontmatter,
-			Highlighter:           &highlighter,
-			NormalizeRelativePath: opts.RelLinkStyle.Normalize,
-			Pagefind:              indexer != nil,
+			Home:        opts.Home,
+			Embedded:    opts.Embed,
+			Internal:    opts.Internal,
+			FrontMatter: frontmatter,
+			Highlighter: &highlighter,
+			NormalizeRelativePath: func(s string) string {
+				return opts.RelLinkStyle.Normalize(s, opts.Basename)
+			},
+			Pagefind: indexer != nil,
 		},
 		OutDir:     opts.OutputDir,
 		SubDir:     opts.SubDir,

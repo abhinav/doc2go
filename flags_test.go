@@ -521,6 +521,12 @@ func TestRelLinkStyle(t *testing.T) {
 			wantString: "directory",
 		},
 		{
+			desc:       "index",
+			give:       []string{"-x", "index"},
+			want:       relLinkStyleIndex,
+			wantString: "index",
+		},
+		{
 			desc:       "plain/uppercase",
 			give:       []string{"-x", "PLAIN"},
 			want:       relLinkStylePlain,
@@ -579,10 +585,11 @@ func TestRelLinkStyle_Normalize(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		desc  string
-		style relLinkStyle
-		give  string
-		want  string
+		desc     string
+		style    relLinkStyle
+		give     string
+		basename string
+		want     string
 	}{
 		{
 			desc: "plain/no slash",
@@ -607,6 +614,45 @@ func TestRelLinkStyle_Normalize(t *testing.T) {
 			want:  "foo/",
 		},
 		{
+			desc:  "index/no slash/default basename",
+			style: relLinkStyleIndex,
+			give:  "foo",
+			want:  "foo/index.html",
+		},
+		{
+			desc:  "index/slash/default basename",
+			style: relLinkStyleIndex,
+			give:  "foo/",
+			want:  "foo/index.html",
+		},
+		{
+			desc:     "index/no slash/custom basename",
+			style:    relLinkStyleIndex,
+			give:     "foo",
+			basename: "page.html",
+			want:     "foo/page.html",
+		},
+		{
+			desc:     "index/slash/custom basename",
+			style:    relLinkStyleIndex,
+			give:     "foo/",
+			basename: "_index.html",
+			want:     "foo/_index.html",
+		},
+		{
+			desc:  "index/empty path/default basename",
+			style: relLinkStyleIndex,
+			give:  "",
+			want:  "index.html",
+		},
+		{
+			desc:     "index/empty path/custom basename",
+			style:    relLinkStyleIndex,
+			give:     "",
+			basename: "page.html",
+			want:     "page.html",
+		},
+		{
 			desc:  "unknown",
 			style: relLinkStyle(42),
 			give:  "foo",
@@ -618,7 +664,7 @@ func TestRelLinkStyle_Normalize(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, tt.want, tt.style.Normalize(tt.give))
+			assert.Equal(t, tt.want, tt.style.Normalize(tt.give, tt.basename))
 		})
 	}
 }

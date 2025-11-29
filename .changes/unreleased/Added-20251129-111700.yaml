@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  Add -rel-link-style=index option for rendering relative links with explicit index file (e.g., foo/index.html).
+  Supports custom index basenames set with the -basename flag.
+time: 2025-11-29T11:17:00.912809-08:00

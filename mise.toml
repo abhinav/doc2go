@@ -38,14 +38,18 @@ run = "go test -race ./..."
 [tasks."test:integration"]
 description = "Run integration tests"
 depends = ["tools"]
+usage = '''
+flag "--run <run>" help="Regex to select which script tests to run" default="."
+'''
 run = """
 GOBIN=$(mktemp -d)
 GOBIN=$GOBIN go install -race go.abhg.dev/doc2go
 PATH=$GOBIN:$PATH \
-    go test -C integration ./... \
+    go -C integration test ./... \
     -doc2go $GOBIN/doc2go \
     -pagefind {{ config_root }}/integration/node_modules/.bin/pagefind \
-    -rundir {{ config_root }}
+    -rundir {{ config_root }} \
+    -run "$usage_run"
 """
 
 [tasks.tools]
