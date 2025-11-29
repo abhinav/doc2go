@@ -66,3 +66,12 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         files: ./cover.integration.out
+
+  # Stable name for branch protection rules.
+  ci-ok:
+    name: CI OK
+    needs: [lint, test, test-integration]
+    runs-on: ubuntu-latest
+    steps:
+    - name: CI OK
+      run: exit 0
