@@ -343,6 +343,10 @@ const (
 	// with a trailing slash,
 	// e.g., "foo/bar/".
 	relLinkStyleDirectory
+
+	// relLinkStyleIndex renders links with explicit index file,
+	// e.g., "foo/bar/index.html".
+	relLinkStyleIndex
 )
 
 func (ls relLinkStyle) String() string {
@@ -351,6 +355,8 @@ func (ls relLinkStyle) String() string {
 		return "plain"
 	case relLinkStyleDirectory:
 		return "directory"
+	case relLinkStyleIndex:
+		return "index"
 	default:
 		return fmt.Sprintf("relLinkStyle(%d)", int(ls))
 	}
@@ -364,13 +370,20 @@ func (ls *relLinkStyle) Set(s string) error {
 		*ls = relLinkStylePlain
 	case "directory":
 		*ls = relLinkStyleDirectory
+	case "index":
+		*ls = relLinkStyleIndex
 	default:
 		return errtrace.Wrap(fmt.Errorf("unrecognized link style %q", s))
 	}
 	return nil
 }
 
-func (ls relLinkStyle) Normalize(s string) string {
+func (ls relLinkStyle) Normalize(s string, basename string) string {
+	// Default basename to index.html if not specified.
+	if basename == "" {
+		basename = "index.html"
+	}
+
 	switch ls {
 	case relLinkStylePlain:
 		return strings.TrimSuffix(s, "/")
@@ -379,6 +392,12 @@ func (ls relLinkStyle) Normalize(s string) string {
 			return s
 		}
 		return s + "/"
+	case relLinkStyleIndex:
+		s = strings.TrimSuffix(s, "/")
+		if s == "" {
+			return basename
+		}
+		return s + "/" + basename
 	default:
 		// Should never happen.
 		// But if it does, we'll just return the input.

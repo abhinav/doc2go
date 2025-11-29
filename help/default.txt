@@ -37,6 +37,7 @@ OPTIONS
 	use STYLE for relative links. One of:
 	  plain: render as-is (e.g. ../foo)
 	  directory: render as a directory (e.g. ../foo/)
+	  index: render with explicit index file (e.g. ../foo/index.html)
 	Defaults to plain.
   -highlight [MODE:][THEME]
 	use THEME to highlight code blocks.
