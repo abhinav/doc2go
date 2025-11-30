@@ -362,6 +362,20 @@ const (
 	localAsset              // CSS or script
 )
 
+// pageIDs is a set of IDs found on a page.
+type pageIDs map[string]struct{}
+
+// Has returns true if the given ID exists in the set.
+func (p pageIDs) Has(id string) bool {
+	_, ok := p[id]
+	return ok
+}
+
+// Add adds an ID to the set.
+func (p pageIDs) Add(id string) {
+	p[id] = struct{}{}
+}
+
 type localURL struct {
 	// Kind is the kind of this URL.
 	Kind localURLKind
@@ -373,6 +387,9 @@ type localURL struct {
 	// Href is the value of the href or src attribute
 	// that led to this link.
 	Href string
+
+	// Fragment is the fragment identifier from the URL.
+	Fragment string
 
 	URL *url.URL
 }
@@ -429,6 +446,7 @@ func visitLocalURLs(t *testing.T, root string, opts *visitOptions) {
 	(&urlWalker{
 		t:           t,
 		seen:        make(map[string]struct{}),
+		pageIDs:     make(map[string]pageIDs),
 		client:      http.DefaultClient,
 		shouldVisit: opts.ShouldVisit,
 		basename:    opts.Basename,
@@ -438,11 +456,12 @@ func visitLocalURLs(t *testing.T, root string, opts *visitOptions) {
 // urlWalker visits all local pages for the generated website
 // and verifies that none of the links are broken.
 type urlWalker struct {
-	t      *testing.T
-	host   string
-	seen   map[string]struct{}
-	queue  ring.Q[localURL]
-	client *http.Client
+	t       *testing.T
+	host    string
+	seen    map[string]struct{}
+	pageIDs map[string]pageIDs // IDs found on each page path
+	queue   ring.Q[localURL]
+	client  *http.Client
 
 	shouldVisit func(localURL) bool
 	basename    string // basename of index file (e.g., "index.html" or "_index.html")
@@ -495,6 +514,25 @@ func (w *urlWalker) visit(dest localURL) {
 	doc, err := html.Parse(res.Body)
 	require.NoError(w.t, err)
 
+	// Extract all IDs from this page.
+	ids := make(pageIDs)
+	for _, el := range cascadia.QueryAll(doc, cascadia.MustCompile("[id]")) {
+		for _, attr := range el.Attr {
+			if attr.Key == "id" {
+				ids.Add(attr.Val)
+				break
+			}
+		}
+	}
+	w.pageIDs[dest.URL.Path] = ids
+
+	// Validate fragment if this URL has one.
+	if dest.Fragment != "" {
+		assert.True(w.t, ids.Has(dest.Fragment),
+			"fragment #%s not found on page %v (linked from %v)",
+			dest.Fragment, dest.URL.Path, dest.From)
+	}
+
 	for _, tag := range cascadia.QueryAll(doc, cascadia.MustCompile("script, link, a")) {
 		kind, dstAttr := localPage, "href"
 		switch tag.Data {
@@ -524,15 +562,31 @@ func (w *urlWalker) push(from localURL, kind localURLKind, href string) {
 		return
 	}
 
+	// Capture fragment identifier.
+	fragment := u.Fragment
+
 	if len(u.Host) > 0 {
 		if u.Host == w.host {
 			w.queue.Push(localURL{
-				Kind: kind,
-				Href: href,
-				URL:  u,
-				From: from.URL,
+				Kind:     kind,
+				Href:     href,
+				Fragment: fragment,
+				URL:      u,
+				From:     from.URL,
 			})
 		}
+		return
+	}
+
+	// Fragment-only links (e.g., "#pkg-index") refer to the current page.
+	if u.Path == "" {
+		w.queue.Push(localURL{
+			Kind:     kind,
+			Href:     href,
+			Fragment: fragment,
+			URL:      from.URL,
+			From:     from.URL,
+		})
 		return
 	}
 
@@ -549,14 +603,15 @@ func (w *urlWalker) push(from localURL, kind localURLKind, href string) {
 	// => /go.abhg.dev/doc2go/internal/godoc/_index.html
 	resolvedPath := path.Join(basePath, u.Path)
 
-	// Create a new URL with the resolved path
+	// Create a new URL with the resolved path.
 	resolvedURL := *from.URL
 	resolvedURL.Path = resolvedPath
 
 	w.queue.Push(localURL{
-		Kind: kind,
-		Href: href,
-		URL:  &resolvedURL,
-		From: from.URL,
+		Kind:     kind,
+		Href:     href,
+		Fragment: fragment,
+		URL:      &resolvedURL,
+		From:     from.URL,
 	})
 }
