@@ -18,14 +18,8 @@ To release a new version of doc2go, take the following steps:
    and create a pull request to `main`.
 
     ```bash
-    gh workflow run prepare-release.yml
-    ```
-
-   Alternatively, specify a version explicitly:
-
-    ```bash
-    VERSION=v1.2.3  # or "minor" or "patch"
-    gh workflow run prepare-release.yml -f version=$VERSION
+    gh workflow run prepare-release.yml -f version=minor
+    # or "major" or "patch"
     ```
 
 2. Review and merge the pull request created by the workflow.
