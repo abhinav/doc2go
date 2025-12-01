@@ -1,8 +1,0 @@
-kind: Changed
-body: >-
-  Use Go type analysis (via go/types) when analyzing source code
-  instead of syntactic analysis (via go/ast) which was deprecated in Go 1.22.
-  This improves accuracy with regards to which identifiers
-  are rendered as links in generated HTML,
-  covering many cases that were previously missed.
-time: 2025-11-29T12:07:31.732471-08:00
