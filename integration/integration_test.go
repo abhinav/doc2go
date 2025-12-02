@@ -3,6 +3,7 @@ package integration
 import (
 	"flag"
 	"io"
+	"iter"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -329,7 +330,6 @@ func generate(t *testing.T, args ...string) (outDir string) {
 
 		if arg == "-internal=false" {
 			noInternal = true
-			continue
 		}
 	}
 
@@ -614,4 +614,153 @@ func (w *urlWalker) push(from localURL, kind localURLKind, href string) {
 		URL:      &resolvedURL,
 		From:     from.URL,
 	})
+}
+
+// TestModuleVersionLinks verifies that versioned links are generated
+// for external dependencies in single-module projects.
+func TestModuleVersionLinks(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t, "-C=integration/testdata/single-module", "./...")
+
+	indexHTML := filepath.Join(dir, "example.com", "testpkg", "index.html")
+	doc := readHTMLFile(t, indexHTML)
+
+	var foundZap, foundTestify bool
+	for href := range listAllHrefs(doc) {
+		if strings.Contains(href, "go.uber.org/zap@v1.27.1") {
+			foundZap = true
+		}
+		if strings.Contains(href, "github.com/stretchr/testify@v1.8.4") {
+			foundTestify = true
+		}
+	}
+
+	assert.True(t, foundZap, "expected versioned link to go.uber.org/zap@v1.27.1")
+	assert.True(t, foundTestify, "expected versioned link to github.com/stretchr/testify@v1.8.4")
+}
+
+// TestModuleVersionLinks_NoVersionsFlag verifies that
+// the -no-mod-versions flag disables versioned links.
+func TestModuleVersionLinks_NoVersionsFlag(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t, "-C=integration/testdata/single-module", "-no-mod-versions", "./...")
+
+	// Read and parse the generated HTML.
+	indexHTML := filepath.Join(dir, "example.com", "testpkg", "index.html")
+	doc := readHTMLFile(t, indexHTML)
+
+	var foundZap, foundTestify bool
+	for href := range listAllHrefs(doc) {
+		assert.NotContains(t, href, "@v",
+			"found versioned link in href with -no-mod-versions flag: %s", href)
+
+		if strings.Contains(href, "pkg.go.dev/go.uber.org/zap") {
+			foundZap = true
+		}
+
+		if strings.Contains(href, "pkg.go.dev/github.com/stretchr/testify") {
+			foundTestify = true
+		}
+	}
+	assert.True(t, foundZap, "expected unversioned link to go.uber.org/zap")
+	assert.True(t, foundTestify, "expected unversioned link to github.com/stretchr/testify")
+}
+
+// TestMultiModuleWorkspace verifies that different modules
+// in a workspace can have different versions of the same dependency.
+func TestMultiModuleWorkspace(t *testing.T) {
+	t.Parallel()
+
+	// Use 'go list -m' to get the modules in the workspace.
+	workspaceDir := filepath.Join("integration", "testdata", "multi-module-workspace")
+	cmd := exec.Command("go", "list", "-m")
+	cmd.Dir = filepath.Join(*_rundir, workspaceDir)
+	output, err := cmd.Output()
+	require.NoError(t, err, "failed to list modules in workspace")
+
+	modules := strings.Split(strings.TrimSpace(string(output)), "\n")
+	require.NotEmpty(t, modules, "no modules found in workspace")
+
+	dir := generate(t, append([]string{"-C=" + workspaceDir}, modules...)...)
+
+	moduleAHTML := filepath.Join(dir, "example.com", "workspace", "modulea", "index.html")
+	moduleABody, err := os.ReadFile(moduleAHTML)
+	require.NoError(t, err)
+
+	// module A uses zap@v1.27.1 and sync@v0.10.0.
+	assert.Contains(t, string(moduleABody),
+		"https://pkg.go.dev/go.uber.org/zap@v1.27.1",
+		"modulea should link to zap@v1.27.1")
+	assert.Contains(t, string(moduleABody),
+		"https://pkg.go.dev/golang.org/x/sync@v0.10.0",
+		"modulea should link to sync@v0.10.0")
+
+	moduleBHTML := filepath.Join(dir, "example.com", "workspace", "moduleb", "index.html")
+	moduleBBody, err := os.ReadFile(moduleBHTML)
+	require.NoError(t, err)
+
+	// module B uses zap@v1.26.0 and sync@v0.9.0 (different versions).
+	assert.Contains(t, string(moduleBBody),
+		"https://pkg.go.dev/go.uber.org/zap@v1.26.0",
+		"moduleb should link to zap@v1.26.0 (NOT v1.27.1)")
+	assert.Contains(t, string(moduleBBody),
+		"https://pkg.go.dev/golang.org/x/sync@v0.9.0",
+		"moduleb should link to sync@v0.9.0 (NOT v0.10.0)")
+}
+
+// TestReplaceDirectives verifies that replace directives in go.mod
+// override the version we link to for external dependencies.
+func TestReplaceDirectives(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t, "-C=integration/testdata/replace-directives", "./...")
+
+	// Read the generated HTML.
+	indexHTML := filepath.Join(dir, "example.com", "replacepkg", "index.html")
+	htmlBody, err := os.ReadFile(indexHTML)
+	require.NoError(t, err)
+
+	// go.mod requires zap@v1.27.1 but replaces it with v1.26.0.
+	// Links should use the replaced version.
+	assert.Contains(t, string(htmlBody),
+		"https://pkg.go.dev/go.uber.org/zap@v1.26.0",
+		"should link to replaced version zap@v1.26.0")
+	assert.NotContains(t, string(htmlBody),
+		"https://pkg.go.dev/go.uber.org/zap@v1.27.1",
+		"should NOT link to original version zap@v1.27.1")
+
+	// golang.org/x/text has no replace, should use required version.
+	assert.Contains(t, string(htmlBody),
+		"https://pkg.go.dev/golang.org/x/text@v0.14.0",
+		"should link to required version of golang.org/x/text")
+}
+
+func readHTMLFile(t *testing.T, filepath string) *html.Node {
+	t.Helper()
+
+	htmlFile, err := os.Open(filepath)
+	require.NoError(t, err)
+	defer func() { _ = htmlFile.Close() }()
+
+	doc, err := html.Parse(htmlFile)
+	require.NoError(t, err)
+
+	return doc
+}
+
+func listAllHrefs(doc *html.Node) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for _, tag := range cascadia.QueryAll(doc, cascadia.MustCompile("a[href]")) {
+			for _, attr := range tag.Attr {
+				if attr.Key == "href" {
+					if !yield(attr.Val) {
+						return
+					}
+					break
+				}
+			}
+		}
+	}
 }

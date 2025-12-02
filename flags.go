@@ -43,11 +43,12 @@ type params struct {
 	Home       string
 	Pagefind   pagefindFlag
 
-	Embed        bool
-	Internal     bool
-	PkgDocs      []pathTemplate
-	FrontMatter  string
-	RelLinkStyle relLinkStyle
+	Embed            bool
+	Internal         bool
+	PkgDocs          []pathTemplate
+	FrontMatter      string
+	RelLinkStyle     relLinkStyle
+	NoModuleVersions bool
 
 	Highlight           highlightParams
 	HighlightPrintCSS   bool
@@ -92,6 +93,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	flag.Var(flagvalue.ListOf(&p.PkgDocs), "pkg-doc", "")
 	flag.Var(&p.RelLinkStyle, "rel-link-style", "")
 	flag.Var(&p.Pagefind, "pagefind", "")
+	flag.BoolVar(&p.NoModuleVersions, "no-mod-versions", false, "")
 
 	// Highlighting:
 	flag.Var(&p.Highlight, "highlight", "")

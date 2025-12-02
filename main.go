@@ -17,6 +17,7 @@ import (
 	"braces.dev/errtrace"
 	"github.com/alecthomas/chroma/v2/styles"
 	"go.abhg.dev/doc2go/internal/godoc"
+	"go.abhg.dev/doc2go/internal/gomod"
 	"go.abhg.dev/doc2go/internal/gosrc"
 	"go.abhg.dev/doc2go/internal/highlight"
 	"go.abhg.dev/doc2go/internal/html"
@@ -163,9 +164,16 @@ func (cmd *mainCmd) run(ctx context.Context, opts *params) error {
 		pkgRefs = refs
 	}
 
+	// Build module dependency tree for versioned external links.
 	linker := docLinker{
 		RelLinkStyle: opts.RelLinkStyle,
 		Basename:     opts.Basename,
+	}
+	if !opts.NoModuleVersions && len(pkgRefs) > 0 {
+		builder := &gomod.Builder{Logger: cmd.log}
+		if moduleTree := builder.Build(pkgRefs); moduleTree != nil {
+			linker.ModuleTree = moduleTree
+		}
 	}
 	for _, lt := range opts.PkgDocs {
 		t, err := template.New(lt.Path).Parse(lt.Template)
