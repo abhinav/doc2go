@@ -34,6 +34,7 @@ type params struct {
 	Tags   string
 	Debug  flagvalue.FileSwitch
 	Config string
+	Dir    string
 
 	Basename   string
 	OutputDir  string
@@ -72,6 +73,10 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 	}
 
 	var p params
+
+	// General:
+	flag.StringVar(&p.Dir, "C", "", "")
+	cfg.Reject("C")
 
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
