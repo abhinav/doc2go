@@ -8,6 +8,9 @@ and all its descendants.
 
 OPTIONS
 
+  -C DIR
+	change to DIR before running doc2go.
+	Equivalent to running 'cd DIR && doc2go ...'.
   -basename NAME
 	base name of generated files. Defaults to index.html.
   -out DIR
