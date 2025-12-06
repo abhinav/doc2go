@@ -83,6 +83,14 @@ func (cmd *mainCmd) Run(args []string) (exitCode int) {
 	cmd.debug = opts.Debug.Bool()
 	cmd.debugLog = log.New(debugw, "", 0)
 
+	// Change directory if -C flag is specified.
+	if opts.Dir != "" {
+		if err := os.Chdir(opts.Dir); err != nil {
+			cmd.log.Printf("doc2go: %+v", err)
+			return 1
+		}
+	}
+
 	// TODO:
 	// In the future, tie this context to a signal handler.
 	ctx := context.Background()
