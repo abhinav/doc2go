@@ -33,6 +33,19 @@ type PackageRef struct {
 
 	// Packages imported by this package.
 	Imports []ImportedPackage
+
+	// Module identifies the Go module that this package belongs to,
+	// if known.
+	Module *ModuleRef
+}
+
+// ModuleRef identifies a Go module.
+type ModuleRef struct {
+	// Path is the module path (e.g., "example.com/myproject").
+	Path string
+
+	// GoMod is the path to the module's go.mod file.
+	GoMod string
 }
 
 // ImportedPackage is a package imported by another package.
@@ -60,7 +73,7 @@ type Finder struct {
 	DebugLog *log.Logger
 }
 
-const _finderLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports
+const _finderLoadMode = packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedModule
 
 // FindPackages searches for packages matching the given import path patterns,
 // and returns references to them.
@@ -92,6 +105,7 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 	}
 
 	infos := make([]*PackageRef, 0, len(pkgs))
+	mods := make(map[string]*ModuleRef) // module path -> ModuleRef
 	for _, pkg := range pkgs {
 		if strings.HasPrefix(pkg.PkgPath, "vendor/") {
 			f.Log.Printf("[%v] Skipping.", pkg.PkgPath)
@@ -147,12 +161,26 @@ func (f *Finder) FindPackages(patterns ...string) ([]*PackageRef, error) {
 			return cmp.Compare(i.ImportPath, j.ImportPath)
 		})
 
+		var mod *ModuleRef
+		if pkg.Module != nil {
+			var ok bool
+			mod, ok = mods[pkg.Module.Path]
+			if !ok {
+				mod = &ModuleRef{
+					Path:  pkg.Module.Path,
+					GoMod: pkg.Module.GoMod,
+				}
+				mods[pkg.Module.Path] = mod
+			}
+		}
+
 		infos = append(infos, &PackageRef{
 			Name:       pkg.Name,
 			ImportPath: pkg.PkgPath,
 			Files:      goFiles,
 			TestFiles:  testFiles,
 			Imports:    imports,
+			Module:     mod,
 		})
 	}
 	return infos, nil

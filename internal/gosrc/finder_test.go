@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,12 +20,28 @@ func TestFinder(t *testing.T) {
 }
 
 func testFinder(t *testing.T, exporter packagestest.Exporter) {
+	// Helper to conditionally set module ref (nil for GOPATH).
+	moduleRef := func(exported *packagestest.Exported, exp packagestest.Exporter, path string) *ModuleRef {
+		if exp.Name() == "GOPATH" {
+			return nil
+		}
+		// In module mode, packagestest creates a subdirectory for each module.
+		// The subdirectory name is the last component of the module path.
+		// For example, "example.com/foo" creates a "foo/" subdirectory.
+		_, moduleName := filepath.Split(path)
+		goMod := filepath.Join(exported.Temp(), moduleName, "go.mod")
+		return &ModuleRef{
+			Path:  path,
+			GoMod: goMod,
+		}
+	}
+
 	tests := []struct {
 		desc     string
 		path     string
 		files    map[string]any
 		tags     []string
-		want     func(*packagestest.Exported) []*PackageRef
+		want     func(*packagestest.Exported, packagestest.Exporter) []*PackageRef
 		wantMsgs []string // messages printed to stderr
 	}{
 		{
@@ -34,11 +51,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 				"foo.go":      "package foo",
 				"foo_test.go": "package foo",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "foo",
 						ImportPath: "example.com/foo",
+						Module:     moduleRef(exported, exp, "example.com/foo"),
 						Files: []string{
 							exported.File("example.com/foo", "foo.go"),
 						},
@@ -57,11 +75,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 				"vendor/bar/baz.go": "package bar",
 				"bar/baz.go":        "package bar",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "foo",
 						ImportPath: "example.com/foo",
+						Module:     moduleRef(exported, exp, "example.com/foo"),
 						Files: []string{
 							exported.File("example.com/foo", "foo.go"),
 						},
@@ -69,6 +88,7 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 					{
 						Name:       "bar",
 						ImportPath: "example.com/foo/bar",
+						Module:     moduleRef(exported, exp, "example.com/foo"),
 						Files: []string{
 							exported.File("example.com/foo", "bar/baz.go"),
 						},
@@ -84,11 +104,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 				"bar.go":     "//go:build mytag\n\npackage bar",
 				"ignored.go": "//go:build anothertag\n\npackage bar",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "bar",
 						ImportPath: "example.com/bar",
+						Module:     moduleRef(exported, exp, "example.com/bar"),
 						Files: []string{
 							exported.File("example.com/bar", "bar.go"),
 						},
@@ -102,11 +123,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 			files: map[string]any{
 				"foo.go": "package foo",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "foo",
 						ImportPath: "example.com/foo-go",
+						Module:     moduleRef(exported, exp, "example.com/foo-go"),
 						Files: []string{
 							exported.File("example.com/foo-go", "foo.go"),
 						},
@@ -123,11 +145,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 				"bar/b.go":   "package", // invalid file
 				"baz/baz.go": "package baz",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "foo",
 						ImportPath: "example.com/foo",
+						Module:     moduleRef(exported, exp, "example.com/foo"),
 						Files: []string{
 							exported.File("example.com/foo", "foo.go"),
 						},
@@ -135,6 +158,7 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 					{
 						Name:       "baz",
 						ImportPath: "example.com/foo/baz",
+						Module:     moduleRef(exported, exp, "example.com/foo"),
 						Files: []string{
 							exported.File("example.com/foo", "baz/baz.go"),
 						},
@@ -150,11 +174,12 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 				"bar.go":          "package bar",
 				"baz/qux_test.go": "package baz",
 			},
-			want: func(exported *packagestest.Exported) []*PackageRef {
+			want: func(exported *packagestest.Exported, exp packagestest.Exporter) []*PackageRef {
 				return []*PackageRef{
 					{
 						Name:       "bar",
 						ImportPath: "example.com/bar",
+						Module:     moduleRef(exported, exp, "example.com/bar"),
 						Files: []string{
 							exported.File("example.com/bar", "bar.go"),
 						},
@@ -188,7 +213,7 @@ func testFinder(t *testing.T, exporter packagestest.Exporter) {
 			got, err := f.FindPackages("./...")
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.want(exported), got)
+			assert.Equal(t, tt.want(exported, exporter), got)
 			for _, msg := range tt.wantMsgs {
 				assert.Contains(t, buff.String(), msg)
 			}
@@ -247,11 +272,27 @@ func testFinderImportedPackage(t *testing.T, exporter packagestest.Exporter) {
 	refs, err := f.FindPackages("./...")
 	require.NoError(t, err)
 
+	// Helper to conditionally set module ref (nil for GOPATH).
+	moduleRef := func(exp packagestest.Exporter, path string) *ModuleRef {
+		if exp.Name() == "GOPATH" {
+			return nil
+		}
+		// In module mode, packagestest creates a subdirectory for each module.
+		// The subdirectory name is the last component of the module path.
+		_, moduleName := filepath.Split(path)
+		goMod := filepath.Join(exported.Temp(), moduleName, "go.mod")
+		return &ModuleRef{
+			Path:  path,
+			GoMod: goMod,
+		}
+	}
+
 	assert.Equal(t,
 		[]*PackageRef{
 			{
 				Name:       "foo",
 				ImportPath: "example.com/foo",
+				Module:     moduleRef(exporter, "example.com/foo"),
 				Files: []string{
 					exported.File("example.com/foo", "foo.go"),
 				},

@@ -42,6 +42,10 @@ OPTIONS
 	  directory: render as a directory (e.g. ../foo/)
 	  index: render with explicit index file (e.g. ../foo/index.html)
 	Defaults to plain.
+  -no-mod-versions
+	disable versioned module links for external dependencies.
+	By default, links to external packages include their module version.
+	Also disables the template variable '.Module' for pkg-doc templates.
   -highlight [MODE:][THEME]
 	use THEME to highlight code blocks.
 	MODE, if any, is one of 'auto', 'inline', and 'classes'
