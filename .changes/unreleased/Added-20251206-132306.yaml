@@ -1,3 +1,0 @@
-kind: Added
-body: Add '-C DIR' flag to change to the given directory before running similarly to the -C flag offered by go and git.
-time: 2025-12-06T13:23:06.744007-08:00
