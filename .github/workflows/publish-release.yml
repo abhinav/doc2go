@@ -62,8 +62,14 @@ jobs:
 
     - name: Extract changelog
       run: |
-        tail -n+2 .changes/v${{ env.VERSION }}.md \
-          | tee ${{ github.workspace }}-CHANGELOG.txt
+        {
+          tail -n+2 .changes/v${{ env.VERSION }}.md 
+
+          echo ""
+          echo "---"
+          echo ""
+          echo "[Support this project](https://github.com/sponsors/abhinav)"
+        } > ${{ github.workspace }}-CHANGELOG.txt
         echo "::group::CHANGELOG"
         cat ${{ github.workspace }}-CHANGELOG.txt
         echo "::endgroup::"
