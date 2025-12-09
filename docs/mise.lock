@@ -1,8 +1,5 @@
 [[tools.hugo-extended]]
 version = "0.152.2"
 backend = "aqua:gohugoio/hugo/hugo-extended"
-
-[tools.hugo-extended.platforms.macos-arm64]
-checksum = "sha256:23e59fcd6951dadc0ee7552c918970aa0c9b00659566f0fa591837e204e87d39"
-size = 37372983
-url = "https://github.com/gohugoio/hugo/releases/download/v0.152.2/hugo_extended_0.152.2_darwin-universal.tar.gz"
+"platforms.macos-arm64" = { checksum = "sha256:23e59fcd6951dadc0ee7552c918970aa0c9b00659566f0fa591837e204e87d39", url = "https://github.com/gohugoio/hugo/releases/download/v0.152.2/hugo_extended_0.152.2_darwin-universal.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:23e59fcd6951dadc0ee7552c918970aa0c9b00659566f0fa591837e204e87d39", url = "https://github.com/gohugoio/hugo/releases/download/v0.152.2/hugo_extended_0.152.2_darwin-universal.tar.gz"}
