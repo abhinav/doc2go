@@ -47,7 +47,7 @@ jobs:
         changie merge
 
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v7
+      uses: peter-evans/create-pull-request@v8
       with:
         title: Release ${{ steps.version.outputs.version }}
         branch: release-${{ steps.version.outputs.version }}
