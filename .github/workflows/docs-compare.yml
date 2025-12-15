@@ -34,13 +34,13 @@ jobs:
 
     steps:
       - name: Download old docs
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: old_docs
           path: a
 
       - name: Download new docs
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: docs
           path: b
