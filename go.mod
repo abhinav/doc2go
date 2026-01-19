@@ -4,15 +4,15 @@ go 1.25.0
 
 require (
 	braces.dev/errtrace v0.4.0
-	github.com/alecthomas/chroma/v2 v2.22.0
+	github.com/alecthomas/chroma/v2 v2.23.0
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/fluhus/godoc-tricks v1.6.0
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/mod v0.32.0
-	golang.org/x/net v0.48.0
+	golang.org/x/net v0.49.0
 	golang.org/x/text v0.33.0
-	golang.org/x/tools v0.40.0
+	golang.org/x/tools v0.41.0
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated
 )
 
