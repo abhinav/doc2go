@@ -61,8 +61,9 @@ func (p *Parser) ParsePackage(ref *PackageRef) (*Package, error) {
 	}
 
 	info := types.Info{
-		Uses: make(map[*ast.Ident]types.Object),
-		Defs: make(map[*ast.Ident]types.Object),
+		Uses:   make(map[*ast.Ident]types.Object),
+		Defs:   make(map[*ast.Ident]types.Object),
+		Scopes: make(map[ast.Node]*types.Scope),
 	}
 	typesPkg, _ := (&types.Config{
 		IgnoreFuncBodies: true,

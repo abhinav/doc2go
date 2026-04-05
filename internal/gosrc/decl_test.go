@@ -304,6 +304,191 @@ type Foo s.Field`,
 			},
 		},
 		{
+			desc: "generic with imported type argument",
+			give: "func UsesGenericArg(_ msg.Container[msg.Message]) {}",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"UsesGenericArg"},
+			want:     "func UsesGenericArg(_ «msg».«Container»[«msg».«Message»]) {}",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic with repeated imported type arguments",
+			give: "func UsesGenericArgs(_ pair.Pair[msg.Message, msg.Message]) {}",
+			imports: map[string]string{
+				"example.com/moda/msg":  "msg",
+				"example.com/moda/pair": "pair",
+			},
+			topLevel: []string{"UsesGenericArgs"},
+			want:     "func UsesGenericArgs(_ «pair».«Pair»[«msg».«Message», «msg».«Message»]) {}",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/pair"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/pair", Name: "Pair"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "method receiver with imported generic argument",
+			give: "func (*wrap.Wrapper[msg.Message]) Handle() {}",
+			imports: map[string]string{
+				"example.com/moda/msg":  "msg",
+				"example.com/moda/wrap": "wrap",
+			},
+			topLevel: []string{"Handle"},
+			want:     "func (*«wrap».«Wrapper»[«msg».«Message»]) Handle() {}",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/wrap"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/wrap", Name: "Wrapper"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic result type with imported type argument",
+			give: "func Build() msg.Container[msg.Message]",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"Build"},
+			want:     "func Build() «msg».«Container»[«msg».«Message»]",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic type args with shadowed and imported names",
+			give: "type Outer[msg any] struct { F pair.Pair[msg, ext.Message] }",
+			imports: map[string]string{
+				"example.com/moda/ext":  "ext",
+				"example.com/moda/pair": "pair",
+				"example.com/moda/msg":  "msg",
+			},
+			topLevel: []string{"Outer"},
+			want:     "type Outer[msg «any»] struct{ «F» «pair».«Pair»[msg, «ext».«Message»] }",
+			regions: []Region{
+				{Label: &EntityRefLabel{ImportPath: Builtin, Name: "any"}},
+				{Label: &DeclLabel{Parent: "Outer", Name: "F"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/pair"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/pair", Name: "Pair"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/ext"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/ext", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic with imported alias type argument",
+			give: "func UseAlias(_ msga.Container[msga.Message]) {}",
+			imports: map[string]string{
+				"example.com/moda/msg": "msga",
+			},
+			topLevel: []string{"UseAlias"},
+			want:     "func UseAlias(_ «msga».«Container»[«msga».«Message»]) {}",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "nested imported generic argument under pointer and slice",
+			give: "type Holder struct { V []*msg.Container[msg.Message] }",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"Holder"},
+			want:     "type Holder struct{ «V» []*«msg».«Container»[«msg».«Message»] }",
+			regions: []Region{
+				{Label: &DeclLabel{Parent: "Holder", Name: "V"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "function type with imported generic argument",
+			give: "type Handler func(msg.Container[msg.Message]) error",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"Handler"},
+			want:     "type Handler func(«msg».«Container»[«msg».«Message»]) «error»",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+				{Label: &EntityRefLabel{ImportPath: Builtin, Name: "error"}},
+			},
+		},
+		{
+			desc: "interface method with imported generic argument",
+			give: "type Service interface { Handle(msg.Container[msg.Message]) }",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"Service"},
+			want: []string{
+				"type Service interface {",
+				"\t«Handle»(«msg».«Container»[«msg».«Message»])",
+				"}",
+			},
+			regions: []Region{
+				{Label: &DeclLabel{Parent: "Service", Name: "Handle"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Container"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic with mixed local and repeated imported type arguments",
+			give: []string{
+				"type Local struct{}",
+				"func UseMixed(_ tri.Tri[Local, msg.Message, msg.Message]) {}",
+			},
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+				"example.com/moda/tri": "tri",
+			},
+			topLevel: []string{"Local", "UseMixed"},
+			want:     "func UseMixed(_ «tri».«Tri»[«Local», «msg».«Message», «msg».«Message»]) {}",
+			regions: []Region{
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/tri"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/tri", Name: "Tri"}},
+				{Label: &EntityRefLabel{Name: "Local"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+				{Label: &PackageRefLabel{ImportPath: "example.com/moda/msg"}},
+				{Label: &EntityRefLabel{ImportPath: "example.com/moda/msg", Name: "Message"}},
+			},
+		},
+		{
+			desc: "generic type param shadowing imported package",
+			give: "type Outer[msg any] struct { Field msg.Message }",
+			imports: map[string]string{
+				"example.com/moda/msg": "msg",
+			},
+			topLevel: []string{"Outer"},
+			want:     "type Outer[msg «any»] struct{ «Field» msg.Message }",
+			regions: []Region{
+				{Label: &EntityRefLabel{ImportPath: Builtin, Name: "any"}},
+				{Label: &DeclLabel{Parent: "Outer", Name: "Field"}},
+			},
+		},
+		{
 			desc: "generic with union of builtins",
 			give: []string{
 				"type Number interface { int | int64 | float64 }",
@@ -1219,8 +1404,9 @@ type Foo s.Field`,
 			})
 
 			info := types.Info{
-				Uses: make(map[*ast.Ident]types.Object),
-				Defs: make(map[*ast.Ident]types.Object),
+				Uses:   make(map[*ast.Ident]types.Object),
+				Defs:   make(map[*ast.Ident]types.Object),
+				Scopes: make(map[ast.Node]*types.Scope),
 			}
 			_, _ = (&types.Config{
 				IgnoreFuncBodies:         true,
@@ -1230,7 +1416,7 @@ type Foo s.Field`,
 				DisableUnusedImportCheck: true,
 			}).Check("example.com/mypkg", fset, []*ast.File{file}, &info)
 
-			df := NewDeclFormatter(fset, tt.topLevel, &info)
+			df := NewDeclFormatter(fset, []*ast.File{file}, tt.topLevel, AdaptTypesInfo(&info))
 			df.Debug(true)
 			src, gotRegions, err := df.FormatDecl(file.Decls[len(file.Decls)-1])
 			require.NoError(t, err)
