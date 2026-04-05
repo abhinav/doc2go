@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fixed `-pkg-doc` links for imported types used inside generic type arguments, such as `pkg.Container[pkg.Message]`, so generated docs now link both the outer generic type and the imported type arguments correctly.
-time: 2026-04-05T14:34:29.33197-07:00
