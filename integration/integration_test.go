@@ -737,6 +737,35 @@ func TestReplaceDirectives(t *testing.T) {
 		"should link to required version of golang.org/x/text")
 }
 
+// https://github.com/abhinav/doc2go/issues/339
+func TestPkgDocLinksForGenericTypeArguments(t *testing.T) {
+	t.Parallel()
+
+	dir := generate(t,
+		"-C=integration/testdata/generic-pkg-doc/modb",
+		"-pkg-doc", "example.com/moda=https://example.com/moda-docs/{{.ImportPath}}",
+		"./...")
+
+	indexHTML := filepath.Join(dir, "example.com", "modb", "service", "index.html")
+	htmlBody, err := os.ReadFile(indexHTML)
+	require.NoError(t, err)
+
+	body := string(htmlBody)
+
+	genericSection := htmlSection(t, body, `id="UsesGenericArg"`, `</pre>`)
+	assert.Contains(t, genericSection,
+		"https://example.com/moda-docs/example.com/moda/msg#Container",
+		"UsesGenericArg should link the outer imported generic type")
+	assert.Contains(t, genericSection,
+		"https://example.com/moda-docs/example.com/moda/msg#Message",
+		"UsesGenericArg should link the imported generic type argument")
+
+	directSection := htmlSection(t, body, `id="UsesDirectRef"`, `</pre>`)
+	assert.Contains(t, directSection,
+		"https://example.com/moda-docs/example.com/moda/msg#Message",
+		"UsesDirectRef should keep linking the plain imported reference")
+}
+
 func readHTMLFile(t *testing.T, filepath string) *html.Node {
 	t.Helper()
 
@@ -748,6 +777,26 @@ func readHTMLFile(t *testing.T, filepath string) *html.Node {
 	require.NoError(t, err)
 
 	return doc
+}
+
+// htmlSection returns the substring starting at the first occurrence of start
+// and ending at the first occurrence of end after that start marker.
+//
+// For example:
+//
+//	body := `<pre id="Foo">hello</pre><pre id="Bar">world</pre>`
+//	got := htmlSection(t, body, `id="Foo"`, `</pre>`)
+//	// got == `id="Foo">hello</pre>`
+func htmlSection(t *testing.T, body, start, end string) string {
+	t.Helper()
+
+	_, afterStart, found := strings.Cut(body, start)
+	require.Truef(t, found, "start marker %q not found", start)
+
+	section, _, found := strings.Cut(afterStart, end)
+	require.Truef(t, found, "end marker %q not found after %q", end, start)
+
+	return start + section + end
 }
 
 func listAllHrefs(doc *html.Node) iter.Seq[string] {

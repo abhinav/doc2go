@@ -13,11 +13,32 @@ import (
 	"braces.dev/errtrace"
 )
 
-// TypesInfo provides type information for identifiers in declarations.
+// TypesInfo provides type and scope information for identifiers.
 type TypesInfo interface {
 	// ObjectOf returns the object denoted by the given identifier,
 	// or nil if the identifier is not in the Uses or Defs maps.
 	ObjectOf(id *ast.Ident) types.Object
+
+	// ScopeOf returns the lexical scope associated with the given node,
+	// or nil if the node does not define a scope.
+	ScopeOf(node ast.Node) *types.Scope
+}
+
+type typesInfoAdapter struct {
+	info *types.Info
+}
+
+// AdaptTypesInfo adapts [types.Info] to [TypesInfo].
+func AdaptTypesInfo(info *types.Info) TypesInfo {
+	return typesInfoAdapter{info: info}
+}
+
+func (a typesInfoAdapter) ObjectOf(id *ast.Ident) types.Object {
+	return a.info.ObjectOf(id)
+}
+
+func (a typesInfoAdapter) ScopeOf(node ast.Node) *types.Scope {
+	return a.info.Scopes[node]
 }
 
 // DeclFormatter formats declarations from a single Go package.
@@ -25,13 +46,14 @@ type TypesInfo interface {
 // This may be re-used between declarations, but not across packages.
 type DeclFormatter struct {
 	fset     *token.FileSet
+	files    []*ast.File
 	topLevel map[string]struct{}
 	debug    bool
 	info     TypesInfo
 }
 
 // NewDeclFormatter builds a new DeclFormatter for the given package.
-func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string, info TypesInfo) *DeclFormatter {
+func NewDeclFormatter(fset *token.FileSet, files []*ast.File, topLevelDecls []string, info TypesInfo) *DeclFormatter {
 	topLevel := make(map[string]struct{}, len(topLevelDecls))
 	for _, name := range topLevelDecls {
 		topLevel[name] = struct{}{}
@@ -39,6 +61,7 @@ func NewDeclFormatter(fset *token.FileSet, topLevelDecls []string, info TypesInf
 
 	return &DeclFormatter{
 		fset:     fset,
+		files:    files,
 		topLevel: topLevel,
 		info:     info,
 	}
@@ -54,10 +77,11 @@ func (f *DeclFormatter) Debug(debug bool) {
 // and reports regions inside it where anything of note happens.
 func (f *DeclFormatter) FormatDecl(decl ast.Decl) (src []byte, regions []Region, err error) {
 	lb := labeler{
+		file:     f.fileForDecl(decl),
 		topLevel: f.topLevel,
 		info:     f.info,
 	}
-	ast.Walk(&lb, decl)
+	lb.walk(decl)
 
 	var buff bytes.Buffer
 	if err := format.Node(&buff, f.fset, decl); err != nil {
@@ -102,6 +126,15 @@ func (f *DeclFormatter) FormatDecl(decl ast.Decl) (src []byte, regions []Region,
 	}
 
 	return buff.Bytes(), regions, nil
+}
+
+func (f *DeclFormatter) fileForDecl(decl ast.Decl) *ast.File {
+	for _, file := range f.files {
+		if decl.Pos() >= file.Pos() && decl.Pos() <= file.End() {
+			return file
+		}
+	}
+	return nil
 }
 
 // Region is a region of a declaration's source code
@@ -175,15 +208,58 @@ func (*PackageRefLabel) label() {}
 // in the same order as go/scanner -- so the order in which
 // they appear in the text left to right.
 type labeler struct {
-	labels   []Label
-	parents  []string
+	// labels are emitted in identifier order
+	// and must stay aligned with the scanner's token stream.
+	labels []Label
+
+	// parents tracks the current declaration owner names
+	// while we descend through the AST.
+	// This stores the owner names we need for anchor labels
+	// like "Type.Field", not the enclosing nodes themselves.
+	// For example, when labeling the field "Field" inside type "Type",
+	// parents holds ["Type"] and the field label contributes "Field".
+	parents []string
+
+	// stack tracks the current AST path.
+	// It runs from the declaration root to the current node, inclusive,
+	// with the current node at the end.
+	stack []ast.Node
+
+	file     *ast.File           // containing file for scope fallback
 	topLevel map[string]struct{} // required
 	info     TypesInfo           // required
 }
 
+func (lb *labeler) walk(root ast.Node) {
+	ast.Walk(lb, root)
+}
+
 var _ ast.Visitor = (*labeler)(nil)
 
-func (lb *labeler) Visit(n ast.Node) ast.Visitor {
+func (lb *labeler) Visit(n ast.Node) (next ast.Visitor) {
+	if n == nil {
+		// ast.Walk calls Visit(nil) after it finishes a node's children.
+		// Use that post-order callback to keep the AST stack in sync with
+		// the subtree we just left.
+		if len(lb.stack) == 0 {
+			return nil
+		}
+
+		lb.stack = lb.stack[:len(lb.stack)-1]
+		return nil
+	}
+
+	lb.stack = append(lb.stack, n)
+	defer func() {
+		// If Visit returns nil, ast.Walk stops at this node
+		// and does not issue Visit(nil) for it.
+		// Pop the stack entry here so manually handled nodes keep the
+		// explicit AST stack balanced.
+		if next == nil {
+			lb.stack = lb.stack[:len(lb.stack)-1]
+		}
+	}()
+
 	switch n := n.(type) {
 	case *ast.TypeSpec:
 		lb.ignore() // type name
@@ -247,9 +323,10 @@ func (lb *labeler) Visit(n ast.Node) ast.Visitor {
 		}
 
 	case *ast.SelectorExpr:
+		// Package-qualified selectors are handled as a unit so that "pkg"
+		// and "Name" stay paired as package/entity labels in scanner order.
+		// Non-package selectors fall back to the normal traversal path.
 		if !lb.packageEntityRef(n) {
-			// If this wasn't a package entity reference,
-			// fall back to traversing.
 			ast.Walk(lb, n.X)
 			lb.ignore() // "Bar" of "foo.Bar"
 		}
@@ -286,19 +363,59 @@ func (lb *labeler) packageEntityRef(n *ast.SelectorExpr) (ok bool) {
 	// shadowed local variables. If x refers to a package import, ObjectOf
 	// returns a *types.PkgName; if it's a local variable or other binding,
 	// ObjectOf returns a different types.Object kind or nil.
-	// This is safe because the type checker has already resolved all bindings.
+	// If ObjectOf returns nil because type checking did not fully resolve
+	// the selector expression, fall back to lexical scope lookup.
 	x, _ := n.X.(*ast.Ident)
 	if x == nil {
 		return false
 	}
 
-	obj := lb.info.ObjectOf(x)
-	if obj == nil {
-		return false
-	}
-	pkgName, ok := obj.(*types.PkgName)
-	if !ok {
-		return false
+	var pkgName *types.PkgName
+	if obj := lb.info.ObjectOf(x); obj != nil {
+		var ok bool
+		pkgName, ok = obj.(*types.PkgName)
+		if !ok {
+			return false
+		}
+	} else {
+		// Walk outward from the innermost enclosing scope.
+		// This preserves normal shadowing rules for locals and type params
+		// while still recovering file-scope imports when Uses is incomplete.
+		for i := len(lb.stack) - 1; i >= 0; i-- {
+			scope := lb.info.ScopeOf(lb.stack[i])
+			if scope == nil {
+				continue
+			}
+
+			_, obj := scope.LookupParent(x.Name, x.Pos())
+			var ok bool
+			pkgName, ok = obj.(*types.PkgName)
+			if ok {
+				break
+			}
+			if obj != nil {
+				return false
+			}
+		}
+		if pkgName == nil {
+			// FormatDecl walks a declaration subtree, so the explicit AST stack
+			// does not include the containing *ast.File. Imported package names
+			// live in file scope, so fall back to the declaration's file scope
+			// if no narrower scope on the declaration path resolved the name.
+			if lb.file == nil {
+				return false
+			}
+			scope := lb.info.ScopeOf(lb.file)
+			if scope == nil {
+				return false
+			}
+			_, obj := scope.LookupParent(x.Name, x.Pos())
+			var ok bool
+			pkgName, ok = obj.(*types.PkgName)
+			if !ok {
+				return false
+			}
+		}
 	}
 
 	importPath := pkgName.Imported().Path()

@@ -43,7 +43,11 @@ var _ DeclFormatter = (*gosrc.DeclFormatter)(nil)
 // newDefaultDeclFormatter builds a DeclFormatter based on
 // [gosrc.DeclFormatter].
 func newDefaultDeclFormatter(pkg *gosrc.Package) DeclFormatter {
-	return gosrc.NewDeclFormatter(pkg.Fset, pkg.TopLevelDecls, pkg.Info)
+	allSyntaxes := make([]*ast.File, len(pkg.Syntax)+len(pkg.TestSyntax))
+	copy(allSyntaxes, pkg.Syntax)
+	copy(allSyntaxes[len(pkg.Syntax):], pkg.TestSyntax)
+
+	return gosrc.NewDeclFormatter(pkg.Fset, allSyntaxes, pkg.TopLevelDecls, gosrc.AdaptTypesInfo(pkg.Info))
 }
 
 // Assembler assembles a [Package] from a [go/doc.Package].
