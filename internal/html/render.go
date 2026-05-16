@@ -445,6 +445,7 @@ func (r *render) FuncMap() template.FuncMap {
 		// Turns key-value pairs into a map.
 		// Useful for building objects in templates.
 		"dict": dict,
+		"inc":  func(i int) int { return i + 1 },
 	}
 }
 
