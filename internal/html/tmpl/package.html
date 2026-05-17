@@ -6,15 +6,17 @@
 {{ define "NavbarExtra" }} | <a href="#pkg-index">Index</a>{{ end -}}
 
 {{ define "Body" -}}
-<h2 id="pkg-overview" {{- if pagefind }} data-pagefind-meta="Import path:{{ .ImportPath }}"{{end }}>
+{{ $level := 2 }}
+<h{{ $level }} id="pkg-overview" {{- if pagefind }} data-pagefind-meta="Import path:{{ .ImportPath }}"{{end }}>
   {{- /**/ -}}
   package {{ .Name -}}
-</h2>
+</h{{ $level }}>
+{{ $level = inc $level }}
 {{ .Import | code }}
-{{ .Doc | doc 3 -}}
-{{ template "examples" (dict "Level" 3 "Examples" .Examples) -}}
+{{ .Doc | doc $level -}}
+{{ template "examples" (dict "Level" $level "Examples" .Examples) -}}
 
-<h3 id="pkg-index" {{- pagefindIgnore -}}>Index</h3>
+<h{{ $level }} id="pkg-index" {{- pagefindIgnore -}}>Index</h{{ $level }}>
 {{ if or .Constants .Variables .Functions .Types -}}
 <ul {{- pagefindIgnore -}}>
   {{ if .Constants }}<li><a href="#pkg-constants">Constants</a></li>{{ end -}}
@@ -41,7 +43,8 @@
 {{- end }}
 
 {{- with .AllExamples -}}
-<h4 id="pkg-examples" {{- pagefindIgnore -}}>Examples</h4>
+{{ $level := inc $level }}
+<h{{ $level }} id="pkg-examples" {{- pagefindIgnore -}}>Examples</h{{ $level }}>
 <ul>
   {{ range . -}}
     {{- $id := printf "example-%s" .Parent.String -}}
@@ -54,52 +57,49 @@
 {{- end -}}
 
 {{ with .Constants -}}
-  <h3 id="pkg-constants" {{- pagefindIgnore -}}>Constants</h3>
-  {{ range . }}{{ template "constOrVar" . }}{{ end -}}
+  <h{{ $level }} id="pkg-constants" {{- pagefindIgnore -}}>Constants</h{{ $level }}>
+  {{ $level := inc $level }}
+  {{ range . }}{{ template "constOrVar" (dict "Level" $level "ConstOrVar" .) }}{{ end -}}
 {{ end -}}
 
 {{ with .Variables -}}
-  <h3 id="pkg-variables" {{- pagefindIgnore -}}>Variables</h3>
-  {{ range . }}{{ template "constOrVar" . }}{{ end -}}
+  <h{{ $level }} id="pkg-variables" {{- pagefindIgnore -}}>Variables</h{{ $level }}>
+  {{ $level := inc $level }}
+  {{ range . }}{{ template "constOrVar" (dict "Level" $level "ConstOrVar" .) }}{{ end -}}
 {{ end -}}
 
 {{ with .Functions -}}
-  <h3 id="pkg-functions" {{- pagefindIgnore -}}>Functions</h3>
-  {{ range . -}}
-    {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
-      <h3 id="{{ .Name }}">func {{ .Name }} {{- template "deprecatedTag" . }}</h3>
-    {{- if .Deprecated }}</summary>{{ end }}
-    {{ .Decl | code }}
-    {{ .Doc | doc 4 -}}
-    {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
-    {{- if .Deprecated }}</details>{{ end -}}
-  {{ end -}}
+  <h{{ $level }} id="pkg-functions" {{- pagefindIgnore -}}>Functions</h{{ $level }}>
+  {{ $level := inc $level }}
+  {{ range . }}{{ template "funcOrMethod" (dict "Level" $level "FuncOrMethod" .) }}{{ end -}}
 {{ end -}}
 
 {{ with .Types -}}
-  <h3 id="pkg-types" {{- pagefindIgnore -}}>Types</h3>
+  <h{{ $level }} id="pkg-types" {{- pagefindIgnore -}}>Types</h{{ $level }}>
+  {{ $level := inc $level }}
   {{ range . -}}
     {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
-    <h3 id="{{ .Name }}">type {{ .Name }} {{- template "deprecatedTag" . }}</h3>
+    <h{{ $level }} id="{{ .Name }}">type {{ .Name }} {{- template "deprecatedTag" . }}</h{{ $level }}>
     {{- if .Deprecated }}</summary>{{ end }}
+    {{ $level := inc $level }}
     {{ .Decl | code }}
-    {{ .Doc | doc 4 -}}
-    {{ template "examples" (dict "Level" 4 "Examples" .Examples) -}}
+    {{ .Doc | doc $level -}}
+    {{ template "examples" (dict "Level" $level "Examples" .Examples) -}}
 
     {{ range .Constants -}}
-      {{ template "constOrVar" . -}}
+      {{ template "constOrVar" (dict "Level" $level "ConstOrVar" .) -}}
     {{ end -}}
 
     {{ range .Variables -}}
-      {{ template "constOrVar" . -}}
+      {{ template "constOrVar" (dict "Level" $level "ConstOrVar" .) -}}
     {{ end -}}
 
     {{ range .Functions -}}
-      {{ template "funcOrMethod" . -}}
+      {{ template "funcOrMethod" (dict "Level" $level "FuncOrMethod" .) -}}
     {{ end -}}
 
     {{ range .Methods -}}
-      {{ template "funcOrMethod" . -}}
+      {{ template "funcOrMethod" (dict "Level" $level "FuncOrMethod" .) -}}
     {{ end -}}
     {{- if .Deprecated }}</details>{{ end -}}
   {{ end -}}
@@ -111,20 +111,27 @@
 {{ end -}}
 
 {{- define "constOrVar" -}}
+  {{ $level := .Level }}
+  {{ with .ConstOrVar }}
   {{ .Decl | code }}
-  {{ .Doc | doc 4 -}}
+  {{ .Doc | doc $level -}}
+  {{ end }}
 {{- end -}}
 
 {{- define "funcOrMethod" -}}
+  {{ $level := .Level }}
+  {{- with .FuncOrMethod -}}
   {{ $id := .Name -}}
   {{ with .RecvType }}{{ $id = printf "%s.%s" . $id }}{{ end -}}
   {{ if .Deprecated }}<details class="deprecated"><summary>{{ end -}}
-    <h4 id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }} {{- template "deprecatedTag" . }}</h4>
+    <h{{ $level }} id="{{ $id }}">func {{ with .Recv }}({{ . }}) {{end }}{{ .Name }} {{- template "deprecatedTag" . }}</h {{- $level }}>
   {{- if .Deprecated }}</summary>{{ end }}
+  {{ $level = inc $level }}
   {{ .Decl | code }}
-  {{ .Doc | doc 5 -}}
-  {{ template "examples" (dict "Level" 5 "Examples" .Examples) -}}
+  {{ .Doc | doc $level -}}
+  {{ template "examples" (dict "Level" $level "Examples" .Examples) -}}
   {{- if .Deprecated }}</details>{{ end -}}
+  {{- end -}}
 {{- end -}}
 
 {{- define "examples" -}}
