@@ -6,10 +6,10 @@ PROJECT_ROOT = "{{ config_root }}"
 [tools]
 go = "latest"
 "aqua:golangci/golangci-lint" = "latest"
-"ubi:miniscruff/changie" = "latest"
-gofumpt = "latest"
+"github:miniscruff/changie" = "latest"
 node = "lts"
-"ubi:abhinav/requiredfield" = "latest"
+"github:abhinav/requiredfield" = "latest"
+gofumpt = "latest"
 
 [tasks.all]
 description = "Build, lint and test the code."
