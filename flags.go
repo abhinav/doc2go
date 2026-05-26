@@ -81,6 +81,7 @@ func (cmd *cliParser) newFlagSet(cfg *configFileParser) (*params, *flag.FlagSet)
 
 	// Filesystem:
 	flag.StringVar(&p.OutputDir, "out", "_site", "")
+	flag.Var(flag.Lookup("out").Value, "o", "")
 	flag.StringVar(&p.SubDir, "subdir", "", "")
 	flag.StringVar(&p.PkgVersion, "pkg-version", "", "")
 	flag.StringVar(&p.Basename, "basename", "", "")
