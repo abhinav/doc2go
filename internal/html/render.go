@@ -153,9 +153,17 @@ func (r *Renderer) WriteStatic(dir string) error {
 	}))
 }
 
+// frontmatterPackageData holds the package data accessible
+// in the frontmatter template.
 type frontmatterPackageData struct {
 	Name     string
 	Synopsis string
+	// Types holds all the defined types in the package.
+	// The slice may be empty.
+	Types []*godoc.Type
+	// Functions holds all the defined functions in the package.
+	// The slice may be empty.
+	Functions []*godoc.Function
 }
 
 type frontmatterData struct {
@@ -240,8 +248,10 @@ func (r *Renderer) RenderPackage(w io.Writer, info *PackageInfo) error {
 		Basename:    info.Basename(),
 		NumChildren: info.NumChildren,
 		Package: frontmatterPackageData{
-			Name:     info.Name,
-			Synopsis: info.Synopsis,
+			Name:      info.Name,
+			Synopsis:  info.Synopsis,
+			Types:     info.Types,
+			Functions: info.Functions,
 		},
 	})
 	if err != nil {
