@@ -12,10 +12,10 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       name: Check out repository
     - name: Set up mise
-      uses: jdx/mise-action@v4
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -29,9 +29,9 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - name: Set up mise
-      uses: jdx/mise-action@v4
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -42,7 +42,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
       with:
         files: ./cover.out
 
@@ -50,9 +50,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Integration test
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - name: Set up mise
-      uses: jdx/mise-action@v4
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -63,7 +63,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
       with:
         files: ./cover.integration.out
 

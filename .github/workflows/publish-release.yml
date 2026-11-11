@@ -23,17 +23,17 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         ref: ${{ inputs.ref }}
 
     - name: Set up Go
-      uses: actions/setup-go@v6
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
       with:
         go-version-file: go.mod
 
     - name: Set up mise
-      uses: jdx/mise-action@v4
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -80,7 +80,7 @@ jobs:
         git push origin "v$VERSION"
 
     - name: Release
-      uses: goreleaser/goreleaser-action@v7
+      uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
       with:
         distribution: goreleaser
         version: latest
