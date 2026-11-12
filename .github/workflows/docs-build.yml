@@ -33,6 +33,14 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
 
+      - name: Match tools for the comparison build
+        if: ${{ github.event_name == 'pull_request' && inputs.ref == github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          if git diff --quiet HEAD FETCH_HEAD -- docs/mise.toml; then
+            git show FETCH_HEAD:docs/mise.lock > docs/mise.lock
+          fi
+
       - name: Set up mise
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
         env:
