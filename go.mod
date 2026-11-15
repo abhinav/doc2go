@@ -10,7 +10,7 @@ require (
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/mod v0.36.0
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 	golang.org/x/text v0.37.0
 	golang.org/x/tools v0.45.0
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated
