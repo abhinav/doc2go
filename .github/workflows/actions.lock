@@ -4,14 +4,14 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
-        - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-        - 'codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f'
-        - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
+        - 'jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b'
     '.github/workflows/docs-build.yml':
-        - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9'
-        - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
+        - 'jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b'
     '.github/workflows/docs-compare.yml':
         - 'actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333'
         - 'peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9'
@@ -19,18 +19,18 @@ workflows:
     '.github/workflows/docs.yml':
         - 'actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346'
     '.github/workflows/prepare-release.yml':
-        - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-        - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b'
         - 'peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1'
     '.github/workflows/publish-release.yml':
-        - 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-        - 'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16'
+        - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
+        - 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
         - 'goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de'
-        - 'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c'
+        - 'jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b'
 dependencies:
-    'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803':
-        ref: 'v6.1.0'
-        commit: 'sha1-d23441a48e516b6c34aea4fa41551a30e30af803'
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1':
+        ref: 'v7.0.1'
+        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
     'actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346':
@@ -48,9 +48,9 @@ dependencies:
         commit: 'sha1-ed597411d8f924073f98dfc5c65a23a2325f34cd'
         owner_id: 44036562
         repo_id: 205262760
-    'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16':
-        ref: 'v6.5.0'
-        commit: 'sha1-924ae3a1cded613372ab5595356fb5720e22ba16'
+    'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e':
+        ref: 'v7.0.0'
+        commit: 'sha1-b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
         owner_id: 44036562
         repo_id: 192624594
     'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f':
@@ -70,9 +70,9 @@ dependencies:
         repo_id: 496012378
         uses:
             - 'actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f'
-    'codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f':
-        ref: 'v7.0.0'
-        commit: 'sha1-fb8b3582c8e4def4969c97caa2f19720cb33a72f'
+    'codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5':
+        ref: 'v7.1.1'
+        commit: 'sha1-303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
         owner_id: 8226205
         repo_id: 200299178
         uses:
@@ -82,9 +82,9 @@ dependencies:
         commit: 'sha1-a4f02ab5355a589de60d917a659ce617ed19b3de'
         owner_id: 24697112
         repo_id: 209873006
-    'jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c':
-        ref: 'v4.3.0'
-        commit: 'sha1-c2a87611a18de5b3828c5652fe268e992400cb5c'
+    'jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b':
+        ref: 'v5.2.7'
+        commit: 'sha1-b44d12e7d0d8ee7461bb893e1b1993500433185b'
         owner_id: 216188
         repo_id: 738284564
     'peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9':
